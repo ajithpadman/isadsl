@@ -107,6 +107,10 @@ The `examples/` directory contains several example ISA specifications:
 - **`sample_isa.isa`**: A complete example with R-type, I-type, and branch instructions
 - **`advanced.isa`**: An advanced RISC architecture with 23 instructions and multiple formats
 - **`simd.isa`**: SIMD example with vector registers and vector operations
+- **`bundling.isa`**: Instruction bundling example
+- **`variable_length.isa`**: Variable-length instruction example
+- **`comprehensive.isa`**: Comprehensive example with multiple features
+- **`arm_subset.isa`**: ARM instruction set subset example
 
 To generate tools from an example:
 

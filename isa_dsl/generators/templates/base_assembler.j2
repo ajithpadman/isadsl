@@ -1,0 +1,60 @@
+{# Base template for assembler with Jinja2 blocks #}
+{# This template defines the structure and blocks that derived templates will implement #}
+
+{% block header %}
+"""
+Generated assembler for {{ isa.name }}.
+
+This assembler was automatically generated from the ISA specification.
+"""
+{% endblock %}
+
+{% block imports %}
+import re
+import sys
+from typing import Dict, List, Tuple, Optional
+{% endblock %}
+
+{% block class_definition %}
+class Assembler:
+    """Assembler for {{ isa.name }}."""
+
+{% block class_init %}
+    def __init__(self):
+        """Initialize the assembler."""
+{% block assembler_state %}
+        self.labels: Dict[str, int] = {}
+        self.symbols: Dict[str, int] = {}
+        self.instructions: List[Tuple[str, List[str], Optional[int]]] = []
+{% endblock %}
+{% endblock %}
+
+{% block assemble_method %}
+{# Main assemble method #}
+{% endblock %}
+
+{% block preprocessing_methods %}
+{# Preprocessing and parsing methods #}
+{% endblock %}
+
+{% block instruction_recognition %}
+{# Methods for recognizing and parsing instructions #}
+{% endblock %}
+
+{% block encoding_methods %}
+{# Methods for encoding instructions #}
+{% endblock %}
+
+{% block binary_output %}
+{# Methods for writing binary output #}
+{% endblock %}
+{% endblock %}
+
+{% block main_function %}
+{# Main function #}
+{% endblock %}
+
+{% block if_main %}
+{# if __name__ == "__main__" block #}
+{% endblock %}
+

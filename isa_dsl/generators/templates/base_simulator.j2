@@ -1,0 +1,74 @@
+{# Base template for simulator with Jinja2 blocks #}
+{# This template defines the structure and blocks that derived templates will implement #}
+
+{% block header %}
+"""
+Generated instruction simulator for {{ isa.name }}.
+
+This simulator was automatically generated from the ISA specification.
+"""
+{% endblock %}
+
+{% block imports %}
+from typing import Dict, List, Optional
+import sys
+{% endblock %}
+
+{% block class_definition %}
+class Simulator:
+    """Instruction simulator for {{ isa.name }}."""
+
+{% block class_init %}
+    def __init__(self):
+        """Initialize the simulator state."""
+{% block register_initialization %}
+        # Initialize registers
+{% endblock %}
+{% block memory_initialization %}
+        # Memory
+        self.memory: Dict[int, int] = {}
+        
+        # Execution state
+        self.pc = 0
+        self.halted = False
+        self.instruction_count = 0
+{% endblock %}
+{% endblock %}
+
+{% block load_methods %}
+{# Load program and binary file methods #}
+{% endblock %}
+
+{% block step_method %}
+{# Step method for executing one instruction #}
+{% endblock %}
+
+{% block execution_methods %}
+{# Execution helper methods #}
+{% endblock %}
+
+{% block utility_methods %}
+{# Utility methods like _load_bits, _get_instruction_width #}
+{% endblock %}
+
+{% block instruction_matching %}
+{# Instruction matching methods (_matches_*) #}
+{% endblock %}
+
+{% block instruction_execution %}
+{# Instruction execution methods (_execute_*) #}
+{% endblock %}
+
+{% block print_state %}
+{# Print state method #}
+{% endblock %}
+{% endblock %}
+
+{% block main_function %}
+{# Main function #}
+{% endblock %}
+
+{% block if_main %}
+{# if __name__ == "__main__" block #}
+{% endblock %}
+

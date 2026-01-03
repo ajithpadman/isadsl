@@ -1,0 +1,51 @@
+{# Base template for disassembler with Jinja2 blocks #}
+{# This template defines the structure and blocks that derived templates will implement #}
+
+{% block header %}
+"""
+Generated disassembler for {{ isa.name }}.
+
+This disassembler was automatically generated from the ISA specification.
+"""
+{% endblock %}
+
+{% block imports %}
+import sys
+from typing import List, Optional, Tuple
+{% endblock %}
+
+{% block class_definition %}
+class Disassembler:
+    """Disassembler for {{ isa.name }}."""
+
+{% block class_init %}
+    def __init__(self):
+        """Initialize the disassembler."""
+        pass
+{% endblock %}
+
+{% block disassemble_method %}
+{# Main disassemble method #}
+{% endblock %}
+
+{% block identify_width_method %}
+{# Method to identify instruction width #}
+{% endblock %}
+
+{% block disassemble_file_method %}
+{# Method to disassemble a file #}
+{% endblock %}
+
+{% block instruction_disassembly_methods %}
+{# Per-instruction disassembly methods (_disassemble_*) #}
+{% endblock %}
+{% endblock %}
+
+{% block main_function %}
+{# Main function #}
+{% endblock %}
+
+{% block if_main %}
+{# if __name__ == "__main__" block #}
+{% endblock %}
+

@@ -1,0 +1,23 @@
+{# Base template for documentation with Jinja2 blocks #}
+{# This template defines the structure and blocks that derived templates will implement #}
+
+{% block title %}
+# {{ isa.name }} Instruction Set Architecture
+{% endblock %}
+
+{% block architecture_overview %}
+## Architecture Overview
+{% endblock %}
+
+{% block registers_section %}
+## Registers
+{% endblock %}
+
+{% block formats_section %}
+## Instruction Formats
+{% endblock %}
+
+{% block instructions_section %}
+## Instruction Set
+{% endblock %}
+

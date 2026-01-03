@@ -1,135 +1,12 @@
 """Generator for ISA documentation."""
 
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader, Template
 from pathlib import Path
 from ..model.isa_model import ISASpecification
 
+# Template is now loaded from file: isa_dsl/generators/templates/documentation.j2
+# Template is now loaded from file: isa_dsl/generators/templates/documentation.j2
 
-DOC_TEMPLATE = '''# {{ isa.name }} Instruction Set Architecture
-
-## Architecture Overview
-
-{%- for prop in isa.properties %}
-- **{{ prop.name }}**: {{ prop.value }}
-{%- endfor %}
-
-## Registers
-
-### General Purpose Registers
-
-{%- for reg in isa.registers %}
-{%- if reg.type == 'gpr' %}
-#### {{ reg.name }}
-- **Type**: General Purpose Register
-- **Width**: {{ reg.width }} bits
-{% if reg.is_register_file() %}
-- **Count**: {{ reg.count }} registers ({{ reg.name }}[0] to {{ reg.name }}[{{ reg.count - 1 }}])
-{% endif %}
-{%- elif reg.type == 'vec' %}
-#### {{ reg.name }}
-- **Type**: Vector Register
-- **Width**: {{ reg.width }} bits
-- **Lanes**: {{ reg.lanes }}
-- **Element Width**: {{ reg.element_width }} bits
-{%- if reg.is_register_file() %}
-- **Count**: {{ reg.count }} vector registers
-{%- endif %}
-{%- if reg.fields %}
-- **Fields**:
-{%- for field in reg.fields %}
-  - `{{ field.name }}`: bits [{{ field.msb }}:{{ field.lsb }}]
-{%- endfor %}
-{%- endif %}
-
-{%- endif %}
-{% endfor %}
-
-### Special Function Registers
-
-{% for reg in isa.registers %}
-{% if reg.type == 'sfr' %}
-#### {{ reg.name }}
-- **Type**: Special Function Register
-- **Width**: {{ reg.width }} bits
-{%- if reg.fields %}
-- **Fields**:
-{%- for field in reg.fields %}
-  - `{{ field.name }}`: bits [{{ field.msb }}:{{ field.lsb }}]
-{%- endfor %}
-{%- endif %}
-
-{%- endif %}
-{%- endfor %}
-
-## Instruction Formats
-
-{%- for fmt in isa.formats %}
-### {{ fmt.name }}
-
-- **Width**: {{ fmt.width }} bits
-
-**Field Layout**:
-
-| Field | Bits | Width | Description |
-|-------|------|-------|-------------|
-{%- for field in fmt.fields %}
-| `{{ field.name }}` | [{{ field.msb }}:{{ field.lsb }}] | {{ field.width() }} | |
-{%- endfor %}
-
-**Bit Layout**:
-```
-{%- set max_bit = fmt.width - 1 %}
-{%- set bit_layout = [] %}
-{%- for i in range(max_bit, -1, -1) %}
-{%- set found = False %}
-{%- for field in fmt.fields %}
-{%- if i >= field.lsb and i <= field.msb %}
-{%- if not found %}
-{%- set _ = bit_layout.append(field.name[0].upper()) %}
-{%- set found = True %}
-{%- endif %}
-{%- endif %}
-{%- endfor %}
-{%- if not found %}
-{%- set _ = bit_layout.append('-') %}
-{%- endif %}
-{%- endfor %}
-{{ bit_layout | join('') }}
-```
-
-{%- endfor %}
-
-## Instruction Set
-
-{%- for instr in isa.instructions %}
-### {{ instr.mnemonic.upper() }}
-
-**Format**: {% if instr.format %}{{ instr.format.name }}{% else %}N/A{% endif %}
-
-{%- if instr.operands %}
-**Operands**: {%- for op in instr.operands %}{{ op }}{% if not loop.last %}, {% endif %}{%- endfor %}
-{%- endif %}
-
-{%- if instr.encoding %}
-**Encoding**:
-{%- for assignment in instr.encoding.assignments %}
-- `{{ assignment.field }}` = `0x{{ "%x"|format(assignment.value) }}`
-{%- endfor %}
-{%- endif %}
-
-{%- if instr.behavior %}
-**Behavior**:
-```
-{%- for stmt in instr.behavior.statements %}
-{{ format_rtl_statement(stmt) }}
-{%- endfor %}
-```
-{%- endif %}
-
----
-
-{%- endfor %}
-'''
 
 
 class DocumentationGenerator:
@@ -213,11 +90,21 @@ class DocumentationGenerator:
 
     def generate(self, output_path: str, format: str = 'markdown'):
         """Generate documentation."""
-        template = Template(DOC_TEMPLATE)
+        # Get templates directory
+        templates_dir = Path(__file__).parent / 'templates'
+        
+        # Create environment with FileSystemLoader
+        env = Environment(
+            loader=FileSystemLoader(str(templates_dir)),
+            trim_blocks=False,
+            lstrip_blocks=False
+        )
         
         def format_rtl_statement(stmt):
             return self._format_rtl_statement(stmt)
         
+        # Load template from file
+        template = env.get_template('documentation.j2')
         code = template.render(isa=self.isa, format_rtl_statement=format_rtl_statement)
         
         ext = 'md' if format == 'markdown' else 'html'

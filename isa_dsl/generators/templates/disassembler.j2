@@ -1,0 +1,413 @@
+{% extends "base_disassembler.j2" %}
+
+{% block disassemble_method %}
+    def disassemble(self, instruction_word: int, num_bits: int = None) -> Optional[str]:
+        """
+        Disassemble a single instruction word.
+
+        Args:
+            instruction_word: Instruction word (may be 16, 32, 64 bits, etc.)
+            num_bits: Number of bits in instruction (None = auto-detect)
+
+        Returns:
+            Assembly mnemonic string or None if unknown
+        """
+        # If num_bits not specified, try to identify instruction width
+        if num_bits is None:
+            num_bits = self._identify_instruction_width(instruction_word)
+        
+        # Mask instruction to specified width
+        if num_bits < 64:
+            instruction_word = instruction_word & ((1 << num_bits) - 1)
+        
+        # Try to disassemble using identification fields (shortest formats first)
+        {%- set all_widths = [] %}
+        {%- for instr in isa.instructions %}
+        {%- if instr.format %}
+        {%- set _ = all_widths.append(instr.format.width) %}
+        {%- endif %}
+        {%- if instr.bundle_format %}
+        {%- set _ = all_widths.append(instr.bundle_format.width) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- set unique_widths = [] %}
+        {%- for width in all_widths %}
+        {%- if width not in unique_widths %}
+        {%- set _ = unique_widths.append(width) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- set unique_widths = unique_widths | sort %}
+        
+        {%- for width in unique_widths %}
+        # Try instructions with width {{ width }} bits
+        # Mask instruction to this width before trying to match
+        {%- if width == 16 %}
+        masked_instruction = instruction_word & 0xFFFF
+        {%- elif width == 32 %}
+        masked_instruction = instruction_word & 0xFFFFFFFF
+        {%- elif width == 64 %}
+        masked_instruction = instruction_word & 0xFFFFFFFFFFFFFFFF
+        {%- else %}
+        masked_instruction = instruction_word & ((1 << {{ width }}) - 1)
+        {%- endif %}
+        
+        {%- for instr in isa.instructions %}
+        {%- if (instr.format and instr.format.width == width) or (instr.bundle_format and instr.bundle_format.width == width) %}
+        result = self._disassemble_{{ instr.mnemonic }}(masked_instruction)
+        if result is not None:
+            return result
+        {%- endif %}
+        {%- endfor %}
+        {%- endfor %}
+        
+        return f"UNKNOWN 0x{instruction_word:08x}"
+{% endblock %}
+
+{% block identify_width_method %}
+    def _identify_instruction_width(self, instruction_word: int) -> int:
+        """Identify instruction width by checking identification fields."""
+        # Try formats from shortest to longest
+        {%- set all_widths = [] %}
+        {%- for instr in isa.instructions %}
+        {%- if instr.format %}
+        {%- set _ = all_widths.append(instr.format.width) %}
+        {%- endif %}
+        {%- if instr.bundle_format %}
+        {%- set _ = all_widths.append(instr.bundle_format.width) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- set unique_widths = [] %}
+        {%- for width in all_widths %}
+        {%- if width not in unique_widths %}
+        {%- set _ = unique_widths.append(width) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- set unique_widths = unique_widths | sort %}
+        
+        {%- for width in unique_widths %}
+        # Check instructions with width {{ width }} bits
+        {%- if width == 16 %}
+        masked_word = instruction_word & 0xFFFF
+        {%- elif width == 32 %}
+        masked_word = instruction_word & 0xFFFFFFFF
+        {%- elif width == 64 %}
+        masked_word = instruction_word & 0xFFFFFFFFFFFFFFFF
+        {%- else %}
+        masked_word = instruction_word & ((1 << {{ width }}) - 1)
+        {%- endif %}
+        
+        {%- for instr in isa.instructions %}
+        {%- if (instr.format and instr.format.width == width) or (instr.bundle_format and instr.bundle_format.width == width) %}
+        {%- if instr.format and instr.encoding %}
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Check {{ instr.mnemonic }} using identification fields
+        {%- set match_conditions = [] %}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        {%- set condition_str = '(masked_word >> ' ~ id_field.lsb ~ ') & ' ~ (id_field.width() | mask) ~ ' == ' ~ encoding_assignment.value %}
+        {%- set _ = match_conditions.append(condition_str) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if match_conditions %}
+        if {{ match_conditions | join(' and ') }}:
+            return {{ width }}
+        {%- endif %}
+        {%- else %}
+        # Check {{ instr.mnemonic }} using all encoding fields
+        {%- set match_conditions = [] %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- set field = instr.format.get_field(assignment.field) %}
+        {%- if field %}
+        {%- set condition_str = '(masked_word >> ' ~ field.lsb ~ ') & ' ~ (field.width() | mask) ~ ' == ' ~ assignment.value %}
+        {%- set _ = match_conditions.append(condition_str) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if match_conditions %}
+        if {{ match_conditions | join(' and ') }}:
+            return {{ width }}
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+        {%- endfor %}
+        
+        # Default: assume 32-bit
+        return 32
+{% endblock %}
+
+{% block disassemble_file_method %}
+    def disassemble_file(self, filename: str, start_address: int = 0) -> List[Tuple[int, str]]:
+        """
+        Disassemble a binary file, handling variable-length instructions.
+
+        Args:
+            filename: Binary file path
+            start_address: Starting address
+
+        Returns:
+            List of (address, instruction) tuples
+        """
+        instructions = []
+        with open(filename, 'rb') as f:
+            address = start_address
+            # Read file into buffer for dynamic access
+            file_data = f.read()
+            file_pos = 0
+            
+            while file_pos < len(file_data):
+                # Load enough bytes to identify instruction (try up to 8 bytes for wide instructions)
+                peek_bytes = min(8, len(file_data) - file_pos)
+                if peek_bytes == 0:
+                    break
+                
+                # Load initial bytes for identification
+                peek_data = file_data[file_pos:file_pos + peek_bytes]
+                # Pad to 8 bytes for word extraction
+                pad_len = max(0, 8 - len(peek_data))
+                padded_peek = peek_data + bytes([0] * pad_len)
+                instruction_word = int.from_bytes(padded_peek, byteorder='little')
+                
+                # Identify instruction width
+                num_bits = self._identify_instruction_width(instruction_word)
+                num_bytes = (num_bits + 7) // 8
+                
+                # Load full instruction
+                if file_pos + num_bytes > len(file_data):
+                    # Not enough data for full instruction
+                    break
+                
+                full_data = file_data[file_pos:file_pos + num_bytes]
+                # Pad to 8 bytes for word extraction
+                pad_len = max(0, 8 - len(full_data))
+                padded_full = full_data + bytes([0] * pad_len)
+                full_instruction = int.from_bytes(padded_full, byteorder='little')
+                
+                # Disassemble
+                asm = self.disassemble(full_instruction, num_bits)
+                instructions.append((address, asm))
+                
+                # Advance to next instruction
+                address += num_bytes
+                file_pos += num_bytes
+                
+        return instructions
+{% endblock %}
+
+{% block instruction_disassembly_methods %}
+{%- for instr in isa.instructions %}
+    def _disassemble_{{ instr.mnemonic }}(self, instruction_word: int) -> Optional[str]:
+        """Disassemble {{ instr.mnemonic }} instruction."""
+        {%- if instr.bundle_format %}
+        # Bundle instruction - handle slots
+        {%- if instr.bundle_format.width == 16 %}
+        instruction_word = instruction_word & 0xFFFF
+        {%- elif instr.bundle_format.width == 32 %}
+        instruction_word = instruction_word & 0xFFFFFFFF
+        {%- elif instr.bundle_format.width == 64 %}
+        instruction_word = instruction_word & 0xFFFFFFFFFFFFFFFF
+        {%- else %}
+        instruction_word = instruction_word & ((1 << {{ instr.bundle_format.width }}) - 1)
+        {%- endif %}
+        
+        # Check if instruction matches encoding using identification fields
+        {%- if instr.format and instr.encoding %}
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        if (instruction_word >> {{ id_field.lsb }}) & {{ id_field.width() | mask }} != {{ encoding_assignment.value }}:
+            return None
+        {%- endif %}
+        {%- endfor %}
+        {%- else %}
+        # No identification fields specified - use all encoding fields (backward compatible)
+        {%- for assignment in instr.encoding.assignments %}
+        {%- set field = instr.format.get_field(assignment.field) %}
+        {%- if field %}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ assignment.value }}:
+            return None
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        {%- endif %}
+        
+        # Extract slot words from bundle
+        slot_disassemblies = {}
+        {%- for slot in instr.bundle_format.slots %}
+        {{ slot.name }}_word = (instruction_word >> {{ slot.lsb }}) & {{ slot | slot_mask }}
+        # Try to disassemble {{ slot.name }} using bundle instructions
+        {{ slot.name }}_asm = None
+        {%- if instr.bundle_instructions %}
+        {%- for sub_instr in instr.bundle_instructions %}
+        {%- set slot_idx = loop.index0 %}
+        {%- if slot_idx < (instr.bundle_format.slots|length) %}
+        # Try {{ sub_instr.mnemonic }} for {{ slot.name }}
+        result_{{ slot.name }}_{{ sub_instr.mnemonic }} = self._disassemble_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
+        if result_{{ slot.name }}_{{ sub_instr.mnemonic }} is not None:
+            {{ slot.name }}_asm = result_{{ slot.name }}_{{ sub_instr.mnemonic }}
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        # If no match found, try generic disassembly
+        if {{ slot.name }}_asm is None:
+            {{ slot.name }}_asm = self.disassemble({{ slot.name }}_word)
+            if {{ slot.name }}_asm is None:
+                {{ slot.name }}_asm = "UNKNOWN_{{ slot.name }}_0x{:x}".format({{ slot.name }}_word)
+        slot_disassemblies['{{ slot.name }}'] = {{ slot.name }}_asm
+        {%- endfor %}
+        
+        # Format output using assembly_syntax if provided
+        {%- if instr.assembly_syntax %}
+        try:
+            # Format the bundle assembly syntax string with slot disassemblies
+            formatted = "{{ instr.assembly_syntax }}".format(**slot_disassemblies)
+            return formatted
+        except (KeyError, ValueError) as e:
+            # Fallback if format string has issues
+            slot_list = [f"{k}={v}" for k, v in slot_disassemblies.items()]
+            return "{{ instr.mnemonic.upper() }}{" + ", ".join(slot_list) + "}"
+        {%- else %}
+        # Default format: BUNDLE{slot0=..., slot1=...}
+        slot_list = [f"{k}={v}" for k, v in slot_disassemblies.items()]
+        return "{{ instr.mnemonic.upper() }}[" + ", ".join(slot_list) + "]"
+        {%- endif %}
+        {%- elif instr.format and instr.encoding %}
+        # Mask instruction word to format width to avoid false matches
+        {%- if instr.format.width == 16 %}
+        instruction_word = instruction_word & 0xFFFF
+        {%- elif instr.format.width == 32 %}
+        instruction_word = instruction_word & 0xFFFFFFFF
+        {%- elif instr.format.width == 64 %}
+        instruction_word = instruction_word & 0xFFFFFFFFFFFFFFFF
+        {%- else %}
+        instruction_word = instruction_word & ((1 << {{ instr.format.width }}) - 1)
+        {%- endif %}
+        
+        # Check if instruction matches encoding using identification fields
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        if (instruction_word >> {{ id_field.lsb }}) & {{ id_field.width() | mask }} != {{ encoding_assignment.value }}:
+            return None
+        {%- endif %}
+        {%- endfor %}
+        {%- else %}
+        # No identification fields specified - use all encoding fields (backward compatible)
+        {%- for assignment in instr.encoding.assignments %}
+        {%- set field = instr.format.get_field(assignment.field) %}
+        {%- if field %}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ assignment.value }}:
+            return None
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        
+        # Extract operands into a dictionary for format string substitution
+        operand_dict = {}
+        {%- for op_spec in (instr.operand_specs if instr.operand_specs else []) %}
+        {%- if op_spec.is_distributed() %}
+        # Distributed operand: {{ op_spec.name }} from fields {{ op_spec.field_names }}
+        {{ op_spec.name }}_val = 0
+        {%- set current_bit = 0 %}
+        {%- for field_name in op_spec.field_names %}
+        {%- set field = instr.format.get_field(field_name) %}
+        {%- if field %}
+        {{ op_spec.name }}_val |= ((instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }}) << {{ current_bit }}
+        {%- set current_bit = current_bit + field.width() %}
+        {%- endif %}
+        {%- endfor %}
+        operand_dict['{{ op_spec.name }}'] = {{ op_spec.name }}_val
+        {%- else %}
+        # Simple operand: {{ op_spec.name }}
+        {%- set field = instr.format.get_field(op_spec.name) %}
+        {%- if field %}
+        {{ op_spec.name }}_val = (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }}
+        operand_dict['{{ op_spec.name }}'] = {{ op_spec.name }}_val
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if not instr.operand_specs %}
+        # Legacy: use operands list
+        {%- for operand in instr.operands %}
+        {%- set field = instr.format.get_field(operand) %}
+        {%- if field %}
+        {{ operand }}_val = (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }}
+        operand_dict['{{ operand }}'] = {{ operand }}_val
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        
+        # Format output using assembly_syntax if provided, otherwise use default format
+        {%- if instr.assembly_syntax %}
+        # Use custom assembly syntax format string
+        try:
+            # Format the assembly syntax string with operand values
+            # Replace {operand_name} with the operand value
+            formatted = "{{ instr.assembly_syntax }}".format(**operand_dict)
+            return formatted
+        except (KeyError, ValueError):
+            # Fallback if format string has issues
+            operands = [str(v) for v in operand_dict.values()]
+            if operands:
+                return "{{ instr.mnemonic.upper() }} " + ", ".join(operands)
+            else:
+                return "{{ instr.mnemonic.upper() }}"
+        {%- else %}
+        # Default format: comma-separated operands
+        operands = [str(v) for v in operand_dict.values()]
+        if operands:
+            return "{{ instr.mnemonic.upper() }} " + ", ".join(operands)
+        else:
+            return "{{ instr.mnemonic.upper() }}"
+        {%- endif %}
+        {%- else %}
+        return None
+        {%- endif %}
+
+{%- endfor %}
+{% endblock %}
+
+{% block main_function %}
+def main():
+    """Main entry point."""
+    if len(sys.argv) < 2:
+        print("Usage: disassembler.py <binary_file> [start_address]")
+        sys.exit(1)
+
+    filename = sys.argv[1]
+    start_address = int(sys.argv[2], 16) if len(sys.argv) > 2 else 0
+
+    disasm = Disassembler()
+    instructions = disasm.disassemble_file(filename, start_address)
+    
+    for address, asm in instructions:
+        print(f"0x{address:08x}: {asm}")
+{% endblock %}
+
+{% block if_main %}
+if __name__ == "__main__":
+    main()
+{% endblock %}

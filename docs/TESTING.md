@@ -4,15 +4,23 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of 38 tests organized into several test files:
+The test suite consists of 87 tests organized into several test files:
 
-- **`test_parser.py`** - Tests for ISA file parsing
+- **`test_parser.py`** - Tests for ISA file parsing (including identification fields)
 - **`test_validator.py`** - Tests for semantic validation
 - **`test_rtl_interpreter.py`** - Tests for RTL expression interpretation
 - **`test_generators.py`** - Tests for code generation
 - **`test_integration.py`** - Tests for end-to-end workflows
 - **`test_generated_tools.py`** - Tests for generated assembler and simulator functionality
 - **`test_bundling.py`** - Tests for instruction bundling support
+- **`test_assembly_syntax.py`** - Tests for assembly syntax generation
+- **`test_assembly_syntax_braces.py`** - Tests for curly brace handling in assembly syntax
+- **`test_bundle_assembly_syntax.py`** - Tests for bundle assembly syntax
+- **`test_variable_length_assembler.py`** - Tests for variable-length instruction assembler
+- **`test_variable_length_disassembler.py`** - Tests for variable-length instruction disassembler
+- **`test_variable_length_execution.py`** - Tests for variable-length instruction execution
+- **`test_variable_length_comprehensive.py`** - Comprehensive tests for variable-length instructions
+- **`test_arm_integration.py`** - ARM ISA integration tests with QEMU and toolchain verification (Linux only)
 
 ## Running Tests
 

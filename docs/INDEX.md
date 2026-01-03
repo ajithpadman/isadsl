@@ -73,5 +73,10 @@ Example ISA specifications are located in the `examples/` directory:
 - `sample_isa.isa` - Complete RISC example
 - `advanced.isa` - Advanced RISC with 23 instructions
 - `simd.isa` - SIMD/vector instruction example
+- `bundling.isa` - Instruction bundling example
+- `variable_length.isa` - Variable-length instruction example
+- `comprehensive.isa` - Comprehensive example with multiple features
+- `arm_subset.isa` - ARM instruction set subset example
+- `test_identification_fields.isa` - Example demonstrating identification fields
 
 See [Examples Guide](EXAMPLES.md) for detailed descriptions.
