@@ -1,0 +1,167 @@
+architecture ARMSubset {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+        sfr CPSR 32 {
+            N: [31:31]
+            Z: [30:30]
+            C: [29:29]
+            V: [28:28]
+        }
+    }
+    
+    formats {
+        format ARM_DP 32 {
+            cond: [28:31]
+            opcode: [21:24]
+            I: [25:25]
+            S: [20:20]
+            Rn: [16:19]
+            Rd: [12:15]
+            shifter_operand: [0:11]
+            identification_fields: cond, opcode, I
+        }
+        
+        format ARM_DP_IMM 32 {
+            cond: [28:31]
+            opcode: [21:24]
+            I: [25:25]
+            S: [20:20]
+            Rn: [16:19]
+            Rd: [12:15]
+            imm: [0:7]
+            rot: [8:11]
+            identification_fields: cond, opcode, I
+        }
+        
+        format ARM_MEM 32 {
+            cond: [28:31]
+            opcode: [26:26]
+            P: [24:24]
+            U: [23:23]
+            B: [22:22]
+            W: [21:21]
+            L: [20:20]
+            Rn: [16:19]
+            Rd: [12:15]
+            offset: [0:11]
+            identification_fields: cond, opcode, L
+        }
+        
+        format ARM_BRANCH 32 {
+            cond: [28:31]
+            opcode: [25:27]
+            L: [24:24]
+            offset: [0:23]
+            identification_fields: cond, opcode, L
+        }
+    }
+    
+    instructions {
+        instruction ADD_IMM {
+            format: ARM_DP_IMM
+            encoding: { cond=14, opcode=4, I=1 }
+            operands: Rd, Rn, imm
+            assembly_syntax: "ADD R{Rd}, R{Rn}, #{imm}"
+            behavior: {
+                R[Rd] = R[Rn] + imm;
+                if (S == 1) {
+                    CPSR.Z = (R[Rd] == 0) ? 1 : 0;
+                    CPSR.N = ((R[Rd] >> 31) & 1);
+                }
+                PC = PC + 4;
+            }
+        }
+        
+        instruction ADD_REG {
+            format: ARM_DP
+            encoding: { cond=14, opcode=4, I=0 }
+            operands: Rd, Rn, shifter_operand
+            assembly_syntax: "ADD R{Rd}, R{Rn}, R{shifter_operand}"
+            behavior: {
+                R[Rd] = R[Rn] + R[shifter_operand];
+                if (S == 1) {
+                    CPSR.Z = (R[Rd] == 0) ? 1 : 0;
+                    CPSR.N = ((R[Rd] >> 31) & 1);
+                }
+                PC = PC + 4;
+            }
+        }
+        
+        instruction SUB_IMM {
+            format: ARM_DP_IMM
+            encoding: { cond=14, opcode=2, I=1 }
+            operands: Rd, Rn, imm
+            assembly_syntax: "SUB R{Rd}, R{Rn}, #{imm}"
+            behavior: {
+                R[Rd] = R[Rn] - imm;
+                if (S == 1) {
+                    CPSR.Z = (R[Rd] == 0) ? 1 : 0;
+                    CPSR.N = ((R[Rd] >> 31) & 1);
+                }
+                PC = PC + 4;
+            }
+        }
+        
+        instruction MOV_IMM {
+            format: ARM_DP_IMM
+            encoding: { cond=14, opcode=13, Rn=0 }
+            operands: Rd, imm
+            assembly_syntax: "MOV R{Rd}, #{imm}"
+            behavior: {
+                R[Rd] = imm;
+                if (S == 1) {
+                    CPSR.Z = (R[Rd] == 0) ? 1 : 0;
+                    CPSR.N = ((R[Rd] >> 31) & 1);
+                }
+                PC = PC + 4;
+            }
+        }
+        
+        instruction LDR {
+            format: ARM_MEM
+            encoding: { cond=14, opcode=1, L=1 }
+            operands: Rd, Rn, offset
+            assembly_syntax: "LDR R{Rd}, [R{Rn}, #{offset}]"
+            behavior: {
+                R[Rd] = MEM[R[Rn] + offset];
+                PC = PC + 4;
+            }
+        }
+        
+        instruction STR {
+            format: ARM_MEM
+            encoding: { cond=14, opcode=1, L=0 }
+            operands: Rd, Rn, offset
+            assembly_syntax: "STR R{Rd}, [R{Rn}, #{offset}]"
+            behavior: {
+                MEM[R[Rn] + offset] = R[Rd];
+                PC = PC + 4;
+            }
+        }
+        
+        instruction B {
+            format: ARM_BRANCH
+            encoding: { cond=14, opcode=5, L=0 }
+            operands: offset
+            assembly_syntax: "B {offset}"
+            behavior: {
+                PC = PC + (offset << 2) + 4;
+            }
+        }
+        
+        instruction BL {
+            format: ARM_BRANCH
+            encoding: { cond=14, opcode=5, L=1 }
+            operands: offset
+            assembly_syntax: "BL {offset}"
+            behavior: {
+                PC = PC + (offset << 2) + 4;
+            }
+        }
+    }
+}
+

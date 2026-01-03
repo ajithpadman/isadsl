@@ -69,9 +69,46 @@ class Assembler:
         """Preprocess source code."""
         lines = []
         for line in source.split('\n'):
-            # Remove comments
-            if '#' in line:
-                line = line[:line.index('#')]
+            # Remove comments - but be careful: # can be part of immediate values like #42
+            # Only treat # as comment if it's followed by whitespace or at end of line
+            # and not part of an immediate value pattern like #42, #0x123, etc.
+            comment_pos = -1
+            i = 0
+            while i < len(line):
+                if line[i] == '#':
+                    # Check if this # is part of an immediate value (# followed by digit/hex)
+                    if i + 1 < len(line):
+                        next_char = line[i + 1]
+                        # If # is followed by digit, x (for 0x), or - (for negative), it's an immediate
+                        if next_char.isdigit() or next_char in 'xX-' or (i > 0 and line[i-1] in ' \t,['):
+                            # This might be an immediate, but if there's whitespace before #, it could be comment
+                            # Check if there's whitespace before #
+                            if i > 0 and line[i-1] in ' \t':
+                                # Check if we're in an operand context (after comma or bracket)
+                                # For now, be conservative: if # is after whitespace and not immediately after comma/bracket, treat as comment
+                                # Look backwards for comma, bracket, or start of line
+                                found_operand_marker = False
+                                for j in range(i-1, -1, -1):
+                                    if line[j] in ',[':
+                                        found_operand_marker = True
+                                        break
+                                    elif line[j] not in ' \t':
+                                        break
+                                if not found_operand_marker:
+                                    comment_pos = i
+                                    break
+                        else:
+                            # # followed by non-digit, treat as comment
+                            comment_pos = i
+                            break
+                    else:
+                        # # at end of line, treat as comment
+                        comment_pos = i
+                        break
+                i += 1
+            
+            if comment_pos >= 0:
+                line = line[:comment_pos]
             line = line.strip()
             if line:
                 lines.append(line)
@@ -86,7 +123,12 @@ class Assembler:
         if not parts:
             return False
         mnemonic = parts[0].upper()
-        return mnemonic in self._get_instruction_mnemonics()
+        # Check if it matches any instruction mnemonic
+        if mnemonic in self._get_instruction_mnemonics():
+            return True
+        # Check if it matches any instruction's assembly_syntax pattern
+        # This allows standard toolchain syntax (e.g., "ADD" instead of "ADD_IMM")
+        return self._matches_assembly_syntax(line.strip()) is not None
 
     def _get_instruction_mnemonics(self) -> List[str]:
         """Get list of valid instruction mnemonics."""
@@ -121,7 +163,25 @@ class Assembler:
         
         mnemonic = parts[0].upper()
         
-        # Look up instruction width by mnemonic
+        # First, try to match against assembly_syntax to get the instruction
+        syntax_match = self._matches_assembly_syntax(line_stripped)
+        if syntax_match:
+            matched_mnemonic, _ = syntax_match
+            # Look up instruction width by matched mnemonic
+            {%- for instr in isa.instructions %}
+            {%- if not instr.is_bundle() %}
+            if matched_mnemonic == '{{ instr.mnemonic.upper() }}':
+                {%- if instr.format %}
+                return ({{ instr.format.width }} + 7) // 8  # Convert bits to bytes
+                {%- elif instr.bundle_format %}
+                return ({{ instr.bundle_format.width }} + 7) // 8
+                {%- else %}
+                return 4  # Default
+                {%- endif %}
+            {%- endif %}
+            {%- endfor %}
+        
+        # Look up instruction width by mnemonic (fallback for non-assembly_syntax instructions)
         {%- for instr in isa.instructions %}
         {%- if not instr.is_bundle() %}
         if mnemonic == '{{ instr.mnemonic.upper() }}':
@@ -137,6 +197,151 @@ class Assembler:
         
         return 4  # Default width
 
+    def _matches_assembly_syntax(self, line: str) -> Optional[Tuple[str, Dict[str, int]]]:
+        """
+        Try to match line against assembly_syntax patterns.
+        Returns (mnemonic, operand_dict) if matched, None otherwise.
+        """
+        line_stripped = line.strip()
+        
+{%- for instr in isa.instructions %}
+{%- if instr.assembly_syntax and not instr.is_bundle() %}
+        # Try to match {{ instr.mnemonic }} with assembly_syntax: {{ instr.assembly_syntax }}
+        match_result = self._parse_assembly_syntax_{{ instr.mnemonic }}(line_stripped)
+        if match_result:
+            return ('{{ instr.mnemonic.upper() }}', match_result)
+{%- endif %}
+{%- endfor %}
+        
+        return None
+    
+    def _parse_assembly_syntax_pattern(self, pattern: str, line: str) -> Optional[Dict[str, int]]:
+        """
+        Parse an assembly line using an assembly_syntax pattern.
+        Converts format string like "ADD R{Rd}, R{Rn}, #{imm}" to regex and extracts values.
+        """
+        import re
+        
+        # Escape special regex characters in the pattern, but preserve {operand} placeholders
+        # Find all {operand} placeholders
+        operand_placeholders = re.findall(r'\{([^}]+)\}', pattern)
+        
+        # Build regex pattern by replacing {operand} with capture groups
+        regex_pattern = pattern
+        # Escape special characters that aren't part of placeholders
+        # We'll do this carefully to preserve the structure
+        
+        # Replace {operand} with named capture groups
+        for operand in operand_placeholders:
+            # Replace {operand} with a named capture group
+            # The pattern before {operand} might have special chars we need to escape
+            operand_placeholder = '{' + operand + '}'
+            regex_pattern = regex_pattern.replace(operand_placeholder, f'(?P<{operand}>[^,\\s\\]]+)')
+        
+        # Escape other special regex characters, but be careful about what we've already done
+        # Escape: . ^ $ * + ? { } [ ] \ | ( )
+        # But we want to preserve literal characters like R, #, [, ], etc. in the pattern
+        # Actually, let's build the regex more carefully
+        
+        # Rebuild regex pattern more systematically
+        regex_parts = []
+        i = 0
+        while i < len(pattern):
+            if pattern[i] == '{':
+                # Find closing brace
+                end = pattern.find('}', i)
+                if end != -1:
+                    operand = pattern[i+1:end]
+                    # Add capture group for operand value
+                    # Operand might be a register number, immediate, etc.
+                    regex_parts.append(f'(?P<{operand}>[^,\\s\\]]+)')
+                    i = end + 1
+                else:
+                    regex_parts.append(re.escape(pattern[i]))
+                    i += 1
+            else:
+                # Escape special regex chars, but allow spaces and common assembly chars
+                char = pattern[i]
+                if char in '.^$*+?{}[]\\|()':
+                    regex_parts.append('\\' + char)
+                else:
+                    regex_parts.append(char)
+                i += 1
+        
+        regex_pattern = ''.join(regex_parts)
+        # Make it case-insensitive and allow flexible whitespace
+        # Replace spaces with \s+ but be careful not to break the pattern
+        regex_pattern = '^' + regex_pattern.replace(' ', '\\s*') + '$'
+        
+        match = re.match(regex_pattern, line, re.IGNORECASE)
+        if not match:
+            return None
+        
+        # Extract operand values
+        operand_dict = {}
+        for operand in operand_placeholders:
+            value_str = match.group(operand)
+            if value_str:
+                # Parse the value
+                value_str = value_str.strip()
+                # Remove register prefix if present (e.g., "R0" -> "0")
+                if value_str.upper().startswith('R') and value_str[1:].isdigit():
+                    operand_dict[operand] = int(value_str[1:])
+                # Remove immediate prefix if present (e.g., "#42" -> "42")
+                elif value_str.startswith('#') and (value_str[1:].isdigit() or 
+                      (value_str[1:].startswith('0x') or value_str[1:].startswith('0X'))):
+                    if value_str[1:].startswith('0x') or value_str[1:].startswith('0X'):
+                        operand_dict[operand] = int(value_str[2:], 16)
+                    else:
+                        operand_dict[operand] = int(value_str[1:])
+                # Handle hex/binary literals
+                elif value_str.startswith('0x') or value_str.startswith('0X'):
+                    operand_dict[operand] = int(value_str, 16)
+                elif value_str.startswith('0b') or value_str.startswith('0B'):
+                    operand_dict[operand] = int(value_str, 2)
+                # Handle decimal numbers
+                elif value_str.isdigit() or (value_str.startswith('-') and value_str[1:].isdigit()):
+                    operand_dict[operand] = int(value_str)
+                # Handle labels
+                elif value_str in self.labels:
+                    label_addr = self.labels[value_str]
+                    operand_dict[operand] = label_addr
+                elif value_str in self.symbols:
+                    operand_dict[operand] = self.symbols[value_str]
+                else:
+                    # Try to extract number from register-like syntax
+                    # For now, just store as string and let encoding handle it
+                    operand_dict[operand] = value_str
+        
+        return operand_dict
+
+{%- for instr in isa.instructions %}
+{%- if instr.assembly_syntax and not instr.is_bundle() %}
+    def _parse_assembly_syntax_{{ instr.mnemonic }}(self, line: str) -> Optional[Dict[str, int]]:
+        """Parse {{ instr.mnemonic }} instruction using assembly_syntax pattern."""
+        pattern = "{{ instr.assembly_syntax }}"
+        # Extract mnemonic from pattern (first word)
+        pattern_parts = pattern.split()
+        if not pattern_parts:
+            return None
+        expected_mnemonic = pattern_parts[0].upper()
+        
+        # Check if line starts with this mnemonic (case-insensitive)
+        line_parts = line.split()
+        if not line_parts:
+            return None
+        line_mnemonic = line_parts[0].upper()
+        
+        # For now, also check if it matches the instruction's actual mnemonic
+        # This allows both "ADD" and "ADD_IMM" to work
+        if line_mnemonic != expected_mnemonic and line_mnemonic != '{{ instr.mnemonic.upper() }}':
+            return None
+        
+        # Parse using the pattern
+        return self._parse_assembly_syntax_pattern(pattern, line)
+{%- endif %}
+{%- endfor %}
+
     def _assemble_instruction(self, line: str, address: int) -> Optional[int]:
         """Assemble a single instruction line."""
         # Check for bundle syntax: bundle{instr1, instr2, ...}
@@ -144,7 +349,15 @@ class Assembler:
         if line_stripped.upper().startswith('BUNDLE{'):
             return self._assemble_bundle(line_stripped, address)
         
-        parts = line.split()
+        # First, try to match against assembly_syntax patterns
+        syntax_match = self._matches_assembly_syntax(line_stripped)
+        if syntax_match:
+            mnemonic, operand_dict = syntax_match
+            # Convert operand_dict to list in the order expected by encoding
+            return self._encode_instruction_from_dict(mnemonic, operand_dict)
+        
+        # Fallback to old parsing method for backward compatibility
+        parts = line_stripped.split()
         if not parts:
             return None
 
@@ -231,6 +444,31 @@ class Assembler:
         {%- endif %}
 {%- endfor %}
         
+        return None
+
+    def _encode_instruction_from_dict(self, mnemonic: str, operand_dict: Dict[str, int]) -> Optional[int]:
+        """Encode an instruction from operand dictionary."""
+{%- for instr in isa.instructions %}
+        if mnemonic == '{{ instr.mnemonic.upper() }}':
+            # Convert operand_dict to list in operand order
+            {%- if instr.operand_specs %}
+            operand_list = []
+            {%- for op_spec in instr.operand_specs %}
+            if '{{ op_spec.name }}' in operand_dict:
+                operand_list.append(operand_dict['{{ op_spec.name }}'])
+            {%- endfor %}
+            return self._encode_{{ instr.mnemonic }}(operand_list)
+            {%- elif instr.operands %}
+            operand_list = []
+            {%- for op in instr.operands %}
+            if '{{ op }}' in operand_dict:
+                operand_list.append(operand_dict['{{ op }}'])
+            {%- endfor %}
+            return self._encode_{{ instr.mnemonic }}(operand_list)
+            {%- else %}
+            return self._encode_{{ instr.mnemonic }}([])
+            {%- endif %}
+{%- endfor %}
         return None
 
     def _encode_instruction(self, mnemonic: str, operands: List) -> Optional[int]:

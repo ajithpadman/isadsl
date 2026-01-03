@@ -122,14 +122,15 @@ class Simulator:
             peeked_bits = self._load_bits(self.pc, min_bits)
             
             # Try to match instructions with this format width
+            # Check instructions with more encoding fields first (more specific matches)
             {%- for instr in isa.instructions %}
             {%- if instr.format and instr.format.width == width %}
-            if self._matches_{{ instr.mnemonic }}(peeked_bits):
+            if matched_mnemonic is None and self._matches_{{ instr.mnemonic }}(peeked_bits):
                 matched_mnemonic = '{{ instr.mnemonic }}'
                 matched_width = {{ width }}
             {%- endif %}
             {%- if instr.bundle_format and instr.bundle_format.width == width %}
-            if self._matches_{{ instr.mnemonic }}(peeked_bits):
+            if matched_mnemonic is None and self._matches_{{ instr.mnemonic }}(peeked_bits):
                 matched_mnemonic = '{{ instr.mnemonic }}'
                 matched_width = {{ width }}
             {%- endif %}
@@ -323,25 +324,8 @@ class Simulator:
         return False
         {%- endif %}
         {%- elif instr.format and instr.encoding %}
-        {%- set id_fields = instr.format.get_identification_fields() %}
-        {%- if id_fields %}
-        # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
-        {%- for id_field in id_fields %}
-        {%- set encoding_assignment = None %}
-        {%- for assignment in instr.encoding.assignments %}
-        {%- if assignment.field == id_field.name %}
-        {%- set encoding_assignment = assignment %}
-        {%- endif %}
-        {%- endfor %}
-        {%- if encoding_assignment %}
-        # Check identification field {{ id_field.name }} == {{ encoding_assignment.value }}
-        if (instruction_word >> {{ id_field.lsb }}) & {{ id_field.width() | mask }} != {{ encoding_assignment.value }}:
-            return False
-        {%- endif %}
-        {%- endfor %}
-        return True
-        {%- else %}
-        # No identification fields specified - use all encoding fields (backward compatible)
+        # Always check ALL encoding fields to ensure exact match
+        # (Identification fields are for quick filtering, but we need exact match)
         {%- for assignment in instr.encoding.assignments %}
         {%- set field = instr.format.get_field(assignment.field) %}
         {%- if field %}
@@ -351,7 +335,6 @@ class Simulator:
         {%- endif %}
         {%- endfor %}
         return True
-        {%- endif %}
         {%- else %}
         return False
         {%- endif %}
@@ -456,6 +439,30 @@ class Simulator:
         {%- endif %}
         {%- endfor %}
         {%- endif %}
+        
+        # Decode format fields that are not operands but may be used in behavior
+        {%- set operand_names = [] %}
+        {%- if instr.operand_specs %}
+        {%- for op_spec in instr.operand_specs %}
+        {%- if op_spec.is_distributed() %}
+        {%- for field_name in op_spec.field_names %}
+        {%- set _ = operand_names.append(field_name) %}
+        {%- endfor %}
+        {%- else %}
+        {%- set _ = operand_names.append(op_spec.name) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- else %}
+        {%- for operand in instr.operands %}
+        {%- set _ = operand_names.append(operand) %}
+        {%- endfor %}
+        {%- endif %}
+        {%- for field in instr.format.fields %}
+        {%- if field.name not in operand_names %}
+        # Decode format field {{ field.name }} (not an operand, but may be used in behavior)
+        {{ field.name }} = (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }}
+        {%- endif %}
+        {%- endfor %}
         
         # Execute behavior
         {%- if instr.behavior %}
@@ -587,7 +594,13 @@ class SimulatorGenerator:
         if isinstance(expr, RTLConstant):
             return str(expr.value)
         elif isinstance(expr, OperandReference):
-            # Operand references are variable names in the generated code
+            # Check if this is actually a register name (not an operand)
+            # Register names are SFRs (single registers) defined in the ISA
+            reg = self.isa.get_register(expr.name)
+            if reg and not reg.is_register_file() and not reg.is_vector_register():
+                # This is a simple register (SFR) like PC
+                return f"self.{expr.name}"
+            # Otherwise, it's an operand reference (variable name in generated code)
             return expr.name
         elif isinstance(expr, RegisterAccess):
             index = self._generate_expr_code(expr.index)
@@ -607,7 +620,11 @@ class SimulatorGenerator:
             else_expr = self._generate_expr_code(expr.else_expr)
             return f"({then_expr} if {condition} else {else_expr})"
         elif isinstance(expr, str):
-            # Simple register name or operand reference as string
+            # Simple register name - check if it's a register
+            reg = self.isa.get_register(expr)
+            if reg and not reg.is_register_file() and not reg.is_vector_register():
+                return f"self.{expr}"
+            # Otherwise treat as operand reference
             return expr
         return "0"
 
