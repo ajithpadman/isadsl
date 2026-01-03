@@ -41,7 +41,71 @@ def get_metamodel():
     original_model_from_file = mm.model_from_file
     
     def model_from_file_wrapper(file_path):
-        textx_model = original_model_from_file(file_path)
+        # Pre-process: Extract and remove assembly_syntax strings that contain braces
+        # This works around textX's limitation with strings containing braces
+        import re
+        lines = Path(file_path).read_text().split('\n')
+        
+        # Map instruction names to their assembly_syntax strings
+        assembly_syntax_map = {}
+        current_instruction = None
+        modified_lines = []
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            
+            # Track current instruction
+            instr_match = re.match(r'\s*instruction\s+(\w+)\s*\{', line)
+            if instr_match:
+                current_instruction = instr_match.group(1)
+                modified_lines.append(line)
+                i += 1
+                continue
+            
+            # Check for assembly_syntax line
+            if 'assembly_syntax' in line and ':' in line:
+                # Extract the string content
+                asm_match = re.search(r'assembly_syntax\s*:\s*"([^"]*)"', line)
+                if asm_match:
+                    asm_content = asm_match.group(1)
+                    # Check if it has problematic pattern (word immediately followed by {)
+                    if re.search(r'[A-Za-z_][A-Za-z0-9_]*\{', asm_content):
+                        # Store it and skip this line
+                        if current_instruction:
+                            assembly_syntax_map[current_instruction] = asm_content
+                        # Don't add this line to modified_lines
+                        i += 1
+                        continue
+            
+            # Reset current_instruction when we see a closing brace
+            if line.strip() == '}' and current_instruction:
+                current_instruction = None
+            
+            modified_lines.append(line)
+            i += 1
+        
+        # Write modified content to temporary file and parse
+        import tempfile
+        modified_content = '\n'.join(modified_lines)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.isa', delete=False) as tmp_file:
+            tmp_file.write(modified_content)
+            tmp_file_path = tmp_file.name
+        
+        try:
+            textx_model = original_model_from_file(tmp_file_path)
+            
+            # Post-process: Inject assembly_syntax strings back
+            if hasattr(textx_model, 'instructions') and hasattr(textx_model.instructions, 'instructions'):
+                for instr_tx in textx_model.instructions.instructions:
+                    instr_name = instr_tx.mnemonic if hasattr(instr_tx, 'mnemonic') else None
+                    if instr_name and instr_name in assembly_syntax_map:
+                        # Set the assembly_syntax directly as a string
+                        # The parser will extract it using str() which will work
+                        setattr(instr_tx, 'assembly_syntax', assembly_syntax_map[instr_name])
+        finally:
+            # Clean up temp file
+            Path(tmp_file_path).unlink()
         
         # Create our model object from textX model
         model = ISASpecification(
@@ -77,10 +141,20 @@ def get_metamodel():
         if hasattr(textx_model, 'formats') and hasattr(textx_model.formats, 'formats'):
             for f in textx_model.formats.formats:
                 # Regular instruction format
+                # Extract identification_fields if present
+                identification_fields = []
+                if hasattr(f, 'identification_fields') and f.identification_fields:
+                    id_list = f.identification_fields
+                    if hasattr(id_list, 'first') and id_list.first:
+                        identification_fields.append(str(id_list.first))
+                    if hasattr(id_list, 'rest') and id_list.rest:
+                        identification_fields.extend([str(name) for name in id_list.rest])
+                
                 fmt = InstructionFormat(
                     name=f.name,
                     width=f.width,
-                    fields=[FormatField(name=field.name, msb=field.msb, lsb=field.lsb) for field in f.fields] if hasattr(f, 'fields') else []
+                    fields=[FormatField(name=field.name, msb=field.msb, lsb=field.lsb) for field in f.fields] if hasattr(f, 'fields') else [],
+                    identification_fields=identification_fields
                 )
                 model.formats.append(fmt)
         
@@ -98,11 +172,22 @@ def get_metamodel():
                 instruction_start = 0
                 if hasattr(f, 'instruction_start') and f.instruction_start is not None:
                     instruction_start = int(f.instruction_start)
+                
+                # Extract identification_fields if present
+                identification_fields = []
+                if hasattr(f, 'identification_fields') and f.identification_fields:
+                    id_list = f.identification_fields
+                    if hasattr(id_list, 'first') and id_list.first:
+                        identification_fields.append(str(id_list.first))
+                    if hasattr(id_list, 'rest') and id_list.rest:
+                        identification_fields.extend([str(name) for name in id_list.rest])
+                
                 bundle_fmt = BundleFormat(
                     name=f.name,
                     width=f.width,
                     instruction_start=instruction_start,
-                    slots=slots
+                    slots=slots,
+                    identification_fields=identification_fields
                 )
                 model.bundle_formats.append(bundle_fmt)
         
@@ -225,6 +310,13 @@ def get_metamodel():
                     if hasattr(bundle_list, 'rest') and bundle_list.rest:
                         bundle_instr_names.extend([str(name) for name in bundle_list.rest])
                 
+                # Extract assembly_syntax if present
+                assembly_syntax = None
+                if hasattr(instr_tx, 'assembly_syntax') and instr_tx.assembly_syntax:
+                    # Remove quotes from string
+                    # String content is already extracted by pre-processing step above
+                    assembly_syntax = str(instr_tx.assembly_syntax).strip('"\'')
+                
                 instr = Instruction(
                     mnemonic=instr_tx.mnemonic,
                     format=fmt_ref,
@@ -232,6 +324,7 @@ def get_metamodel():
                     encoding=encoding,
                     operands=operands,  # Legacy support
                     operand_specs=operand_specs,  # New distributed field support
+                    assembly_syntax=assembly_syntax,
                     behavior=behavior,
                     bundle_instructions=[]  # Will be resolved after all instructions are parsed
                 )

@@ -71,61 +71,100 @@ class Simulator:
         self.pc = start_address
 
     def step(self) -> bool:
-        """Execute one instruction. Returns True if execution continues."""
+        """Execute one instruction with dynamic width loading. Returns True if execution continues."""
         if self.halted:
             return False
 
-        # Fetch instruction - check if it's a bundle (64-bit) or regular (32-bit)
-        # First, try to fetch as 64-bit bundle
-        {%- set max_bundle_width = 4 %}
+        # Step 1: Identify instruction by loading minimum bits and matching
+        # Strategy: Try formats from shortest to longest
+        # Collect all format widths and their minimum identification bits
+        matched_mnemonic = None
+        matched_width = None
+        
+        # Try each unique format width (sorted shortest first)
+        {%- set all_widths = [] %}
         {%- for instr in isa.instructions %}
-        {%- if instr.is_bundle() and instr.bundle_format %}
-        {%- set bundle_bytes = (instr.bundle_format.width // 8) %}
-        {%- if bundle_bytes > max_bundle_width %}
-        {%- set max_bundle_width = bundle_bytes %}
+        {%- if instr.format %}
+        {%- set _ = all_widths.append(instr.format.width) %}
         {%- endif %}
+        {%- if instr.bundle_format %}
+        {%- set _ = all_widths.append(instr.bundle_format.width) %}
         {%- endif %}
         {%- endfor %}
-        {%- if max_bundle_width > 4 %}
-        # Check for wide bundle (64-bit, 80-bit, etc.)
-        {%- set bundle_words_needed = (max_bundle_width + 3) // 4 %}
-        bundle_available = True
-        bundle_word = 0
-        for i in range({{ bundle_words_needed }}):
-            if self.pc + i * 4 not in self.memory:
-                bundle_available = False
-                break
-            bundle_word |= (self.memory[self.pc + i * 4] << (i * 32))
+        {%- set unique_widths = [] %}
+        {%- for width in all_widths %}
+        {%- if width not in unique_widths %}
+        {%- set _ = unique_widths.append(width) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- set unique_widths = unique_widths | sort %}
         
-        if bundle_available:
-            # Check if this matches a bundle encoding
+        {%- for width in unique_widths %}
+        if matched_mnemonic is None:
+            # Find minimum bits needed for this width category
+            {%- set min_bits_list = [] %}
             {%- for instr in isa.instructions %}
-            {%- if instr.is_bundle() %}
-            if self._matches_{{ instr.mnemonic }}(bundle_word):
-                self._execute_{{ instr.mnemonic }}(bundle_word)
-                self.instruction_count += 1
-                return True
+            {%- if instr.format and instr.format.width == width %}
+            {%- set min_bits = instr.format.get_minimum_bits_for_identification() %}
+            {%- set _ = min_bits_list.append(min_bits) %}
+            {%- endif %}
+            {%- if instr.bundle_format and instr.bundle_format.width == width %}
+            {%- if instr.format %}
+            {%- set min_bits = instr.format.get_minimum_bits_for_identification() %}
+            {%- else %}
+            {%- set min_bits = 32 %}
+            {%- endif %}
+            {%- set _ = min_bits_list.append(min_bits) %}
             {%- endif %}
             {%- endfor %}
-        {%- endif %}
+            {%- if min_bits_list %}
+            min_bits = min([{{ min_bits_list | join(', ') }}])
+            peeked_bits = self._load_bits(self.pc, min_bits)
+            
+            # Try to match instructions with this format width
+            {%- for instr in isa.instructions %}
+            {%- if instr.format and instr.format.width == width %}
+            if self._matches_{{ instr.mnemonic }}(peeked_bits):
+                matched_mnemonic = '{{ instr.mnemonic }}'
+                matched_width = {{ width }}
+            {%- endif %}
+            {%- if instr.bundle_format and instr.bundle_format.width == width %}
+            if self._matches_{{ instr.mnemonic }}(peeked_bits):
+                matched_mnemonic = '{{ instr.mnemonic }}'
+                matched_width = {{ width }}
+            {%- endif %}
+            {%- endfor %}
+            {%- endif %}
+        {%- endfor %}
         
-        # Fetch as 32-bit instruction
-        if self.pc not in self.memory:
+        if matched_mnemonic is None:
             self.halted = True
             return False
-
-        instruction_word = self.memory[self.pc]
-        self.instruction_count += 1
-
-        # Decode and execute
-        executed = self._execute_instruction(instruction_word)
+        
+        # Step 2: Load full instruction based on matched width
+        full_instruction = self._load_bits(self.pc, matched_width)
+        
+        # Step 3: Execute instruction
+        executed = self._execute_instruction_by_mnemonic(full_instruction, matched_mnemonic)
         
         if not executed:
-            print(f"Unknown instruction at PC=0x{self.pc:08x}: 0x{instruction_word:08x}")
+            print(f"Unknown instruction at PC=0x{self.pc:08x}: 0x{full_instruction:x}")
             self.halted = True
             return False
-
+        
+        # Step 4: Update PC by instruction width (in bytes)
+        self.pc += (matched_width + 7) // 8
+        self.instruction_count += 1
         return True
+
+    def _execute_instruction_by_mnemonic(self, instruction_word: int, mnemonic: str) -> bool:
+        """Execute instruction by mnemonic name."""
+        {%- for instr in isa.instructions %}
+        if mnemonic == '{{ instr.mnemonic }}':
+            self._execute_{{ instr.mnemonic }}(instruction_word)
+            return True
+        {%- endfor %}
+        return False
 
     def run(self, max_steps: int = 10000):
         """Run the simulator until halt or max_steps."""
@@ -136,14 +175,94 @@ class Simulator:
         if steps >= max_steps:
             print(f"Reached maximum step count ({max_steps})")
 
+    def _load_bits(self, address: int, num_bits: int) -> int:
+        """
+        Load specified number of bits from memory starting at address.
+        Handles instructions that span multiple word boundaries.
+        
+        Args:
+            address: Starting address (byte-aligned)
+            num_bits: Number of bits to load
+            
+        Returns:
+            Integer value of loaded bits (little-endian)
+        """
+        num_bytes = (num_bits + 7) // 8
+        value = 0
+        for i in range(num_bytes):
+            byte_addr = address + i
+            # Memory stores 32-bit words, need to extract bytes
+            word_addr = (byte_addr // 4) * 4
+            byte_offset = byte_addr % 4
+            if word_addr in self.memory:
+                word = self.memory[word_addr]
+                byte_val = (word >> (byte_offset * 8)) & 0xFF
+                value |= (byte_val << (i * 8))
+        # Mask to requested number of bits
+        if num_bits < 64:
+            return value & ((1 << num_bits) - 1)
+        else:
+            return value
+
+    def _get_instruction_width(self, instruction) -> int:
+        """Get the full width of an instruction in bits."""
+        if hasattr(instruction, 'bundle_format') and instruction.bundle_format:
+            return instruction.bundle_format.width
+        elif hasattr(instruction, 'format') and instruction.format:
+            return instruction.format.width
+        else:
+            return 32  # Default
+
     def _execute_instruction(self, instruction_word: int) -> bool:
         """Execute a single instruction word."""
-        # First, check if this is a bundle instruction
+        # First, check if this might be a wide bundle by checking the first byte
+        # If it matches a bundle_opcode, construct the full bundle_word from memory
+        # Calculate max bundle width
+        {%- set bundle_widths = [] %}
+        {%- for instr in isa.instructions %}
+        {%- if instr.is_bundle() and instr.bundle_format %}
+        {%- set bundle_bytes = (instr.bundle_format.width // 8) %}
+        {%- set _ = bundle_widths.append(bundle_bytes) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if bundle_widths %}
+        {%- set max_bundle_width = bundle_widths | max %}
+        {%- else %}
+        {%- set max_bundle_width = 4 %}
+        {%- endif %}
+        {%- if max_bundle_width > 4 %}
+        # Check if first byte matches any bundle_opcode - if so, load full bundle
+        first_byte = instruction_word & 0xFF
+        if first_byte == 255:
+            # This might be a bundle - construct full bundle_word from memory
+            {%- set bundle_words_needed = (max_bundle_width + 3) // 4 %}
+            bundle_word_wide = 0
+            wide_bundle_available = True
+            for i in range({{ bundle_words_needed }}):
+                addr = self.pc + i * 4
+                if addr not in self.memory:
+                    wide_bundle_available = False
+                    break
+                word_val = self.memory[addr]
+                bundle_word_wide |= (word_val << (i * 32))
+            
+            if wide_bundle_available:
+                {%- for instr in isa.instructions %}
+                {%- if instr.is_bundle() %}
+                if self._matches_{{ instr.mnemonic }}(bundle_word_wide):
+                    self._execute_{{ instr.mnemonic }}(bundle_word_wide)
+                    return True
+                {%- endif %}
+                {%- endfor %}
+{%- endif %}
+        # Check if this is a bundle instruction (using the 32-bit word) - only for small bundles
 {%- for instr in isa.instructions %}
         {%- if instr.is_bundle() %}
+        {%- if not instr.bundle_format or (instr.bundle_format.width // 8) <= 4 %}
         if self._matches_{{ instr.mnemonic }}(instruction_word):
             self._execute_{{ instr.mnemonic }}(instruction_word)
             return True
+        {%- endif %}
         {%- endif %}
 {%- endfor %}
         
@@ -171,19 +290,25 @@ class Simulator:
         {%- if instr.is_bundle() %}
         # Bundle instruction - check encoding using format (not bundle_format)
         {%- if instr.format and instr.encoding %}
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
         {%- for assignment in instr.encoding.assignments %}
-        {%- set field = instr.format.get_field(assignment.field) %}
-        {%- if field %}
-        # Check {{ assignment.field }} == {{ assignment.value }}
-        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ assignment.value }}:
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        # Check identification field {{ id_field.name }} == {{ encoding_assignment.value }}
+        if (instruction_word >> {{ id_field.lsb }}) & {{ id_field.width() | mask }} != {{ encoding_assignment.value }}:
             return False
         {%- endif %}
         {%- endfor %}
         return True
         {%- else %}
-        return False
-        {%- endif %}
-        {%- elif instr.format and instr.encoding %}
+        # No identification fields specified - use all encoding fields (backward compatible)
         {%- for assignment in instr.encoding.assignments %}
         {%- set field = instr.format.get_field(assignment.field) %}
         {%- if field %}
@@ -193,6 +318,40 @@ class Simulator:
         {%- endif %}
         {%- endfor %}
         return True
+        {%- endif %}
+        {%- else %}
+        return False
+        {%- endif %}
+        {%- elif instr.format and instr.encoding %}
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        # Check identification field {{ id_field.name }} == {{ encoding_assignment.value }}
+        if (instruction_word >> {{ id_field.lsb }}) & {{ id_field.width() | mask }} != {{ encoding_assignment.value }}:
+            return False
+        {%- endif %}
+        {%- endfor %}
+        return True
+        {%- else %}
+        # No identification fields specified - use all encoding fields (backward compatible)
+        {%- for assignment in instr.encoding.assignments %}
+        {%- set field = instr.format.get_field(assignment.field) %}
+        {%- if field %}
+        # Check {{ assignment.field }} == {{ assignment.value }}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ assignment.value }}:
+            return False
+        {%- endif %}
+        {%- endfor %}
+        return True
+        {%- endif %}
         {%- else %}
         return False
         {%- endif %}
@@ -222,7 +381,8 @@ class Simulator:
         slot_{{ slot.name }}_matched = False
         {%- if slot_idx < (instr.bundle_instructions|length) %}
         {%- set sub_instr = instr.bundle_instructions[slot_idx] %}
-        if self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word):
+        matches_{{ slot.name }}_{{ sub_instr.mnemonic }} = self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
+        if matches_{{ slot.name }}_{{ sub_instr.mnemonic }}:
             # Save PC before executing (instruction will update it, but we'll restore)
             self.pc = saved_pc
             self._execute_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
@@ -233,12 +393,14 @@ class Simulator:
         if not slot_{{ slot.name }}_matched:
             {%- for sub_instr in instr.bundle_instructions %}
             {%- if loop.index0 != slot_idx %}
-            if not slot_{{ slot.name }}_matched and self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word):
-                # Save PC before executing (instruction will update it, but we'll restore)
-                self.pc = saved_pc
-                self._execute_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-                saved_pc = self.pc  # Update saved PC after execution
-                slot_{{ slot.name }}_matched = True
+            if not slot_{{ slot.name }}_matched:
+                matches_fallback = self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
+                if matches_fallback:
+                    # Save PC before executing (instruction will update it, but we'll restore)
+                    self.pc = saved_pc
+                    self._execute_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
+                    saved_pc = self.pc  # Update saved PC after execution
+                    slot_{{ slot.name }}_matched = True
             {%- endif %}
             {%- endfor %}
         {%- else %}
@@ -248,15 +410,10 @@ class Simulator:
         saved_pc = self.pc
         {%- endif %}
         {%- endfor %}
-        # Restore PC to value before bundle execution (will be updated by bundle width below)
+        # Restore PC to value before bundle execution (step() will update PC by bundle width)
         self.pc = saved_pc
-        
-        # Update PC by bundle width (not individual instruction width)
-        # Bundle is stored as multiple 32-bit words in memory
-        {%- set bundle_words = (instr.bundle_format.width + 31) // 32 %}
-        self.pc += {{ bundle_words * 4 }}
         {%- else %}
-        self.pc += 4
+        # No bundle format - step() will update PC
         {%- endif %}
         {%- elif instr.format %}
         # Decode operands
@@ -307,11 +464,9 @@ class Simulator:
         {%- endfor %}
         {%- endif %}
         
-        # Update PC
-        self.pc += 4
+        # PC update is handled by step() method
         {%- else %}
-        # No format defined
-        self.pc += 4
+        # No format defined - PC update is handled by step() method
         {%- endif %}
 
 {%- endfor %}

@@ -57,6 +57,7 @@ architecture ComprehensiveISA {
             format: R_TYPE
             encoding: { opcode=1, funct=0 }
             operands: rd, rs1, rs2
+            assembly_syntax: "ADD R{rd}, R{rs1}, R{rs2}"
             behavior: {
                 R[rd] = R[rs1] + R[rs2];
                 FLAGS.Z = (R[rd] == 0) ? 1 : 0;
@@ -67,6 +68,7 @@ architecture ComprehensiveISA {
             format: DIST_TYPE
             encoding: { opcode=2, funct=0 }
             operands: rd(rd_low, rd_high), rs1, rs2
+            assembly_syntax: "ADD_DIST R{rd}, R{rs1}, R{rs2}"
             behavior: {
                 R[rd] = R[rs1] + R[rs2];
                 FLAGS.Z = (R[rd] == 0) ? 1 : 0;
@@ -77,6 +79,7 @@ architecture ComprehensiveISA {
             format: VV_TYPE
             encoding: { opcode=32, funct=0 }
             operands: vd, vs1, vs2
+            assembly_syntax: "VADD V{vd}, V{vs1}, V{vs2}"
             behavior: {
                 V[vd][0] = V[vs1][0] + V[vs2][0];
                 V[vd][1] = V[vs1][1] + V[vs2][1];
@@ -90,6 +93,7 @@ architecture ComprehensiveISA {
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
             bundle_instructions: ADD, ADD_DIST, VADD
+            assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
         }
     }
 }

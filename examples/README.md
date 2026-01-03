@@ -197,7 +197,7 @@ behavior: {
 
 ## Next Steps
 
-- Read the [Usage Guide](../docs/USAGE.md) for detailed documentation
+- Read the [DSL Specification](../docs/DSL_Specification.md) for detailed documentation
 - Modify the examples to create your own ISA
 - Generate tools and test them with sample programs
 - Generate documentation to see how your ISA is documented

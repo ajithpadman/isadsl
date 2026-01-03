@@ -95,9 +95,7 @@ python output/simulator.py program.bin
 All technical documentation is available in the `docs/` folder:
 
 - **[INDEX.md](docs/INDEX.md)**: Documentation index and navigation guide - Start here to find what you need
-- **[USAGE.md](docs/USAGE.md)**: Complete usage guide covering DSL syntax, register definitions, instruction formats, RTL behavior specification, command-line interface, and best practices
-- **[SIMD_SUPPORT.md](docs/SIMD_SUPPORT.md)**: Guide to SIMD vector instructions including vector register definitions, vector instruction syntax, lane access patterns, and example vector operations
-- **[BUNDLING.md](docs/BUNDLING.md)**: Guide to instruction bundling including bundle formats, bundle instructions, assembly syntax, and two-level decoding
+- **[DSL_Specification.md](docs/DSL_Specification.md)**: Complete DSL specification covering all features including syntax, registers, formats, instructions, RTL behavior, variable-length instructions, bundling, SIMD, and more
 - **[EXAMPLES.md](docs/EXAMPLES.md)**: Detailed documentation of example ISA specifications with learning paths and common patterns
 - **[TESTING.md](docs/TESTING.md)**: Complete testing documentation including test suite overview, how to run tests, and how to add new tests
 

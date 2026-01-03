@@ -93,6 +93,7 @@ class InstructionFormat(TextXObject):
     name: str
     width: int
     fields: List[FormatField] = field(default_factory=list)
+    identification_fields: List[str] = field(default_factory=list)  # Fields used for instruction identification
 
     def get_field(self, name: str) -> Optional[FormatField]:
         """Get a field by name."""
@@ -100,6 +101,22 @@ class InstructionFormat(TextXObject):
             if field.name == name:
                 return field
         return None
+
+    def get_identification_fields(self) -> List[FormatField]:
+        """Get fields used for instruction identification."""
+        if self.identification_fields:
+            return [f for f in self.fields if f.name in self.identification_fields]
+        # Default: return empty list (backward compatible - will use all encoding fields)
+        return []
+
+    def get_minimum_bits_for_identification(self) -> int:
+        """Get minimum number of bits needed to identify instructions using this format."""
+        id_fields = self.get_identification_fields()
+        if id_fields:
+            max_bit = max((f.msb for f in id_fields), default=0)
+            return max_bit + 1
+        # Default: use format width (backward compatible)
+        return self.width
 
     def total_field_width(self) -> int:
         """Calculate total width of all fields."""
@@ -157,6 +174,7 @@ class Instruction(TextXObject):
     encoding: Optional[EncodingSpec] = None
     operands: List[str] = field(default_factory=list)  # Legacy: simple operand names
     operand_specs: List[OperandSpec] = field(default_factory=list)  # New: operand specifications with field mappings
+    assembly_syntax: Optional[str] = None  # Format string for disassembly (e.g., "ADD R{rd}, R{rs1}, R{rs2}")
     behavior: Optional['RTLBlock'] = None
     bundle_instructions: List['Instruction'] = field(default_factory=list)  # For bundle instructions
 
@@ -421,6 +439,7 @@ class BundleFormat(TextXObject):
     width: int
     instruction_start: int = 0  # Starting bit position for instructions (to avoid bundle_opcode conflict)
     slots: List[BundleSlot] = field(default_factory=list)
+    identification_fields: List[str] = field(default_factory=list)  # Fields used for bundle identification
 
     def get_slot(self, name: str) -> Optional[BundleSlot]:
         """Get a slot by name."""
@@ -428,6 +447,18 @@ class BundleFormat(TextXObject):
             if slot.name == name:
                 return slot
         return None
+
+    def get_minimum_bits_for_identification(self) -> int:
+        """Get minimum number of bits needed to identify bundle."""
+        # For bundles, identification is typically in the first few bits
+        # (e.g., bundle_opcode field). If identification_fields are specified,
+        # we need to find the format that contains these fields (from the bundle instruction's format).
+        # For now, default to 32 bits (first word) for backward compatibility.
+        if self.identification_fields:
+            # In practice, bundle identification fields are usually in the first byte or word
+            # This will be refined when we have access to the bundle instruction's format
+            return 32
+        return 32
 
     def extract_instructions(self, bundle_word: int) -> List[Tuple[str, int]]:
         """Extract all sub-instructions from a bundle word."""

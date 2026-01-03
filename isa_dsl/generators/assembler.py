@@ -39,7 +39,7 @@ class Assembler:
         """
         lines = self._preprocess(source)
         
-        # First pass: collect labels
+        # First pass: collect labels and determine instruction widths
         address = start_address
         for line in lines:
             label_match = re.match(r'^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:', line)
@@ -52,21 +52,9 @@ class Assembler:
                 # Check if it's an instruction
                 if self._is_instruction_line(line):
                     self.instructions.append((line, address))
-                    # Bundle instructions may be wider than 4 bytes
-                    if line.strip().upper().startswith('BUNDLE{'):
-                        # Find the widest bundle format
-                        {%- set max_bundle_width = 4 %}
-                        {%- for instr in isa.instructions %}
-                        {%- if instr.is_bundle() and instr.bundle_format %}
-                        {%- set bundle_bytes = (instr.bundle_format.width // 8) %}
-                        {%- if bundle_bytes > max_bundle_width %}
-                        {%- set max_bundle_width = bundle_bytes %}
-                        {%- endif %}
-                        {%- endif %}
-                        {%- endfor %}
-                        address += {{ max_bundle_width }}
-                    else:
-                        address += 4
+                    # Determine instruction width based on mnemonic
+                    instruction_width = self._get_instruction_width_from_line(line)
+                    address += instruction_width
 
         # Second pass: assemble instructions
         machine_code = []
@@ -107,6 +95,47 @@ class Assembler:
             '{{ instr.mnemonic.upper() }}',
 {%- endfor %}
         ]
+
+    def _get_instruction_width_from_line(self, line: str) -> int:
+        """Determine instruction width in bytes from assembly line."""
+        line_stripped = line.strip()
+        
+        # Check for bundle syntax
+        if line_stripped.upper().startswith('BUNDLE{'):
+            # Find the widest bundle format
+            {%- set max_bundle_width = 4 %}
+            {%- for instr in isa.instructions %}
+            {%- if instr.is_bundle() and instr.bundle_format %}
+            {%- set bundle_bytes = (instr.bundle_format.width // 8) %}
+            {%- if bundle_bytes > max_bundle_width %}
+            {%- set max_bundle_width = bundle_bytes %}
+            {%- endif %}
+            {%- endif %}
+            {%- endfor %}
+            return {{ max_bundle_width }}
+        
+        # Extract mnemonic
+        parts = line_stripped.split()
+        if not parts:
+            return 4  # Default
+        
+        mnemonic = parts[0].upper()
+        
+        # Look up instruction width by mnemonic
+        {%- for instr in isa.instructions %}
+        {%- if not instr.is_bundle() %}
+        if mnemonic == '{{ instr.mnemonic.upper() }}':
+            {%- if instr.format %}
+            return ({{ instr.format.width }} + 7) // 8  # Convert bits to bytes
+            {%- elif instr.bundle_format %}
+            return ({{ instr.bundle_format.width }} + 7) // 8
+            {%- else %}
+            return 4  # Default
+            {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+        
+        return 4  # Default width
 
     def _assemble_instruction(self, line: str, address: int) -> Optional[int]:
         """Assemble a single instruction line."""
@@ -331,55 +360,118 @@ class Assembler:
         # Add more register name resolution as needed
         return 0
 
-    def write_binary(self, machine_code: List[int], filename: str):
-        """Write machine code to a binary file."""
-        # Get maximum bundle width from ISA model
-        {%- set bundle_widths = [] %}
+    def _determine_instruction_width(self, instruction_word: int) -> int:
+        """Determine instruction width in bytes by matching encoding."""
+        # Strategy: Check instructions from shortest to longest width
+        # to avoid false matches (e.g., 16-bit instruction matching 32-bit pattern)
+        
+        # Get all instruction widths, sorted shortest first
+        {%- set all_widths = [] %}
         {%- for instr in isa.instructions %}
-        {%- if instr.is_bundle() and instr.bundle_format %}
-        {%- set bundle_bytes = (instr.bundle_format.width // 8) %}
-        {%- set _ = bundle_widths.append(bundle_bytes) %}
+        {%- if instr.format %}
+        {%- set _ = all_widths.append((instr.format.width, 'format')) %}
+        {%- endif %}
+        {%- if instr.bundle_format %}
+        {%- set _ = all_widths.append((instr.bundle_format.width, 'bundle')) %}
         {%- endif %}
         {%- endfor %}
-        {%- if bundle_widths %}
-        max_bundle_bytes = max({{ bundle_widths | join(', ') }}, 4)
-        {%- else %}
-        max_bundle_bytes = 4
+        {%- set unique_widths = [] %}
+        {%- for width_tuple in all_widths %}
+        {%- if width_tuple[0] not in unique_widths %}
+        {%- set _ = unique_widths.append(width_tuple[0]) %}
         {%- endif %}
-        max_bundle_words = (max_bundle_bytes + 3) // 4
+        {%- endfor %}
+        {%- set unique_widths = unique_widths | sort %}
         
+        # Try each width category (shortest first)
+        {%- for width in unique_widths %}
+        # Check instructions with width {{ width }} bits
+        # First, mask instruction_word to this width to avoid false matches
+        {%- if width == 16 %}
+        masked_word = instruction_word & 0xFFFF
+        {%- elif width == 32 %}
+        masked_word = instruction_word & 0xFFFFFFFF
+        {%- elif width == 64 %}
+        masked_word = instruction_word & 0xFFFFFFFFFFFFFFFF
+        {%- else %}
+        # Calculate mask for {{ width }} bits
+        width_mask_{{ width }} = (1 << {{ width }}) - 1
+        masked_word = instruction_word & width_mask_{{ width }}
+        {%- endif %}
+        
+        {%- for instr in isa.instructions %}
+        {%- if (instr.format and instr.format.width == width) or (instr.bundle_format and instr.bundle_format.width == width) %}
+        {%- if instr.format and instr.encoding %}
+        {%- set id_fields = instr.format.get_identification_fields() %}
+        {%- if id_fields %}
+        # Check {{ instr.mnemonic }} using identification fields
+        {%- set match_conditions = [] %}
+        {%- for id_field in id_fields %}
+        {%- set encoding_assignment = None %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- if assignment.field == id_field.name %}
+        {%- set encoding_assignment = assignment %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if encoding_assignment %}
+        {%- set condition_str = '(masked_word >> ' ~ id_field.lsb ~ ') & ' ~ (id_field.width() | mask) ~ ' == ' ~ encoding_assignment.value %}
+        {%- set _ = match_conditions.append(condition_str) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if match_conditions %}
+        if {{ match_conditions | join(' and ') }}:
+            {%- if instr.bundle_format %}
+            return ({{ instr.bundle_format.width }} + 7) // 8
+            {%- else %}
+            return ({{ instr.format.width }} + 7) // 8
+            {%- endif %}
+        {%- endif %}
+        {%- else %}
+        # Check {{ instr.mnemonic }} using all encoding fields
+        {%- set match_conditions = [] %}
+        {%- for assignment in instr.encoding.assignments %}
+        {%- set field = instr.format.get_field(assignment.field) %}
+        {%- if field %}
+        {%- set condition_str = '(masked_word >> ' ~ field.lsb ~ ') & ' ~ (field.width() | mask) ~ ' == ' ~ assignment.value %}
+        {%- set _ = match_conditions.append(condition_str) %}
+        {%- endif %}
+        {%- endfor %}
+        {%- if match_conditions %}
+        if {{ match_conditions | join(' and ') }}:
+            {%- if instr.bundle_format %}
+            return ({{ instr.bundle_format.width }} + 7) // 8
+            {%- else %}
+            return ({{ instr.format.width }} + 7) // 8
+            {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+        {%- endfor %}
+        
+        # Default: assume 32-bit (4 bytes)
+        return 4
+
+    def write_binary(self, machine_code: List[int], filename: str):
+        """Write machine code to a binary file, handling variable-length instructions."""
         with open(filename, 'wb') as f:
             for word in machine_code:
-                # Check if this is a bundle by checking bundle_opcode
-                is_bundle = False
-                {%- for instr in isa.instructions %}
-                {%- if instr.is_bundle() and instr.format and instr.encoding %}
-                # Check if word matches {{ instr.mnemonic }} bundle encoding
-                {%- if instr.encoding.assignments|length > 0 %}
-                if {%- for assignment in instr.encoding.assignments %}
-                {%- set field = instr.format.get_field(assignment.field) %}
-                {%- if field %}(word >> {{ field.lsb }}) & {{ field.width() | mask }} == {{ assignment.value }}{%- if not loop.last %} and {%- endif %}{%- endif %}
-                {%- endfor %}:
-                    is_bundle = True
-                {%- endif %}
-                {%- endif %}
-                {%- endfor %}
+                # Determine instruction width
+                instruction_width_bytes = self._determine_instruction_width(word)
                 
-                if is_bundle:
-                    # Bundle word - write using bundle format width (even if word value is smaller)
-                    for i in range(max_bundle_words):
-                        word_part = (word >> (i * 32)) & 0xFFFFFFFF
-                        f.write(word_part.to_bytes(4, byteorder='little'))
-                elif word > 0xFFFFFFFF:
-                    # Wide word (not a bundle, but > 32 bits) - write as multiple 32-bit words
-                    bit_length = word.bit_length()
-                    words_needed = (bit_length + 31) // 32
+                # Write instruction with correct width
+                if instruction_width_bytes <= 4:
+                    # 16-bit or 32-bit instruction - write as bytes
+                    for i in range(instruction_width_bytes):
+                        byte_val = (word >> (i * 8)) & 0xFF
+                        f.write(byte_val.to_bytes(1, byteorder='little'))
+                else:
+                    # Wide instruction (> 32 bits) - write as multiple 32-bit words
+                    words_needed = (instruction_width_bytes + 3) // 4
                     for i in range(words_needed):
                         word_part = (word >> (i * 32)) & 0xFFFFFFFF
                         f.write(word_part.to_bytes(4, byteorder='little'))
-                else:
-                    # 32-bit word
-                    f.write(word.to_bytes(4, byteorder='little'))
 
 
 def main():

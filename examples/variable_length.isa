@@ -1,0 +1,89 @@
+architecture VariableLengthISA {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+    }
+    
+    formats {
+        format SHORT_16 16 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            immediate: [12:15]
+            identification_fields: opcode
+        }
+        
+        format LONG_32 32 {
+            opcode: [0:6]
+            funct: [7:10]
+            rd: [11:15]
+            rs1: [16:20]
+            rs2: [21:25]
+            immediate: [26:31]
+            identification_fields: opcode, funct
+        }
+        
+        format DIST_32 32 {
+            opcode_low: [0:3]
+            opcode_high: [20:23]
+            rd_low: [4:7]
+            rd_high: [16:19]
+            rs1: [8:11]
+            rs2: [12:15]
+            immediate: [24:31]
+            identification_fields: opcode_low, opcode_high
+        }
+        
+        bundle format BUNDLE_64 64 {
+            instruction_start: 8
+            slot0: [8:39]
+            slot1: [40:71]
+        }
+        
+        format BUNDLE_ID 64 {
+            bundle_opcode: [0:7]
+            reserved: [8:63]
+            identification_fields: bundle_opcode
+        }
+    }
+    
+    instructions {
+        instruction ADD16 {
+            format: SHORT_16
+            encoding: { opcode=1 }
+            operands: rd, rs1, immediate
+            behavior: {
+                R[rd] = R[rs1] + immediate;
+            }
+        }
+        
+        instruction ADD32 {
+            format: LONG_32
+            encoding: { opcode=2, funct=0 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+        
+        instruction ADD_DIST {
+            format: DIST_32
+            encoding: { opcode_low=3, opcode_high=0 }
+            operands: rd(rd_low, rd_high), rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+        
+        instruction BUNDLE {
+            format: BUNDLE_ID
+            bundle_format: BUNDLE_64
+            encoding: { bundle_opcode=255 }
+            bundle_instructions: ADD16, ADD32, ADD_DIST
+        }
+    }
+}
+

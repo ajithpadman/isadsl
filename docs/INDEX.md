@@ -5,26 +5,32 @@ Welcome to the ISA DSL documentation. This index helps you navigate all availabl
 ## Getting Started
 
 - **[README.md](../README.md)**: Project overview, installation, and quick start guide
-- **[Usage Guide](USAGE.md)**: Complete guide to using the ISA DSL
+- **[DSL Specification](DSL_Specification.md)**: Complete specification of all DSL features
 - **[Examples Guide](EXAMPLES.md)**: Detailed documentation of example ISA specifications
 
 ## Feature Documentation
 
-- **[SIMD Support](SIMD_SUPPORT.md)**: Guide to using SIMD vector instructions and vector registers
-- **[Instruction Bundling](BUNDLING.md)**: Guide to instruction bundling with bundle formats and two-level decoding
+- **[DSL Specification](DSL_Specification.md)**: Complete specification of all DSL features including SIMD, bundling, variable-length instructions, and more
 - **[Testing](TESTING.md)**: Complete testing documentation including test suite overview and how to add new tests
+
+**Note**: For detailed feature documentation, see [DSL Specification](DSL_Specification.md) which consolidates all DSL features.
+
+## Generated Tools Documentation
+
+- **[Simulator](Simulator.md)**: Documentation for the generated instruction simulator
+- **[Assembler](Assembler.md)**: Documentation for the generated assembler
+- **[Disassembler](Disassembler.md)**: Documentation for the generated disassembler
+- **[Documentation Generation](documentation_generation.md)**: Documentation generator features and usage
 
 ## Quick Links
 
 ### For New Users
 1. Start with the [README.md](../README.md) for installation and quick start
-2. Read the [Usage Guide](USAGE.md) to learn the DSL syntax
+2. Read the [DSL Specification](DSL_Specification.md) for complete feature reference
 3. Explore [Examples](EXAMPLES.md) to see real ISA specifications
 
 ### For Advanced Users
-- [SIMD Support](SIMD_SUPPORT.md) - Vector instruction support
-- [Instruction Bundling](BUNDLING.md) - Bundle multiple instructions into wider words
-- [Usage Guide](USAGE.md) - Complete syntax reference
+- [DSL Specification](DSL_Specification.md) - Complete feature reference
 - [Examples](EXAMPLES.md) - Advanced examples and patterns
 - [Testing](TESTING.md) - Test suite documentation and adding new tests
 
@@ -32,12 +38,14 @@ Welcome to the ISA DSL documentation. This index helps you navigate all availabl
 
 ```
 docs/
-├── INDEX.md          # This file - documentation index
-├── USAGE.md          # Complete usage guide and syntax reference
-├── SIMD_SUPPORT.md   # SIMD/vector instruction documentation
-├── BUNDLING.md       # Instruction bundling documentation
-├── EXAMPLES.md       # Example ISA specifications guide
-└── TESTING.md        # Testing documentation and test suite overview
+├── INDEX.md                  # This file - documentation index
+├── DSL_Specification.md     # Complete DSL specification (all features)
+├── EXAMPLES.md               # Example ISA specifications guide
+├── TESTING.md                # Testing documentation and test suite overview
+├── Simulator.md              # Generated simulator documentation
+├── Assembler.md              # Generated assembler documentation
+├── Disassembler.md           # Generated disassembler documentation
+├── documentation_generation.md  # Documentation generator features
 ```
 
 ## Command Reference
@@ -55,7 +63,7 @@ uv run isa-dsl validate <isa_file>
 uv run isa-dsl info <isa_file>
 ```
 
-For detailed command options, see [Usage Guide](USAGE.md#command-line-interface).
+For detailed command options, see [README.md](../README.md#command-line-interface).
 
 ## Examples
 

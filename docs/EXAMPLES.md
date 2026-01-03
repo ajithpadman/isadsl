@@ -232,8 +232,8 @@ behavior: {
 
 ## Next Steps
 
-- Read the [Usage Guide](USAGE.md) for detailed documentation
-- Check out [SIMD Support](SIMD_SUPPORT.md) for vector instruction documentation
+- Read the [DSL Specification](DSL_Specification.md) for detailed documentation
+- Check out [DSL Specification](DSL_Specification.md#simd-vector-support) for vector instruction documentation
 - Modify the examples to create your own ISA
 - Generate tools and test them with sample programs
 - Generate documentation to see how your ISA is documented

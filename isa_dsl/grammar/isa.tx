@@ -51,12 +51,14 @@ FormatBlock:
 InstructionFormat:
     'format' name=ID width=INT '{'
         fields+=FormatField
+        ('identification_fields' ':' identification_fields=IdentificationFieldList)?
     '}'
 ;
 
 BundleFormat:
     'bundle' 'format' name=ID width=INT '{'
         ('instruction_start' ':' instruction_start=INT)?
+        ('identification_fields' ':' identification_fields=IdentificationFieldList)?
         slots+=BundleSlot
     '}'
 ;
@@ -82,6 +84,7 @@ Instruction:
         ('encoding' ':' encoding=EncodingSpec)?
         ('bundle_instructions' ':' bundle_instructions_list=BundleInstructionList)?
         ('operands' ':' operands_list=OperandList)?
+        ('assembly_syntax' ':' assembly_syntax=STRING)?
         ('behavior' ':' behavior=RTLBlock)?
     '}'
 ;
@@ -103,6 +106,10 @@ DistributedOperand:
 ;
 
 FieldList:
+    first=ID (',' rest+=ID)*
+;
+
+IdentificationFieldList:
     first=ID (',' rest+=ID)*
 ;
 
