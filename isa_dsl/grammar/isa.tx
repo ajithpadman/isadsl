@@ -1,0 +1,205 @@
+// ISA DSL Grammar for textX
+// Using skipws to handle whitespace
+
+ISASpec:
+    'architecture' name=ID '{'
+        properties*=Property
+        registers=RegisterBlock
+        formats=FormatBlock
+        instructions=InstructionBlock
+    '}'
+;
+
+Property:
+    name=ID ':' value=PropertyValue
+;
+
+PropertyValue:
+    INT | STRING | ID
+;
+
+RegisterBlock:
+    'registers' '{'
+        registers+=Register
+    '}'
+;
+
+Register:
+    type=RegisterType name=ID width=INT ('[' count=INT ']')? (vector_props=VectorProperties)? ('{'
+        fields+=RegisterField
+    '}')?
+;
+
+VectorProperties:
+    '<' element_width=INT ',' lanes=INT '>'
+;
+
+RegisterType:
+    'gpr' | 'sfr' | 'vec'
+;
+
+RegisterField:
+    name=ID ':' '[' lsb=INT ':' msb=INT ']'
+;
+
+FormatBlock:
+    'formats' '{'
+        (formats+=InstructionFormat | bundle_formats+=BundleFormat)*
+    '}'
+;
+
+InstructionFormat:
+    'format' name=ID width=INT '{'
+        fields+=FormatField
+    '}'
+;
+
+BundleFormat:
+    'bundle' 'format' name=ID width=INT '{'
+        ('instruction_start' ':' instruction_start=INT)?
+        slots+=BundleSlot
+    '}'
+;
+
+BundleSlot:
+    slot_name=ID ':' '[' lsb=INT ':' msb=INT ']'
+;
+
+FormatField:
+    name=ID ':' '[' lsb=INT ':' msb=INT ']'
+;
+
+InstructionBlock:
+    'instructions' '{'
+        instructions+=Instruction
+    '}'
+;
+
+Instruction:
+    'instruction' mnemonic=ID '{'
+        ('format' ':' format=[InstructionFormat])?
+        ('bundle_format' ':' bundle_format=[BundleFormat])?
+        ('encoding' ':' encoding=EncodingSpec)?
+        ('bundle_instructions' ':' bundle_instructions_list=BundleInstructionList)?
+        ('operands' ':' operands_list=OperandList)?
+        ('behavior' ':' behavior=RTLBlock)?
+    '}'
+;
+
+BundleInstructionList:
+    first=ID (',' rest+=ID)*
+;
+
+OperandList:
+    first=OperandSpec (',' rest=OperandList)?
+;
+
+OperandSpec:
+    distributed_operand=DistributedOperand | simple_operand=ID
+;
+
+DistributedOperand:
+    name=ID '(' field_list=FieldList ')'
+;
+
+FieldList:
+    first=ID (',' rest+=ID)*
+;
+
+EncodingSpec:
+    '{' assignments+=EncodingAssignment (',' assignments+=EncodingAssignment)* '}'
+;
+
+EncodingAssignment:
+    field=ID '=' value=INT
+;
+
+RTLBlock:
+    '{' statements+=RTLStatement+ '}'
+;
+
+RTLStatement:
+    RTLAssignment | RTLConditional | RTLMemoryAccess | RTLForLoop
+;
+
+RTLAssignment:
+    target=RTLLValue '=' expr=RTLExpression ';'
+;
+
+RTLConditional:
+    'if' '(' condition=RTLExpression ')' '{' then_statements+=RTLStatement '}' ('else' '{' else_statements+=RTLStatement '}')?
+;
+
+RTLMemoryAccess:
+    memory_access=RTLLValue '=' 'MEM' '[' address=RTLExpression ']' ';' |
+    'MEM' '[' address=RTLExpression ']' '=' value=RTLExpression ';'
+;
+
+RTLForLoop:
+    'for' '(' init=RTLAssignment condition=RTLExpression ';' update=RTLAssignment ')' '{' statements+=RTLStatement+ '}'
+;
+
+RTLExpression:
+    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLExpressionAtom
+;
+
+RTLExpressionAtom:
+    RTLLValue | RTLConstant | OperandReference | '(' RTLExpression ')'
+;
+
+OperandReference:
+    name=ID
+;
+
+RTLTernary:
+    condition=RTLExpressionAtom '?' then_expr=RTLExpression ':' else_expr=RTLExpression
+;
+
+RTLBinaryOp:
+    left=RTLExpressionAtom op=BinaryOperator right=RTLExpression
+;
+
+BinaryOperator:
+    '<<' | '>>' | '<=' | '>=' | '==' | '!=' | '<' | '>' | '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^'
+;
+
+RTLUnaryOp:
+    op=UnaryOperator expr=RTLExpressionAtom
+;
+
+UnaryOperator:
+    '-' | '!' | '~'
+;
+
+RTLLValue:
+    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID
+;
+
+RegisterAccess:
+    reg_name=ID '[' index=OperandReference ']' (lane_access=LaneAccess)?
+;
+
+LaneAccess:
+    '[' lane_index=LaneIndex ']'
+;
+
+LaneIndex:
+    OperandReference | RTLConstant | ID
+;
+
+FieldAccess:
+    reg_name=ID '.' field_name=ID
+;
+
+RTLConstant:
+    value=INT | hex_value=HEX | binary_value=BINARY
+;
+
+HEX:
+    /0[xX][0-9a-fA-F]+/
+;
+
+BINARY:
+    /0[bB][01]+/
+;
+

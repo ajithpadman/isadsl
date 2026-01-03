@@ -1,0 +1,55 @@
+architecture BundledISA {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [8]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+        }
+        
+        format BUNDLE_ID 64 {
+            bundle_opcode: [0:7]
+        }
+        
+        bundle format BUNDLE_64 64 {
+            slot0: [0:31]
+            slot1: [32:63]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+        
+        instruction SUB {
+            format: R_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] - R[rs2];
+            }
+        }
+        
+        instruction BUNDLE {
+            format: BUNDLE_ID
+            bundle_format: BUNDLE_64
+            encoding: { bundle_opcode=255 }
+            bundle_instructions: ADD, SUB
+        }
+    }
+}
+

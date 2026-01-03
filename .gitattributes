@@ -1,0 +1,16 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# ISA DSL files
+*.isa text eol=lf
+
+# Configuration files
+*.toml text eol=lf
+*.txt text eol=lf
+*.ini text eol=lf

@@ -1,0 +1,154 @@
+architecture SimpleRISC {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [8]           
+        sfr PC 32              
+        sfr FLAGS 32 {
+            Z: [0:0]           
+            C: [1:1]           
+            N: [2:2]           
+        }
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            funct: [15:17]
+            unused: [18:31]
+        }
+        
+        format I_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            imm: [15:31]
+        }
+        
+        format BRANCH_TYPE 32 {
+            opcode: [0:5]
+            rs1: [6:8]
+            rs2: [9:11]
+            offset: [12:31]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1, funct=0 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+                FLAGS.N = (R[rd] < 0) ? 1 : 0;
+            }
+        }
+        
+        instruction SUB {
+            format: R_TYPE
+            encoding: { opcode=1, funct=1 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] - R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+                FLAGS.N = (R[rd] < 0) ? 1 : 0;
+            }
+        }
+        
+        instruction AND {
+            format: R_TYPE
+            encoding: { opcode=1, funct=2 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] & R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+            }
+        }
+        
+        instruction OR {
+            format: R_TYPE
+            encoding: { opcode=1, funct=3 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] | R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+            }
+        }
+        
+        instruction XOR {
+            format: R_TYPE
+            encoding: { opcode=1, funct=4 }
+            behavior: {
+                R[rd] = R[rs1] ^ R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+            }
+        }
+        
+        instruction ADDI {
+            format: I_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1, imm
+            behavior: {
+                R[rd] = R[rs1] + imm;
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+                FLAGS.N = (R[rd] < 0) ? 1 : 0;
+            }
+        }
+        
+        instruction LOAD {
+            format: I_TYPE
+            encoding: { opcode=3 }
+            operands: rd, rs1, imm
+            behavior: {
+                R[rd] = MEM[R[rs1] + imm];
+            }
+        }
+        
+        instruction STORE {
+            format: I_TYPE
+            encoding: { opcode=4 }
+            operands: rs1, rs2, imm
+            behavior: {
+                MEM[R[rs1] + imm] = R[rs2];
+            }
+        }
+        
+        instruction BEQ {
+            format: BRANCH_TYPE
+            encoding: { opcode=5 }
+            operands: rs1, rs2, offset
+            behavior: {
+                if (R[rs1] == R[rs2]) {
+                    PC = PC + (offset << 2);
+                }
+            }
+        }
+        
+        instruction BNE {
+            format: BRANCH_TYPE
+            encoding: { opcode=6 }
+            operands: rs1, rs2, offset
+            behavior: {
+                if (R[rs1] != R[rs2]) {
+                    PC = PC + (offset << 2);
+                }
+            }
+        }
+        
+        instruction JMP {
+            format: I_TYPE
+            encoding: { opcode=7 }
+            operands: rs1, imm
+            behavior: {
+                PC = R[rs1] + imm;
+            }
+        }
+    }
+}
+

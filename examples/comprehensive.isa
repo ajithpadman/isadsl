@@ -1,0 +1,96 @@
+architecture ComprehensiveISA {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        vec V 128 <32, 4>
+        sfr PC 32
+        sfr FLAGS 32 {
+            Z: [0:0]
+            V: [1:1]
+        }
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            funct: [15:23]
+            reserved: [24:31]
+        }
+        
+        format DIST_TYPE 32 {
+            opcode: [0:5]
+            rd_low: [6:8]
+            rd_high: [20:22]
+            rs1: [9:11]
+            rs2: [12:14]
+            funct: [15:19]
+            unused: [23:31]
+        }
+        
+        format VV_TYPE 32 {
+            opcode: [0:5]
+            vd: [6:9]
+            vs1: [10:13]
+            vs2: [14:17]
+            funct: [18:23]
+            unused: [24:31]
+        }
+        
+        format BUNDLE_ID 80 {
+            bundle_opcode: [0:7]
+        }
+        
+        bundle format BUNDLE_64 80 {
+            instruction_start: 8
+            slot0: [8:39]
+            slot1: [40:71]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1, funct=0 }
+            operands: rd, rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+            }
+        }
+        
+        instruction ADD_DIST {
+            format: DIST_TYPE
+            encoding: { opcode=2, funct=0 }
+            operands: rd(rd_low, rd_high), rs1, rs2
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+                FLAGS.Z = (R[rd] == 0) ? 1 : 0;
+            }
+        }
+        
+        instruction VADD {
+            format: VV_TYPE
+            encoding: { opcode=32, funct=0 }
+            operands: vd, vs1, vs2
+            behavior: {
+                V[vd][0] = V[vs1][0] + V[vs2][0];
+                V[vd][1] = V[vs1][1] + V[vs2][1];
+                V[vd][2] = V[vs1][2] + V[vs2][2];
+                V[vd][3] = V[vs1][3] + V[vs2][3];
+            }
+        }
+        
+        instruction BUNDLE {
+            format: BUNDLE_ID
+            bundle_format: BUNDLE_64
+            encoding: { bundle_opcode=255 }
+            bundle_instructions: ADD, ADD_DIST, VADD
+        }
+    }
+}
+

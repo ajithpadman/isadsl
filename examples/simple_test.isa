@@ -1,0 +1,34 @@
+architecture SimpleRISC {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [8]
+        sfr PC 32
+        sfr FLAGS 32 {
+            Z: [0:0]
+            C: [1:1]
+            N: [2:2]
+        }
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            funct: [15:17]
+            unused: [18:31]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1, funct=0 }
+            operands: rd, rs1, rs2
+        }
+    }
+}
+

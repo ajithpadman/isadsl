@@ -1,0 +1,39 @@
+architecture Minimal {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [4]
+        sfr PC 32
+    }
+    
+    formats {
+        format SIMPLE 32 {
+            opcode: [0:7]
+            rd: [8:10]
+            rs1: [11:13]
+            imm: [14:31]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: SIMPLE
+            encoding: { opcode=1 }
+            operands: rd, rs1, imm
+            behavior: {
+                R[rd] = R[rs1] + imm;
+            }
+        }
+        
+        instruction SUB {
+            format: SIMPLE
+            encoding: { opcode=2 }
+            operands: rd, rs1, imm
+            behavior: {
+                R[rd] = R[rs1] - imm;
+            }
+        }
+    }
+}
+
