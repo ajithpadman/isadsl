@@ -1,0 +1,31 @@
+#include "test_merge_registers.isa"
+#include "test_merge_formats.isa"
+
+architecture TestISA {
+    word_size: 32
+    
+    registers {
+        sfr SP 32
+    }
+    
+    formats {
+        format IMM_TYPE 32 {
+            opcode: [0:6]
+            rd: [7:11]
+            imm: [12:31]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1 }
+        }
+        
+        instruction ADDI {
+            format: IMM_TYPE
+            encoding: { opcode=2 }
+        }
+    }
+}
+

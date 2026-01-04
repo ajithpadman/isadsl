@@ -1,0 +1,192 @@
+// ARM Cortex-A9 Instruction Format Definitions
+// This file defines all instruction formats for ARM Cortex-A9
+
+formats {
+    // ========== Data Processing Formats ==========
+    
+    // Data Processing (Register) Format
+    format ARM_DP_REG 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Operation code
+        I: [25:25]              // Immediate bit (0 = register)
+        S: [20:20]              // Set condition codes
+        Rn: [16:19]             // First operand register
+        Rd: [12:15]             // Destination register
+        shifter_operand: [0:11] // Shifter operand (register/shift)
+        identification_fields: cond, opcode, I
+    }
+    
+    // Data Processing (Immediate) Format
+    format ARM_DP_IMM 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Operation code
+        I: [25:25]              // Immediate bit (1 = immediate)
+        S: [20:20]              // Set condition codes
+        Rn: [16:19]             // First operand register
+        Rd: [12:15]             // Destination register
+        imm: [0:7]              // Immediate value
+        rot: [8:11]             // Rotation amount
+        identification_fields: cond, opcode, I
+    }
+    
+    // ========== Memory Access Formats ==========
+    
+    // Memory Access Format (LDR/STR) - Single register
+    format ARM_MEM 32 {
+        cond: [28:31]          // Condition code
+        opcode: [26:26]         // Memory operation type
+        P: [24:24]              // Pre/Post indexing
+        U: [23:23]              // Up/Down bit
+        B: [22:22]              // Byte/Word bit
+        W: [21:21]              // Writeback bit
+        L: [20:20]              // Load/Store bit
+        Rn: [16:19]             // Base register
+        Rd: [12:15]             // Destination/Source register
+        offset: [0:11]          // Offset value
+        identification_fields: cond, opcode, L
+    }
+    
+    // Memory Access with Register Offset
+    format ARM_MEM_REG 32 {
+        cond: [28:31]          // Condition code
+        opcode: [26:26]         // Memory operation type
+        P: [24:24]              // Pre/Post indexing
+        U: [23:23]              // Up/Down bit
+        B: [22:22]              // Byte/Word bit
+        W: [21:21]              // Writeback bit
+        L: [20:20]              // Load/Store bit
+        Rn: [16:19]             // Base register
+        Rd: [12:15]             // Destination/Source register
+        Rm: [0:3]               // Offset register
+        identification_fields: cond, opcode, L
+    }
+    
+    // Load/Store Multiple (LDM/STM)
+    format ARM_LDM_STM 32 {
+        cond: [28:31]          // Condition code
+        opcode: [25:27]         // Operation code
+        P: [24:24]              // Pre/Post indexing
+        U: [23:23]              // Up/Down bit
+        S: [22:22]              // User mode bit
+        W: [21:21]              // Writeback bit
+        L: [20:20]              // Load/Store bit
+        Rn: [16:19]             // Base register
+        register_list: [0:15]    // Register list (16 bits)
+        identification_fields: cond, opcode, L
+    }
+    
+    // ========== Branch Formats ==========
+    
+    // Branch Format
+    format ARM_BRANCH 32 {
+        cond: [28:31]          // Condition code
+        opcode: [25:27]         // Branch opcode
+        L: [24:24]              // Link bit
+        offset: [0:23]          // Signed offset (24-bit)
+        identification_fields: cond, opcode, L
+    }
+    
+    // Branch and Exchange (BX/BLX)
+    format ARM_BX 32 {
+        cond: [28:31]          // Condition code
+        opcode: [4:7]          // Operation code
+        Rn: [0:3]               // Register containing target address
+        identification_fields: cond, opcode
+    }
+    
+    // ========== Multiply Formats ==========
+    
+    // Multiply Format
+    format ARM_MUL 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Multiply opcode
+        S: [20:20]              // Set condition codes
+        Rd: [16:19]             // Destination register
+        Rn: [12:15]             // Accumulator register
+        Rs: [8:11]              // Multiplier register
+        Rm: [0:3]               // Multiplicand register
+        identification_fields: cond, opcode
+    }
+    
+    // Multiply Long Format (MULL/MLAL)
+    format ARM_MUL_LONG 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Multiply opcode
+        S: [20:20]              // Set condition codes
+        RdHi: [16:19]           // High destination register
+        RdLo: [12:15]           // Low destination register
+        Rs: [8:11]              // Multiplier register
+        Rm: [0:3]               // Multiplicand register
+        U: [22:22]              // Unsigned bit
+        A: [21:21]              // Accumulate bit
+        identification_fields: cond, opcode, U, A
+    }
+    
+    // ========== Compare/Test Formats ==========
+    
+    // Compare Format (CMP/CMN/TST/TEQ)
+    format ARM_CMP 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Comparison opcode
+        I: [25:25]              // Immediate bit
+        Rn: [16:19]             // First operand register
+        shifter_operand: [0:11] // Second operand
+        identification_fields: cond, opcode, I
+    }
+    
+    // ========== Status Register Formats ==========
+    
+    // Move to/from Status Register (MRS/MSR)
+    format ARM_MSR 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Operation code
+        R: [22:22]              // CPSR/SPSR bit
+        field_mask: [16:19]     // Field mask
+        operand: [0:11]         // Source operand
+        identification_fields: cond, opcode, R
+    }
+    
+    format ARM_MRS 32 {
+        cond: [28:31]          // Condition code
+        opcode: [21:24]         // Operation code
+        R: [22:22]              // CPSR/SPSR bit
+        Rd: [12:15]             // Destination register
+        identification_fields: cond, opcode, R
+    }
+    
+    // ========== Software Interrupt Format ==========
+    
+    // Software Interrupt (SWI/SVC)
+    format ARM_SWI 32 {
+        cond: [28:31]          // Condition code
+        opcode: [24:27]         // Software interrupt opcode
+        imm: [0:23]             // Immediate value (24-bit)
+        identification_fields: cond, opcode
+    }
+    
+    // ========== Coprocessor Formats ==========
+    
+    // Coprocessor Data Processing
+    format ARM_CDP 32 {
+        cond: [28:31]          // Condition code
+        opcode: [20:23]         // Coprocessor opcode
+        CP: [8:11]              // Coprocessor number
+        CRd: [12:15]            // Coprocessor destination register
+        CRn: [16:19]            // Coprocessor source register
+        CP_opcode: [5:7]        // Coprocessor operation
+        CRm: [0:3]              // Coprocessor register
+        identification_fields: cond, opcode
+    }
+    
+    // ========== Swap Format ==========
+    
+    // Swap (SWP/SWPB)
+    format ARM_SWAP 32 {
+        cond: [28:31]          // Condition code
+        opcode: [23:23]         // Byte/Word bit
+        Rn: [16:19]             // Base register
+        Rd: [12:15]             // Destination register
+        Rm: [0:3]               // Source register
+        identification_fields: cond, opcode
+    }
+}

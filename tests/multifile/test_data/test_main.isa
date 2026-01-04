@@ -1,0 +1,19 @@
+#include "test_registers.isa"
+
+architecture TestISA {
+    word_size: 32
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:6]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1 }
+        }
+    }
+}
+

@@ -1,0 +1,34 @@
+#include "test_base_isa.isa"
+
+architecture ExtendedISA {
+    word_size: 64  // Override property
+    
+    registers {
+        gpr R 64 [32]  // Override register with different width
+        sfr SP 64      // Add new register
+    }
+    
+    formats {
+        format R_TYPE 64 {  // Override format
+            opcode: [0:6]
+            rd: [7:11]
+            rs1: [12:16]
+            funct3: [17:19]  // New field
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1
+        }
+        
+        instruction SUB {
+            format: R_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1
+        }
+    }
+}
+

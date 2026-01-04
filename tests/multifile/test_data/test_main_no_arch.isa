@@ -1,0 +1,7 @@
+#include "test_base_isa_simple.isa"
+
+// No architecture block - should cause error
+registers {
+    sfr SP 32
+}
+

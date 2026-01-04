@@ -1,0 +1,5 @@
+registers {
+    sfr STATUS 32
+    sfr CONTROL 32
+}
+

@@ -1,0 +1,4 @@
+registers {
+    gpr R 32 [8]
+}
+

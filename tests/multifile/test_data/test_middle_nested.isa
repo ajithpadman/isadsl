@@ -1,0 +1,6 @@
+#include "test_base_nested.isa"
+
+registers {
+    gpr R 32 [8]
+}
+

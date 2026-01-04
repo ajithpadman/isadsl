@@ -1,0 +1,6 @@
+// Register definitions
+registers {
+    gpr R 32 [8]  // General purpose registers
+    sfr PC 32     // Program counter
+}
+

@@ -18,7 +18,7 @@ The generated assembler:
 
 ```bash
 # Generate assembler
-uv run isa-dsl generate examples/sample_isa.isa --output output/ --assembler
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/ --assembler
 
 # Assemble source file
 python output/assembler.py program.asm program.bin

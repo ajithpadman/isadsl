@@ -1,13 +1,29 @@
 // ISA DSL Grammar for textX
 // Using skipws to handle whitespace
 
+// Root rule: can be either a full architecture spec or a partial spec
+// Try ISASpecFull first (more specific - starts with 'architecture')
 ISASpec:
+    ISASpecFull | ISASpecPartial
+;
+
+// Full ISA specification with architecture block
+// All blocks are optional since they can be provided by included files
+ISASpecFull:
     'architecture' name=ID '{'
-        properties*=Property
-        registers=RegisterBlock
-        formats=FormatBlock
-        instructions=InstructionBlock
+        (properties*=Property)*
+        (registers=RegisterBlock)?
+        (formats=FormatBlock)?
+        (instructions=InstructionBlock)?
     '}'
+;
+
+// Partial ISA specification for included files - all blocks are optional
+ISASpecPartial:
+    (properties*=Property)*
+    (registers=RegisterBlock)?
+    (formats=FormatBlock)?
+    (instructions=InstructionBlock)?
 ;
 
 Property:
@@ -155,7 +171,7 @@ RTLExpressionAtom:
 ;
 
 OperandReference:
-    name=ID
+    name=ID | index=INT
 ;
 
 RTLTernary:
@@ -199,7 +215,7 @@ FieldAccess:
 ;
 
 RTLConstant:
-    value=INT | hex_value=HEX | binary_value=BINARY
+    hex_value=HEX | binary_value=BINARY | value=INT
 ;
 
 HEX:

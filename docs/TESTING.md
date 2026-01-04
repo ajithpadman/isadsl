@@ -4,23 +4,53 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of 87 tests organized into several test files:
+The test suite consists of **111 tests** organized into logical groups within the `tests/` directory. All tests are passing with 0 skipped and 0 failed.
 
-- **`test_parser.py`** - Tests for ISA file parsing (including identification fields)
-- **`test_validator.py`** - Tests for semantic validation
-- **`test_rtl_interpreter.py`** - Tests for RTL expression interpretation
-- **`test_generators.py`** - Tests for code generation
-- **`test_integration.py`** - Tests for end-to-end workflows
-- **`test_generated_tools.py`** - Tests for generated assembler and simulator functionality
-- **`test_bundling.py`** - Tests for instruction bundling support
-- **`test_assembly_syntax.py`** - Tests for assembly syntax generation
-- **`test_assembly_syntax_braces.py`** - Tests for curly brace handling in assembly syntax
-- **`test_bundle_assembly_syntax.py`** - Tests for bundle assembly syntax
-- **`test_variable_length_assembler.py`** - Tests for variable-length instruction assembler
-- **`test_variable_length_disassembler.py`** - Tests for variable-length instruction disassembler
-- **`test_variable_length_execution.py`** - Tests for variable-length instruction execution
-- **`test_variable_length_comprehensive.py`** - Comprehensive tests for variable-length instructions
-- **`test_arm_integration.py`** - ARM ISA integration tests with QEMU and toolchain verification (Linux only)
+### Test Organization
+
+Tests are organized into the following directories:
+
+- **`tests/core/`** - Core parser, validator, and RTL interpreter tests
+  - `test_parser.py` - Tests for ISA file parsing (including identification fields)
+  - `test_validator.py` - Tests for semantic validation
+  - `test_rtl_interpreter.py` - Tests for RTL expression interpretation
+
+- **`tests/multifile/`** - Multi-file support tests
+  - `test_multifile_support.py` - Tests for `#include` directives, merge mode, inheritance mode, and cross-file references
+
+- **`tests/bundling/`** - Bundle instruction tests
+  - `test_bundling.py` - Tests for instruction bundling support
+  - `test_bundle_assembly_syntax.py` - Tests for bundle assembly syntax
+
+- **`tests/assembly_syntax/`** - Assembly syntax tests
+  - `test_assembly_syntax.py` - Tests for assembly syntax generation
+  - `test_assembly_syntax_braces.py` - Tests for curly brace handling in assembly syntax
+
+- **`tests/variable_length/`** - Variable-length instruction tests
+  - `test_variable_length_assembler.py` - Tests for variable-length instruction assembler
+  - `test_variable_length_disassembler.py` - Tests for variable-length instruction disassembler
+  - `test_variable_length_execution.py` - Tests for variable-length instruction execution
+  - `test_variable_length_comprehensive.py` - Comprehensive tests for variable-length instructions
+
+- **`tests/generators/`** - Code generator tests
+  - `test_generators.py` - Tests for code generation
+  - `test_generated_tools.py` - Tests for generated assembler and simulator functionality
+
+- **`tests/integration/`** - Integration tests
+  - `test_integration.py` - Tests for end-to-end workflows
+  - `test_comprehensive_features.py` - Comprehensive feature tests
+
+- **`tests/arm/`** - ARM ISA integration tests
+  - `test_arm_basic.py` - Basic ARM Cortex-A9 ISA tests (parsing, tool generation)
+  - `test_arm_qemu.py` - QEMU verification tests for ARM Cortex-A9
+  - `test_arm_disassembler.py` - Disassembler tests for ARM Cortex-A9
+  - `test_arm_end_to_end.py` - End-to-end workflow tests for ARM Cortex-A9
+  - `test_arm_integration_basic.py` - Basic ARM ISA subset integration tests
+  - `test_arm_integration_qemu.py` - QEMU verification tests for ARM ISA subset
+  - `test_arm_integration_disassembler.py` - Disassembler tests for ARM ISA subset
+  - `test_arm_integration_end_to_end.py` - End-to-end workflow tests for ARM ISA subset
+  - `test_arm_integration_labels_loops.py` - Labels and loops tests with QEMU
+  - Helper files: `test_helpers.py`, `test_helpers_basic.py`, `test_helpers_compilation.py`, `test_helpers_qemu.py`, `test_helpers_integration.py`
 
 ## Running Tests
 
@@ -39,13 +69,21 @@ uv run pytest -v
 ### Run Specific Test File
 
 ```bash
-uv run pytest tests/test_parser.py
+uv run pytest tests/core/test_parser.py
+```
+
+### Run Specific Test Group
+
+```bash
+uv run pytest tests/core/
+uv run pytest tests/multifile/
+uv run pytest tests/bundling/
 ```
 
 ### Run Specific Test
 
 ```bash
-uv run pytest tests/test_parser.py::test_instruction_parsing
+uv run pytest tests/core/test_parser.py::test_instruction_parsing
 ```
 
 ### Run Tests with Coverage
@@ -56,7 +94,9 @@ uv run pytest --cov
 
 ## Test Categories
 
-### Parser Tests (`test_parser.py`)
+### Core Tests (`tests/core/`)
+
+#### Parser Tests (`test_parser.py`)
 
 Tests the ISA DSL parser functionality:
 
@@ -73,7 +113,7 @@ Tests the ISA DSL parser functionality:
 - Instruction encodings
 - RTL behavior statements (assignments, conditionals, memory access)
 
-### Validator Tests (`test_validator.py`)
+#### Validator Tests (`test_validator.py`)
 
 Tests semantic validation of ISA specifications:
 
@@ -88,7 +128,7 @@ Tests semantic validation of ISA specifications:
 - Encoding field validation
 - Register access validation
 
-### RTL Interpreter Tests (`test_rtl_interpreter.py`)
+#### RTL Interpreter Tests (`test_rtl_interpreter.py`)
 
 Tests the RTL expression interpreter:
 
@@ -104,7 +144,27 @@ Tests the RTL expression interpreter:
 - Register field access
 - Operand reference resolution
 
-### Generator Tests (`test_generators.py`)
+### Multi-file Support Tests (`tests/multifile/`)
+
+Tests for multi-file ISA specifications using `#include` directives:
+
+- **`test_multifile_support.py`** - Comprehensive multi-file support tests
+  - Comment support (single-line and multi-line)
+  - Include processing (simple, multiple, nested)
+  - Relative path resolution
+  - Circular dependency detection
+  - Merge mode (combining partial definitions)
+  - Inheritance mode (extending base architectures)
+  - Error handling (duplicate definitions, missing architecture blocks)
+
+**Key Features Tested:**
+- `#include` directive parsing
+- Cross-file format reference resolution via textX scope providers
+- Model merging and inheritance
+- Path resolution (absolute and relative)
+- Circular dependency detection
+
+### Generator Tests (`tests/generators/`)
 
 Tests code generation functionality:
 
@@ -118,7 +178,7 @@ Tests code generation functionality:
 - Generated code structure and syntax
 - Template rendering
 
-### Integration Tests (`test_integration.py`)
+### Integration Tests (`tests/integration/`)
 
 Tests end-to-end workflows:
 
@@ -130,7 +190,7 @@ Tests end-to-end workflows:
 - Instruction encoding/decoding round-trip
 - Validation integration
 
-### Generated Tools Tests (`test_generated_tools.py`)
+### Generated Tools Tests (`tests/generators/test_generated_tools.py`)
 
 Tests the functionality of generated assemblers and simulators:
 
@@ -154,7 +214,7 @@ Tests the functionality of generated assemblers and simulators:
 - Comment preprocessing
 - Instruction counting
 
-### Bundling Tests (`test_bundling.py`)
+### Bundling Tests (`tests/bundling/`)
 
 Tests for instruction bundling functionality:
 
@@ -229,7 +289,8 @@ def test_feature_name():
 ```python
 def test_new_feature_parsing():
     """Test parsing of new feature."""
-    isa_file = Path(__file__).parent.parent / 'examples' / 'sample_isa.isa'
+    test_data_dir = Path(__file__).parent / "test_data"
+    isa_file = test_data_dir / 'sample_isa.isa'
     isa = parse_isa_file(str(isa_file))
     
     # Verify new feature is parsed correctly
@@ -242,7 +303,8 @@ def test_new_feature_parsing():
 ```python
 def test_new_generator():
     """Test new code generator."""
-    isa_file = Path(__file__).parent.parent / 'examples' / 'sample_isa.isa'
+    test_data_dir = Path(__file__).parent / "test_data"
+    isa_file = test_data_dir / 'sample_isa.isa'
     isa = parse_isa_file(str(isa_file))
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -269,12 +331,18 @@ uv run pytest tests/ -v
 
 ## Test Data
 
-Test data is located in the `examples/` directory:
+Test data is organized in `test_data/` directories within each test group:
 
-- `minimal.isa` - Minimal ISA for basic tests
-- `sample_isa.isa` - Complete example ISA
-- `advanced.isa` - Advanced RISC ISA
-- `simd.isa` - SIMD vector ISA
+- **`tests/core/test_data/`** - Core test ISAs (`sample_isa.isa`, `comprehensive.isa`, `test_identification_fields.isa`)
+- **`tests/multifile/test_data/`** - Multi-file test ISAs (all `test_*.isa` files)
+- **`tests/bundling/test_data/`** - Bundle test ISA (`bundling.isa`)
+- **`tests/assembly_syntax/test_data/`** - Assembly syntax test ISA (`comprehensive.isa`)
+- **`tests/variable_length/test_data/`** - Variable-length test ISAs (`variable_length.isa`, `test_identification_fields.isa`)
+- **`tests/generators/test_data/`** - Generator test ISAs (`sample_isa.isa`, `minimal.isa`)
+- **`tests/integration/test_data/`** - Integration test ISAs (`sample_isa.isa`, `comprehensive.isa`)
+- **`tests/arm/test_data/`** - ARM test ISAs and assembly files (`arm_subset.isa`, `*.s`, `*.gdb`)
+
+**Note**: The `examples/` directory now contains only reference ISA specifications (e.g., `arm_cortex_a9.isa` and its includes) demonstrating the multi-file approach. All test-specific files have been moved to appropriate `test_data/` directories.
 
 ## Troubleshooting
 
@@ -305,7 +373,18 @@ If parser tests fail:
 
 ## Performance
 
-The full test suite runs in approximately 1-2 seconds on modern hardware. Individual test files typically complete in under 0.5 seconds.
+The full test suite (111 tests) runs in approximately 17-18 seconds on modern hardware. Individual test files typically complete in under 1 second.
+
+## Code Quality Standards
+
+All test files follow strict code quality standards:
+
+- **Test Function Limit**: No test function exceeds 50 lines of code
+- **Test File Limit**: No test file exceeds 500 lines of code
+- **Helper Functions**: Helper functions are implemented as class methods in separate files
+- **Modularity**: Large test suites are split into multiple focused test files
+
+This ensures maintainability, readability, and ease of debugging.
 
 ## Future Test Improvements
 

@@ -19,7 +19,7 @@ The generated simulator:
 
 ```bash
 # Generate simulator
-uv run isa-dsl generate examples/sample_isa.isa --output output/ --simulator
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/ --simulator
 
 # Run simulator
 python output/simulator.py program.bin [start_address]

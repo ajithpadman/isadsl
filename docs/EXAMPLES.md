@@ -1,109 +1,57 @@
 # ISA DSL Examples
 
-This document provides an overview of the example ISA specifications included in the `examples/` directory.
+This document provides an overview of the example ISA specifications. Reference examples are in the `examples/` directory, while test-specific examples are in `tests/*/test_data/` directories.
 
-## Example Files
+## Reference Examples
 
-### minimal.isa
+The `examples/` directory contains reference ISA specifications demonstrating best practices:
 
-A minimal ISA specification with just two instructions (ADD and SUB). This is an excellent starting point for understanding the basic syntax.
+### ARM Cortex-A9 ISA Specification
+
+A comprehensive ARM Cortex-A9 ISA specification organized across multiple files using the multi-file approach:
+
+- **`arm_cortex_a9.isa`** - Main architecture file with `#include` directives
+- **`arm_cortex_a9_registers.isa`** - Register definitions (GPRs, PC, CPSR, SPSR, LR, SP)
+- **`arm_cortex_a9_formats.isa`** - Instruction format definitions (ARM_DP_REG, ARM_DP_IMM, ARM_MEM, ARM_BRANCH, etc.)
+- **`arm_cortex_a9_instructions.isa`** - Instruction definitions (ADD, SUB, MOV, AND, ORR, EOR, LDR, STR, B, BL, CMP)
 
 **Features demonstrated:**
-- Basic register definitions (GPR and SFR)
-- Simple instruction format
-- Basic RTL behavior
-- Minimal instruction set
+- Multi-file ISA specification using `#include` directives
+- Cross-file format reference resolution via textX scope providers
+- Modular organization of ISA components
+- Complete ARM Cortex-A9 instruction subset with 15 instructions
 
 **Usage:**
 ```bash
-uv run isa-dsl generate examples/minimal.isa --output output/
-uv run isa-dsl info examples/minimal.isa
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
+uv run isa-dsl validate examples/arm_cortex_a9.isa
+uv run isa-dsl info examples/arm_cortex_a9.isa
 ```
 
-### sample_isa.isa
+This example demonstrates how to organize a large ISA specification across multiple files, making it easier to maintain and understand.
 
-A complete example ISA called "SimpleRISC" with a full instruction set including:
-- Arithmetic operations (ADD, SUB, AND, OR, XOR)
-- Immediate operations (ADDI)
-- Memory operations (LOAD, STORE)
-- Branch instructions (BEQ, BNE)
-- Jump instructions (JMP)
+## Test Examples
 
-**Features demonstrated:**
-- Multiple instruction formats (R_TYPE, I_TYPE, BRANCH_TYPE)
-- Register files and special function registers
-- Register fields (FLAGS register with Z, C, N flags)
-- Conditional RTL behavior
-- Memory access operations
-- Complex expressions
+Test-specific ISA examples are located in `tests/*/test_data/` directories:
 
-**Usage:**
-```bash
-uv run isa-dsl generate examples/sample_isa.isa --output output/
-uv run isa-dsl validate examples/sample_isa.isa
-uv run isa-dsl info examples/sample_isa.isa
-```
+- **`tests/core/test_data/`** - Core test examples (`sample_isa.isa`, `comprehensive.isa`)
+- **`tests/multifile/test_data/`** - Multi-file test examples (various `test_*.isa` files)
+- **`tests/bundling/test_data/`** - Bundle instruction examples (`bundling.isa`)
+- **`tests/variable_length/test_data/`** - Variable-length instruction examples (`variable_length.isa`)
+- **`tests/generators/test_data/`** - Generator test examples (`minimal.isa`, `sample_isa.isa`)
+- **`tests/integration/test_data/`** - Integration test examples (`comprehensive.isa`, `sample_isa.isa`)
+- **`tests/arm/test_data/`** - ARM test examples (`arm_subset.isa`)
 
-### advanced.isa
-
-An advanced RISC architecture with comprehensive instruction set including:
-- All R-type operations (ADD, SUB, SLL, SRL, AND, OR, XOR)
-- I-type operations (ADDI, SLTI, LOAD)
-- S-type operations (STORE)
-- B-type operations (BEQ, BNE, BLT, BGE)
-- U-type operations (LUI, AUIPC)
-- J-type operations (JAL, JALR)
-- Stack operations (PUSH, POP)
-- Function call/return (CALL, RET)
-
-**Features demonstrated:**
-- Multiple register files (R, F)
-- Multiple special function registers (PC, SP, FLAGS, STATUS)
-- Complex register fields
-- All instruction format types
-- Advanced RTL behavior with conditionals
-- Stack manipulation
-- Function call conventions
-
-**Usage:**
-```bash
-uv run isa-dsl generate examples/advanced.isa --output output/
-uv run isa-dsl validate examples/advanced.isa
-uv run isa-dsl info examples/advanced.isa
-```
-
-### simd.isa
-
-A SIMD-enabled ISA demonstrating vector instruction support:
-- Vector registers (128-bit, 4 lanes of 32 bits)
-- Vector-vector operations (VADD, VSUB, VMUL)
-- Vector-scalar operations (VADD_SCALAR, VMUL_SCALAR)
-- Vector-immediate operations (VADD_IMM)
-- Vector memory operations (VLOAD, VSTORE)
-- Vector reduction operations (VDOT)
-- Vector comparison operations (VMAX, VMIN)
-
-**Features demonstrated:**
-- Vector register definitions
-- Lane access in RTL
-- Element-wise operations
-- Vector memory access patterns
-
-**Usage:**
-```bash
-uv run isa-dsl generate examples/simd.isa --output output/
-uv run isa-dsl validate examples/simd.isa
-uv run isa-dsl info examples/simd.isa
-```
+**Note**: These test examples are used by the test suite and demonstrate various ISA DSL features. For learning purposes, refer to the reference examples in the `examples/` directory.
 
 ## Running Examples
 
 ### Generate All Tools
 
-Generate simulator, assembler, disassembler, and documentation:
+Generate simulator, assembler, disassembler, and documentation from the ARM Cortex-A9 reference:
 
 ```bash
-uv run isa-dsl generate examples/sample_isa.isa --output output/
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
 ```
 
 ### Generate Specific Tools
@@ -111,7 +59,7 @@ uv run isa-dsl generate examples/sample_isa.isa --output output/
 Generate only the simulator:
 
 ```bash
-uv run isa-dsl generate examples/sample_isa.isa \
+uv run isa-dsl generate examples/arm_cortex_a9.isa \
     --output output/ \
     --simulator \
     --no-assembler \
@@ -124,7 +72,7 @@ uv run isa-dsl generate examples/sample_isa.isa \
 Check if an example ISA is valid:
 
 ```bash
-uv run isa-dsl validate examples/sample_isa.isa
+uv run isa-dsl validate examples/arm_cortex_a9.isa
 ```
 
 ### Get ISA Information
@@ -132,16 +80,15 @@ uv run isa-dsl validate examples/sample_isa.isa
 Display summary information about an ISA:
 
 ```bash
-uv run isa-dsl info examples/sample_isa.isa
+uv run isa-dsl info examples/arm_cortex_a9.isa
 ```
 
 ## Learning Path
 
-1. **Start with `minimal.isa`**: Understand basic syntax and structure
-2. **Study `sample_isa.isa`**: Learn about different instruction formats and RTL behavior
-3. **Explore `advanced.isa`**: See advanced features and complex instruction sets
-4. **Try `simd.isa`**: Learn about vector registers and SIMD operations
-5. **Create your own**: Use these examples as templates for your own ISA
+1. **Start with the ARM Cortex-A9 example**: Study `examples/arm_cortex_a9.isa` to understand the multi-file approach
+2. **Examine the included files**: Look at how registers, formats, and instructions are organized across files
+3. **Study test examples**: Explore `tests/*/test_data/` directories to see various ISA DSL features
+4. **Create your own**: Use the ARM Cortex-A9 example as a template for your own multi-file ISA specification
 
 ## Common Patterns
 

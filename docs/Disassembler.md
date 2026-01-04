@@ -19,7 +19,7 @@ The generated disassembler:
 
 ```bash
 # Generate disassembler
-uv run isa-dsl generate examples/sample_isa.isa --output output/ --disassembler
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/ --disassembler
 
 # Disassemble binary file
 python output/disassembler.py program.bin [start_address]

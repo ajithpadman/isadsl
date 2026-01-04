@@ -1,0 +1,6 @@
+#include "test_circular_b.isa"
+
+registers {
+    gpr R 32 [8]
+}
+

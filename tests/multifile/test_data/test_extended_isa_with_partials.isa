@@ -1,0 +1,25 @@
+#include "test_base_isa_simple.isa"
+#include "test_additional_registers.isa"
+
+architecture ExtendedISA {
+    word_size: 64
+    
+    registers {
+        sfr SP 64
+    }
+    
+    formats {
+        format IMM_TYPE 64 {
+            opcode: [0:6]
+            imm: [7:63]
+        }
+    }
+    
+    instructions {
+        instruction ADDI {
+            format: IMM_TYPE
+            encoding: { opcode=2 }
+        }
+    }
+}
+

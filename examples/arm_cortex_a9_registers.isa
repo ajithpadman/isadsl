@@ -1,0 +1,58 @@
+// ARM Cortex-A9 Register Definitions
+// This file defines all registers for ARM Cortex-A9
+
+registers {
+    // General Purpose Registers (R0-R15)
+    // R13 = SP (Stack Pointer), R14 = LR (Link Register), R15 = PC (Program Counter)
+    gpr R 32 [16]
+    
+    // Program Counter (also accessible as R15)
+    sfr PC 32
+    
+    // Current Program Status Register
+    sfr CPSR 32 {
+        N: [31:31]    // Negative flag
+        Z: [30:30]    // Zero flag
+        C: [29:29]    // Carry flag
+        V: [28:28]    // Overflow flag
+        Q: [27:27]    // Saturation flag
+        J: [24:24]    // Jazelle state
+        GE: [16:19]   // Greater than or Equal flags (SIMD)
+        IT: [10:15]   // IT state (Thumb)
+        E: [9:9]      // Endianness
+        A: [8:8]      // Abort disable
+        I: [7:7]      // IRQ disable
+        F: [6:6]      // FIQ disable
+        T: [5:5]      // Thumb mode
+        M: [0:4]      // Mode bits
+    }
+    
+    // Saved Program Status Register (for exception handling)
+    sfr SPSR 32 {
+        N: [31:31]
+        Z: [30:30]
+        C: [29:29]
+        V: [28:28]
+        Q: [27:27]
+        J: [24:24]
+        GE: [16:19]
+        IT: [10:15]
+        E: [9:9]
+        A: [8:8]
+        I: [7:7]
+        F: [6:6]
+        T: [5:5]
+        M: [0:4]
+    }
+    
+    // Link Register (R14/LR) - used for function return addresses
+    sfr LR 32
+    
+    // Stack Pointer (R13/SP) - used for stack operations
+    sfr SP 32
+    
+    // Floating Point Registers (VFP/NEON) - 32 single precision or 16 double precision
+    // S0-S31 for single precision, D0-D15 for double precision
+    gpr S 32 [32]    // Single precision floating point registers
+    gpr D 64 [16]    // Double precision floating point registers (overlaps with S)
+}

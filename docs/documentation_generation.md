@@ -17,7 +17,7 @@ The documentation generator:
 
 ```bash
 # Generate documentation
-uv run isa-dsl generate examples/sample_isa.isa --output output/ --docs
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/ --docs
 
 # Documentation will be generated as:
 # output/isa_documentation.md
@@ -26,7 +26,7 @@ uv run isa-dsl generate examples/sample_isa.isa --output output/ --docs
 ### Generate All Tools Including Documentation
 
 ```bash
-uv run isa-dsl generate examples/sample_isa.isa --output output/
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
 ```
 
 This generates simulator, assembler, disassembler, and documentation.
@@ -172,10 +172,10 @@ The documentation generator is integrated with the CLI:
 
 ```bash
 # Generate only documentation
-uv run isa-dsl generate examples/sample_isa.isa --output output/ --no-simulator --no-assembler --no-disassembler --docs
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/ --no-simulator --no-assembler --no-disassembler --docs
 
 # Generate all tools including documentation
-uv run isa-dsl generate examples/sample_isa.isa --output output/
+uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
 ```
 
 ## Limitations

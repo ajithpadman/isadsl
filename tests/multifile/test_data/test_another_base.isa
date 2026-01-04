@@ -1,0 +1,18 @@
+architecture AnotherBase {
+    word_size: 32
+    registers {
+        sfr PC 32
+    }
+    formats {
+        format IMM_TYPE 32 {
+            opcode: [0:6]
+        }
+    }
+    instructions {
+        instruction ADDI {
+            format: IMM_TYPE
+            encoding: { opcode=2 }
+        }
+    }
+}
+

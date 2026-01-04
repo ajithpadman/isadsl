@@ -19,7 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+GITHUB_READINESS_REPORT.md
 # Virtual environments
 .venv/
 venv/

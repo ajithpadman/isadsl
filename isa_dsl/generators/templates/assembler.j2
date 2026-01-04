@@ -207,55 +207,62 @@
         """
         import re
         
-        # Escape special regex characters in the pattern, but preserve {operand} placeholders
-        # Find all {operand} placeholders
-        operand_placeholders = re.findall(r'\{([^}]+)\}', pattern)
-        
-        # Build regex pattern by replacing {operand} with capture groups
-        regex_pattern = pattern
-        # Escape special characters that aren't part of placeholders
-        # We'll do this carefully to preserve the structure
-        
-        # Replace {operand} with named capture groups
-        for operand in operand_placeholders:
-            # Replace {operand} with a named capture group
-            # The pattern before {operand} might have special chars we need to escape
-            operand_placeholder = '{' + operand + '}'
-            regex_pattern = regex_pattern.replace(operand_placeholder, f'(?P<{operand}>[^,\\s\\]]+)')
-        
-        # Escape other special regex characters, but be careful about what we've already done
-        # Escape: . ^ $ * + ? { } [ ] \ | ( )
-        # But we want to preserve literal characters like R, #, [, ], etc. in the pattern
-        # Actually, let's build the regex more carefully
-        
-        # Rebuild regex pattern more systematically
+        # Find all {operand} placeholders - these are template variables to be replaced
+        # Use a regex that matches {identifier} but not double braces which would be escaped braces
+        operand_placeholders = []
         regex_parts = []
         i = 0
-        while i < len(pattern):
+        pattern_len = len(pattern)
+        
+        while i < pattern_len:
             if pattern[i] == '{':
-                # Find closing brace
-                end = pattern.find('}', i)
-                if end != -1:
-                    operand = pattern[i+1:end]
-                    # Add capture group for operand value
-                    # Operand might be a register number, immediate, etc.
-                    regex_parts.append(f'(?P<{operand}>[^,\\s\\]]+)')
-                    i = end + 1
+                # Check if this is a double brace (escaped literal brace in template)
+                if i + 1 < pattern_len and pattern[i + 1] == '{':
+                    # This is a literal {, escape it for regex
+                    regex_parts.append('\\{')
+                    i += 2
                 else:
-                    regex_parts.append(re.escape(pattern[i]))
-                    i += 1
+                    # This might be a placeholder {operand}
+                    # Find the closing brace
+                    end = pattern.find('}', i)
+                    if end != -1:
+                        operand = pattern[i+1:end]
+                        # Validate that operand is a valid identifier (alphanumeric and underscore)
+                        if operand and (operand[0].isalpha() or operand[0] == '_') and all(c.isalnum() or c == '_' for c in operand):
+                            # This is a placeholder - add it to the list and create a capture group
+                            if operand not in operand_placeholders:
+                                operand_placeholders.append(operand)
+                            
+                            # Determine appropriate capture pattern based on operand name
+                            # Register lists need to capture braces and commas: {r0, r1, r2}
+                            if 'register_list' in operand.lower() or 'list' in operand.lower():
+                                # Capture register list like {r0, r1, r2} or {r0-r3}
+                                regex_parts.append(r'(?P<' + operand + r'>\{[^}]+\})')
+                            else:
+                                # Regular operand: register, immediate, etc.
+                                regex_parts.append(r'(?P<' + operand + r'>[^,\s\]]+)')
+                            i = end + 1
+                        else:
+                            # Not a valid placeholder, treat as literal brace
+                            regex_parts.append('\\{')
+                            i += 1
+                    else:
+                        # No closing brace found, treat as literal
+                        regex_parts.append('\\{')
+                        i += 1
             else:
-                # Escape special regex chars, but allow spaces and common assembly chars
+                # Regular character - escape special regex characters
                 char = pattern[i]
-                if char in '.^$*+?{}[]\\|()':
+                if char in '.^$*+?[]\\|()':
                     regex_parts.append('\\' + char)
                 else:
                     regex_parts.append(char)
                 i += 1
         
+        # Build the final regex pattern
         regex_pattern = ''.join(regex_parts)
         # Make it case-insensitive and allow flexible whitespace
-        # Replace spaces with \s+ but be careful not to break the pattern
+        # Replace spaces with \s* but be careful not to break the pattern
         regex_pattern = '^' + regex_pattern.replace(' ', '\\s*') + '$'
         
         match = re.match(regex_pattern, line, re.IGNORECASE)
@@ -269,8 +276,14 @@
             if value_str:
                 # Parse the value
                 value_str = value_str.strip()
+                
+                # Handle register lists (e.g., {r0, r1, r2, r3})
+                if 'register_list' in operand.lower() or 'list' in operand.lower():
+                    # Register list is captured as a string like "{r0, r1, r2, r3}"
+                    # Store as-is and let the encoding function parse it
+                    operand_dict[operand] = value_str
                 # Remove register prefix if present (e.g., "R0" -> "0")
-                if value_str.upper().startswith('R') and value_str[1:].isdigit():
+                elif value_str.upper().startswith('R') and value_str[1:].isdigit():
                     operand_dict[operand] = int(value_str[1:])
                 # Remove immediate prefix if present (e.g., "#42" -> "42")
                 elif value_str.startswith('#') and (value_str[1:].isdigit() or 

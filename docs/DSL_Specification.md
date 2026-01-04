@@ -2,21 +2,24 @@
 
 This document provides a complete specification of the ISA Domain Specific Language (DSL) for describing Instruction Set Architectures.
 
+**Status**: ✅ Production Ready (Beta) - All features are implemented and tested. The test suite includes 111 tests, all passing.
+
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [File Structure](#file-structure)
-3. [Architecture Definition](#architecture-definition)
-4. [Registers](#registers)
-5. [Instruction Formats](#instruction-formats)
-6. [Instructions](#instructions)
-7. [RTL Behavior](#rtl-behavior)
-8. [Variable-Length Instructions](#variable-length-instructions)
-9. [Instruction Bundling](#instruction-bundling)
-10. [SIMD Vector Support](#simd-vector-support)
-11. [Assembly Syntax](#assembly-syntax)
-12. [Distributed Operands](#distributed-operands)
-13. [Best Practices](#best-practices)
+3. [Multi-File Support](#multi-file-support)
+4. [Architecture Definition](#architecture-definition)
+5. [Registers](#registers)
+6. [Instruction Formats](#instruction-formats)
+7. [Instructions](#instructions)
+8. [RTL Behavior](#rtl-behavior)
+9. [Variable-Length Instructions](#variable-length-instructions)
+10. [Instruction Bundling](#instruction-bundling)
+11. [SIMD Vector Support](#simd-vector-support)
+12. [Assembly Syntax](#assembly-syntax)
+13. [Distributed Operands](#distributed-operands)
+14. [Best Practices](#best-practices)
 
 ## Overview
 
@@ -53,6 +56,92 @@ architecture ArchitectureName {
     }
 }
 ```
+
+## Multi-File Support
+
+The ISA DSL supports organizing ISA specifications across multiple files using `#include` directives. This enables modular organization of large ISA specifications.
+
+### Include Directive
+
+Use `#include` to include other ISA files:
+
+```isa
+#include "registers.isa"
+#include "formats.isa"
+#include "instructions.isa"
+```
+
+**Syntax**: `#include "<file_path>"`
+
+- `file_path` can be absolute or relative to the current file
+- Included files can contain partial definitions (registers, formats, or instructions without an architecture block)
+- Included files can also contain complete architecture blocks (for inheritance mode)
+
+### Cross-File References
+
+The ISA DSL uses textX scope providers to resolve cross-file references automatically:
+
+- **Format references**: Instructions in one file can reference formats defined in another file
+- **Automatic resolution**: The scope provider searches included files to resolve format references
+- **No explicit imports needed**: References are resolved automatically based on file inclusion order
+
+**Example**: An instruction file can reference a format from a formats file:
+
+```isa
+// formats.isa
+format R_TYPE 32 {
+    opcode: [0:5]
+    rd: [6:8]
+}
+
+// instructions.isa
+#include "formats.isa"
+
+instruction ADD {
+    format: R_TYPE  // Automatically resolved from formats.isa
+    encoding: { opcode=1 }
+}
+```
+
+### Merge Mode
+
+When all included files contain partial definitions (no architecture blocks), they are merged into the main file:
+
+```isa
+// main.isa
+architecture MyISA {
+    word_size: 32
+    #include "registers.isa"
+    #include "formats.isa"
+    #include "instructions.isa"
+}
+```
+
+### Inheritance Mode
+
+When included files contain architecture blocks, the main file extends the base architecture:
+
+```isa
+// base.isa
+architecture BaseISA {
+    word_size: 32
+    registers { ... }
+}
+
+// extended.isa
+#include "base.isa"
+
+architecture ExtendedISA {
+    // Extends BaseISA, can override or add definitions
+}
+```
+
+### Best Practices
+
+1. **Organize by component**: Separate registers, formats, and instructions into different files
+2. **Use descriptive names**: Name files based on their content (e.g., `arm_cortex_a9_registers.isa`)
+3. **Relative paths**: Use relative paths for portability
+4. **Reference example**: See `examples/arm_cortex_a9.isa` for a complete multi-file example
 
 ## Architecture Definition
 

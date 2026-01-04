@@ -11,7 +11,7 @@ Welcome to the ISA DSL documentation. This index helps you navigate all availabl
 ## Feature Documentation
 
 - **[DSL Specification](DSL_Specification.md)**: Complete specification of all DSL features including SIMD, bundling, variable-length instructions, and more
-- **[Testing](TESTING.md)**: Complete testing documentation including test suite overview and how to add new tests
+- **[Testing](TESTING.md)**: Complete testing documentation including test suite overview (111 tests, all passing) and how to add new tests
 
 **Note**: For detailed feature documentation, see [DSL Specification](DSL_Specification.md) which consolidates all DSL features.
 
@@ -46,6 +46,7 @@ docs/
 ├── Assembler.md              # Generated assembler documentation
 ├── Disassembler.md           # Generated disassembler documentation
 ├── documentation_generation.md  # Documentation generator features
+└── README.md                 # Documentation directory overview
 ```
 
 ## Command Reference
@@ -67,16 +68,13 @@ For detailed command options, see [README.md](../README.md#command-line-interfac
 
 ## Examples
 
-Example ISA specifications are located in the `examples/` directory:
+Reference ISA specifications are located in the `examples/` directory:
 
-- `minimal.isa` - Minimal example for learning
-- `sample_isa.isa` - Complete RISC example
-- `advanced.isa` - Advanced RISC with 23 instructions
-- `simd.isa` - SIMD/vector instruction example
-- `bundling.isa` - Instruction bundling example
-- `variable_length.isa` - Variable-length instruction example
-- `comprehensive.isa` - Comprehensive example with multiple features
-- `arm_subset.isa` - ARM instruction set subset example
-- `test_identification_fields.isa` - Example demonstrating identification fields
+- `arm_cortex_a9.isa` - Main ARM Cortex-A9 ISA specification (multi-file reference)
+  - `arm_cortex_a9_registers.isa` - Register definitions
+  - `arm_cortex_a9_formats.isa` - Instruction format definitions
+  - `arm_cortex_a9_instructions.isa` - Instruction definitions
+
+Test-specific ISA examples are located in `tests/*/test_data/` directories.
 
 See [Examples Guide](EXAMPLES.md) for detailed descriptions.

@@ -1,0 +1,6 @@
+#include "test_circular_a.isa"
+
+registers {
+    sfr PC 32
+}
+

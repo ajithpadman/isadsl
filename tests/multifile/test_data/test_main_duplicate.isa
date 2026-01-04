@@ -1,0 +1,23 @@
+#include "test_duplicate_registers.isa"
+
+architecture TestISA {
+    word_size: 32
+    
+    registers {
+        gpr R 32 [16]  // Duplicate name!
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:6]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=1 }
+        }
+    }
+}
+

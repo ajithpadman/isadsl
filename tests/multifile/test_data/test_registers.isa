@@ -1,0 +1,5 @@
+registers {
+    gpr R 32 [8]
+    sfr PC 32
+}
+

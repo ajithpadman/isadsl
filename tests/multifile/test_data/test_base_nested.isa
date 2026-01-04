@@ -1,0 +1,4 @@
+registers {
+    sfr PC 32
+}
+

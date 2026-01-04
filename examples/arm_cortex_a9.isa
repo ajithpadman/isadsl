@@ -1,0 +1,13 @@
+// ARM Cortex-A9 ISA Specification
+// Main architecture file that includes register, format, and instruction definitions
+
+#include "arm_cortex_a9_registers.isa"
+#include "arm_cortex_a9_formats.isa"
+#include "arm_cortex_a9_instructions.isa"
+
+architecture ARMCortexA9 {
+    word_size: 32
+    endianness: little
+}
+
+
