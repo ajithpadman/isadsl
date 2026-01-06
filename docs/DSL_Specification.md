@@ -679,7 +679,6 @@ instructions {
         format: BUNDLE_ID          # Format for bundle identification
         bundle_format: BUNDLE_64   # Bundle format for slot layout
         encoding: { bundle_opcode=255 }  # Special opcode to identify bundle
-        bundle_instructions: ADD, SUB  # Instructions that can be bundled
         assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
     }
 }
@@ -689,7 +688,8 @@ instructions {
 - A **format** that defines fields for bundle identification (e.g., `bundle_opcode`)
 - A **bundle_format** that defines the slot layout
 - An **encoding** that references fields in the format (not slots)
-- A **bundle_instructions** list of instruction names that can be bundled
+
+**Dynamic Instruction Identification:** Bundle instructions are abstract - any instruction that fits in a slot's width will be dynamically identified and executed at runtime. You do not need to specify which instructions can be bundled.
 
 ### Bundle Identification Fields
 
@@ -867,7 +867,6 @@ instruction BUNDLE {
     format: BUNDLE_ID
     bundle_format: BUNDLE_64
     encoding: { bundle_opcode=255 }
-    bundle_instructions: ADD, ADD_DIST
     assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
 }
 ```
@@ -1097,7 +1096,6 @@ architecture ComprehensiveISA {
             format: BUNDLE_ID
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
-            bundle_instructions: ADD, ADD_DIST, VADD
             assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
         }
     }

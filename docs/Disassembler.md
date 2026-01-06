@@ -117,7 +117,6 @@ instruction BUNDLE {
     format: BUNDLE_ID
     bundle_format: BUNDLE_64
     encoding: { bundle_opcode=255 }
-    bundle_instructions: ADD, ADD_DIST
     assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
 }
 ```
@@ -217,15 +216,13 @@ instruction BUNDLE {
     format: BUNDLE_ID
     bundle_format: BUNDLE_64
     encoding: { bundle_opcode=255 }
-    bundle_instructions: ADD, ADD_DIST
     assembly_syntax: "BUNDLE[ {slot0}, {slot1} ]"
 }
 ```
 
 **Slot Placeholders**:
 - `{slot0}`, `{slot1}`, etc. - Replaced with the disassembled instruction from each slot
-- Each slot is disassembled using the appropriate instruction's `assembly_syntax` if available
-- Slots are matched against `bundle_instructions` in order
+- Each slot is dynamically disassembled - any instruction that fits in the slot width will be identified
 
 **Example Output**:
 - Format string: `"BUNDLE[ {slot0}, {slot1} ]"`
@@ -303,9 +300,8 @@ The disassembler supports instruction bundling with two-level decoding.
 
 1. Check if instruction matches bundle encoding
 2. Extract slot words from bundle format
-3. For each slot, try to match against `bundle_instructions`
-4. Disassemble each matched instruction
-5. Format output using `assembly_syntax` if provided
+3. For each slot, dynamically identify and disassemble any instruction that fits
+4. Format output using `assembly_syntax` if provided
 
 ## API Reference
 

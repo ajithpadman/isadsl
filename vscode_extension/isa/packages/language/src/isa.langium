@@ -104,15 +104,10 @@ Instruction:
         ('format' ':' format=[InstructionFormat])?
         ('bundle_format' ':' bundle_format=[BundleFormat])?
         ('encoding' ':' encoding=EncodingSpec)?
-        ('bundle_instructions' ':' bundle_instructions_list=BundleInstructionList)?
         ('operands' ':' operands_list=OperandList)?
         ('assembly_syntax' ':' assembly_syntax=STRING)?
         ('behavior' ':' behavior=RTLBlock)?
     '}'
-;
-
-BundleInstructionList:
-    first=ID (',' rest+=ID)*
 ;
 
 OperandList:

@@ -82,7 +82,6 @@ architecture VariableLengthISA {
             format: BUNDLE_ID
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
-            bundle_instructions: ADD16, ADD32, ADD_DIST
         }
     }
 }

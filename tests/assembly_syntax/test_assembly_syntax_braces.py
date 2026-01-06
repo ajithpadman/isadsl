@@ -19,7 +19,7 @@ def test_literal_braces_in_assembly_syntax():
     }
     instructions {
         instruction ADD { format: R_TYPE encoding: { opcode=1, funct=0 } operands: rd, rs1 assembly_syntax: "ADD R{rd}, R{rs1}" }
-        instruction BUNDLE { format: BUNDLE_ID bundle_format: BUNDLE_64 encoding: { bundle_opcode=255 } bundle_instructions: ADD assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}" }
+        instruction BUNDLE { format: BUNDLE_ID bundle_format: BUNDLE_64 encoding: { bundle_opcode=255 } assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}" }
     }
 }'''
     test_isa_file = AssemblySyntaxTestHelpers.create_temp_isa_file(test_isa_content)
@@ -67,7 +67,6 @@ architecture TestNested {
             format: BUNDLE_ID
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
-            bundle_instructions: ADD
             assembly_syntax: "{{ {slot0} }}"
         }
     }
@@ -116,7 +115,6 @@ architecture TestMultiple {
             format: BUNDLE_ID
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
-            bundle_instructions: ADD
             assembly_syntax: "BUNDLE{{{{ {slot0} }}}}"
         }
     }

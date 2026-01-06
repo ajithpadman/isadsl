@@ -219,15 +219,6 @@ class TextXModelConverter:
                     if hasattr(instr_tx, 'assembly_syntax') and instr_tx.assembly_syntax:
                         assembly_syntax = str(instr_tx.assembly_syntax).strip('"\'')
                     
-                    # Extract bundle_instructions using textX object model
-                    bundle_instructions = []
-                    if hasattr(instr_tx, 'bundle_instructions_list') and instr_tx.bundle_instructions_list:
-                        bundle_list = instr_tx.bundle_instructions_list
-                        if hasattr(bundle_list, 'first') and bundle_list.first:
-                            bundle_instructions.append(str(bundle_list.first))
-                        if hasattr(bundle_list, 'rest') and bundle_list.rest:
-                            bundle_instructions.extend([str(name) for name in bundle_list.rest])
-                    
                     instr = Instruction(
                         mnemonic=instr_tx.mnemonic,
                         format=fmt_ref,
@@ -236,29 +227,11 @@ class TextXModelConverter:
                         operands=operands,
                         operand_specs=operand_specs,
                         assembly_syntax=assembly_syntax,
-                        behavior=behavior,
-                        bundle_instructions=[]  # Will be resolved after all instructions are parsed
+                        behavior=behavior
                     )
                     model.instructions.append(instr)
         
-        # Second pass: resolve bundle instruction references by name
-        if hasattr(spec_obj, 'instructions') and hasattr(spec_obj.instructions, 'instructions'):
-            for i, instr_tx in enumerate(spec_obj.instructions.instructions):
-                if hasattr(instr_tx, 'bundle_instructions_list') and instr_tx.bundle_instructions_list:
-                    bundle_list = instr_tx.bundle_instructions_list
-                    bundle_instr_names = []
-                    if hasattr(bundle_list, 'first') and bundle_list.first:
-                        bundle_instr_names.append(str(bundle_list.first))
-                    if hasattr(bundle_list, 'rest') and bundle_list.rest:
-                        bundle_instr_names.extend([str(name) for name in bundle_list.rest])
-                    
-                    # Resolve instruction names to actual instructions
-                    for ref_name in bundle_instr_names:
-                        ref_instr = model.get_instruction(ref_name)
-                        if ref_instr:
-                            model.instructions[i].bundle_instructions.append(ref_instr)
-        
-        # Third pass: resolve any format references that weren't resolved by textX scope provider
+        # Second pass: resolve any format references that weren't resolved by textX scope provider
         # Even though the scope provider finds formats, textX might not assign them to the instruction
         # So we need to check the textX model and resolve format references manually
         for i, instr in enumerate(model.instructions):

@@ -92,7 +92,6 @@ architecture ComprehensiveISA {
             format: BUNDLE_ID
             bundle_format: BUNDLE_64
             encoding: { bundle_opcode=255 }
-            bundle_instructions: ADD, ADD_DIST, VADD
             assembly_syntax: "BUNDLE{{ {slot0}, {slot1} }}"
         }
     }

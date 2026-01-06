@@ -250,24 +250,10 @@
         slot_disassemblies = {}
         {%- for slot in instr.bundle_format.slots %}
         {{ slot.name }}_word = (instruction_word >> {{ slot.lsb }}) & {{ slot | slot_mask }}
-        # Try to disassemble {{ slot.name }} using bundle instructions
-        {{ slot.name }}_asm = None
-        {%- if instr.bundle_instructions %}
-        {%- for sub_instr in instr.bundle_instructions %}
-        {%- set slot_idx = loop.index0 %}
-        {%- if slot_idx < (instr.bundle_format.slots|length) %}
-        # Try {{ sub_instr.mnemonic }} for {{ slot.name }}
-        result_{{ slot.name }}_{{ sub_instr.mnemonic }} = self._disassemble_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-        if result_{{ slot.name }}_{{ sub_instr.mnemonic }} is not None:
-            {{ slot.name }}_asm = result_{{ slot.name }}_{{ sub_instr.mnemonic }}
-        {%- endif %}
-        {%- endfor %}
-        {%- endif %}
-        # If no match found, try generic disassembly
+        # Dynamically disassemble {{ slot.name }} - any instruction that fits will be identified
+        {{ slot.name }}_asm = self.disassemble({{ slot.name }}_word)
         if {{ slot.name }}_asm is None:
-            {{ slot.name }}_asm = self.disassemble({{ slot.name }}_word)
-            if {{ slot.name }}_asm is None:
-                {{ slot.name }}_asm = "UNKNOWN_{{ slot.name }}_0x{:x}".format({{ slot.name }}_word)
+            {{ slot.name }}_asm = "UNKNOWN_{{ slot.name }}_0x{:x}".format({{ slot.name }}_word)
         slot_disassemblies['{{ slot.name }}'] = {{ slot.name }}_asm
         {%- endfor %}
         

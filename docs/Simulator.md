@@ -108,12 +108,14 @@ The simulator supports instruction bundling with two-level decoding.
 
 1. **First-level decoding**: The simulator checks if an instruction word matches a bundle encoding
 2. **Bundle extraction**: If it's a bundle, extract sub-instructions from each slot
-3. **Second-level decoding**: Execute each sub-instruction in sequence
-4. **PC update**: Advance PC by the bundle width (not individual instruction width)
+3. **Dynamic identification**: For each slot, dynamically identify any instruction that fits in the slot width
+4. **Second-level decoding**: Execute each identified sub-instruction in sequence
+5. **PC update**: Advance PC by the bundle width (not individual instruction width)
 
 ### Bundle Execution Order
 
 - Sub-instructions are executed in slot order (slot0, slot1, ...)
+- Instructions in slots are dynamically identified at runtime - any instruction that fits will be executed
 - All sub-instructions in a bundle execute atomically
 - PC advances by bundle width after bundle execution
 

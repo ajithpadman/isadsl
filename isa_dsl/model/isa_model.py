@@ -176,11 +176,10 @@ class Instruction(TextXObject):
     operand_specs: List[OperandSpec] = field(default_factory=list)  # New: operand specifications with field mappings
     assembly_syntax: Optional[str] = None  # Format string for disassembly (e.g., "ADD R{rd}, R{rs1}, R{rs2}")
     behavior: Optional['RTLBlock'] = None
-    bundle_instructions: List['Instruction'] = field(default_factory=list)  # For bundle instructions
 
     def is_bundle(self) -> bool:
         """Check if this is a bundle instruction."""
-        return self.bundle_format is not None and len(self.bundle_instructions) > 0
+        return self.bundle_format is not None
 
     def matches_encoding(self, instruction_word: int) -> bool:
         """Check if an instruction word matches this instruction's encoding."""

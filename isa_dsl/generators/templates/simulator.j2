@@ -194,6 +194,26 @@
         else:
             return 32  # Default
 
+    def _execute_non_bundle_instruction(self, instruction_word: int) -> bool:
+        """Execute a single instruction word, skipping bundle checks (used for bundle slots)."""
+        # Only try non-bundle instructions
+{%- for instr in isa.instructions %}
+        {%- if not instr.is_bundle() %}
+        {%- if instr.matches_encoding %}
+        # Check {{ instr.mnemonic }}
+        if self._matches_{{ instr.mnemonic }}(instruction_word):
+            self._execute_{{ instr.mnemonic }}(instruction_word)
+            return True
+        {%- else %}
+        # {{ instr.mnemonic }}
+        if self._matches_{{ instr.mnemonic }}(instruction_word):
+            self._execute_{{ instr.mnemonic }}(instruction_word)
+            return True
+        {%- endif %}
+        {%- endif %}
+{%- endfor %}
+        return False
+
     def _execute_instruction(self, instruction_word: int) -> bool:
         """Execute a single instruction word."""
         # First, check if this might be a wide bundle by checking the first byte
@@ -248,22 +268,7 @@
 {%- endfor %}
         
         # If not a bundle, try regular instructions
-{%- for instr in isa.instructions %}
-        {%- if not instr.is_bundle() %}
-        {%- if instr.matches_encoding %}
-        # Check {{ instr.mnemonic }}
-        if self._matches_{{ instr.mnemonic }}(instruction_word):
-            self._execute_{{ instr.mnemonic }}(instruction_word)
-            return True
-        {%- else %}
-        # {{ instr.mnemonic }}
-        if self._matches_{{ instr.mnemonic }}(instruction_word):
-            self._execute_{{ instr.mnemonic }}(instruction_word)
-            return True
-        {%- endif %}
-        {%- endif %}
-{%- endfor %}
-        return False
+        return self._execute_non_bundle_instruction(instruction_word)
 {% endblock %}
 
 {% block instruction_matching %}
@@ -343,42 +348,12 @@
         # Save PC before executing bundle slots (instructions in bundles shouldn't update PC)
         saved_pc = self.pc
         {%- for slot in instr.bundle_format.slots %}
-        {%- set slot_idx = loop.index0 %}
-        # Execute instruction in {{ slot.name }} slot (direct execution, skip bundle check)
-        {%- if instr.bundle_instructions %}
-        # Try to match against bundle instructions in order
-        # Match slot {{ slot_idx }} with instruction at index {{ slot_idx }}
-        slot_{{ slot.name }}_matched = False
-        {%- if slot_idx < (instr.bundle_instructions|length) %}
-        {%- set sub_instr = instr.bundle_instructions[slot_idx] %}
-        matches_{{ slot.name }}_{{ sub_instr.mnemonic }} = self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-        if matches_{{ slot.name }}_{{ sub_instr.mnemonic }}:
-            # Save PC before executing (instruction will update it, but we'll restore)
-            self.pc = saved_pc
-            self._execute_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-            saved_pc = self.pc  # Update saved PC after execution
-            slot_{{ slot.name }}_matched = True
-        {%- endif %}
-        # If no match, try other bundle instructions as fallback
-        if not slot_{{ slot.name }}_matched:
-            {%- for sub_instr in instr.bundle_instructions %}
-            {%- if loop.index0 != slot_idx %}
-            if not slot_{{ slot.name }}_matched:
-                matches_fallback = self._matches_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-                if matches_fallback:
-                    # Save PC before executing (instruction will update it, but we'll restore)
-                    self.pc = saved_pc
-                    self._execute_{{ sub_instr.mnemonic }}({{ slot.name }}_word)
-                    saved_pc = self.pc  # Update saved PC after execution
-                    slot_{{ slot.name }}_matched = True
-            {%- endif %}
-            {%- endfor %}
-        {%- else %}
-        # No bundle instructions specified, try regular execution
+        # Execute instruction in {{ slot.name }} slot using dynamic identification
+        # The simulator will identify any instruction that fits in this slot width
+        # Use _execute_non_bundle_instruction to avoid recursion
         self.pc = saved_pc
-        self._execute_instruction({{ slot.name }}_word)
+        self._execute_non_bundle_instruction({{ slot.name }}_word)
         saved_pc = self.pc
-        {%- endif %}
         {%- endfor %}
         # Restore PC to value before bundle execution (step() will update PC by bundle width)
         self.pc = saved_pc
