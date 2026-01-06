@@ -41,3 +41,30 @@ jobs:
         # Example: black --check . || true
         echo "Linting checks can be added here"
 
+  test-vscode-extension:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install dependencies
+      working-directory: vscode_extension/isa/packages/language
+      run: |
+        npm install
+    
+    - name: Generate langium code
+      working-directory: vscode_extension/isa/packages/language
+      run: |
+        npm run langium:generate
+    
+    - name: Run vscode extension tests
+      working-directory: vscode_extension/isa/packages/language
+      run: |
+        npm test
+

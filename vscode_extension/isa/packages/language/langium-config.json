@@ -1,0 +1,16 @@
+{
+    "projectName": "Isa",
+    "languages": [
+        {
+            "id": "isa-dsl",
+            "grammar": "src/isa.langium",
+            "fileExtensions": [
+                "isa"
+            ],
+            "textMate": {
+                "out": "syntaxes/isa.tmLanguage.json"
+            }
+        }
+    ],
+    "out": "src/generated"
+}

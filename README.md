@@ -17,6 +17,11 @@ A powerful Domain Specific Language (DSL) for describing Instruction Set Archite
   - Markdown documentation
 - **SIMD Support**: Built-in support for vector registers and SIMD instructions
 - **Validation**: Comprehensive semantic validation of ISA specifications
+- **Language Server Protocol (LSP) Support**: Full IDE integration with VS Code extension providing:
+  - Real-time syntax highlighting
+  - Code completion
+  - Hover documentation
+  - Error diagnostics
 
 ## Installation
 
@@ -98,6 +103,7 @@ All technical documentation is available in the `docs/` folder:
 - **[DSL_Specification.md](docs/DSL_Specification.md)**: Complete DSL specification covering all features including syntax, registers, formats, instructions, RTL behavior, variable-length instructions, bundling, SIMD, and more
 - **[EXAMPLES.md](docs/EXAMPLES.md)**: Detailed documentation of example ISA specifications with learning paths and common patterns
 - **[TESTING.md](docs/TESTING.md)**: Complete testing documentation including test suite overview, how to run tests, and how to add new tests
+- **[LANGUAGE_SERVER.md](docs/LANGUAGE_SERVER.md)**: Language Server Protocol (LSP) setup and usage guide for VS Code extension
 
 ## Examples
 
@@ -156,11 +162,12 @@ The project includes a comprehensive test suite with **111 automated tests** cov
 - **Integration tests**: End-to-end workflows, QEMU verification, ARM toolchain integration
 - **Multi-file support**: Include processing, inheritance, merge modes
 - **Assembly syntax**: Formatting, literal braces, backward compatibility
+- **VS Code Extension**: Language server tests (18 tests) for LSP functionality
 
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all Python tests
 uv run pytest
 
 # Run with verbose output
@@ -171,9 +178,15 @@ uv run pytest --cov
 
 # Run specific test suite
 uv run pytest tests/arm/
+
+# Run VS Code extension tests
+cd vscode_extension/isa/packages/language && npm test
 ```
 
-**Test Status**: ✅ All 111 tests passing, 0 skipped, 0 failed
+**Test Status**: 
+- ✅ All 111 Python tests passing, 0 skipped, 0 failed
+- ✅ All 18 VS Code extension tests passing
+- ✅ Continuous Integration (CI) runs all tests automatically on push/PR
 
 ## Development
 

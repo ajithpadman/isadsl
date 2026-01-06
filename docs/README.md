@@ -27,10 +27,13 @@ Welcome to the ISA DSL documentation. This directory contains all documentation 
 
 **Current Status**: ✅ Ready for Deployment (Beta)
 
-- **Test Suite**: 111 tests, all passing, 0 skipped, 0 failed
+- **Test Suite**: 
+  - 111 Python tests, all passing, 0 skipped, 0 failed
+  - 18 VS Code extension tests, all passing
 - **Code Quality**: Modular, well-organized, follows best practices
 - **Documentation**: Complete and up-to-date
 - **Dependencies**: All properly specified in pyproject.toml
+- **CI/CD**: Automated testing on GitHub Actions for both Python and VS Code extension
 
 ## Documentation Structure
 

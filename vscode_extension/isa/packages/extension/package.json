@@ -1,0 +1,56 @@
+{
+    "name": "isa-dsl-language-server",
+    "description": "Language server and syntax highlighting for ISA DSL files (Langium-based)",
+    "version": "0.1.0",
+    "displayName": "ISA DSL Language Server",
+    "type": "module",
+    "engines": {
+        "vscode": "^1.67.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "isa-dsl",
+            "aliases": ["ISA DSL", "isa-dsl"],
+            "extensions": [".isa"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "isa-dsl",
+            "scopeName": "source.isa-dsl",
+            "path": "syntaxes/isa.tmLanguage.json"
+        }],
+        "commands": [{
+            "command": "isa-dsl.showVersion",
+            "title": "Show ISA DSL Extension Version",
+            "category": "ISA DSL"
+        }]
+    },
+    "activationEvents": [
+        "onLanguage:isa-dsl"
+    ],
+    "main": "./out/extension/main.cjs",
+    "scripts": {
+        "clean": "shx rm -fr *.tsbuildinfo out syntaxes",
+        "vscode:prepublish": "npm run build",
+        "build:prepare": "shx mkdir -p ./syntaxes/ && shx cp -f ../language/syntaxes/isa-dsl.tmLanguage.json ./syntaxes/isa.tmLanguage.json || shx cp -f ../language/syntaxes/isa.tmLanguage.json ./syntaxes/isa.tmLanguage.json",
+        "build": "npm run build:prepare && tsc -b tsconfig.json && node esbuild.mjs",
+        "build:clean": "npm run clean && npm run build",
+        "watch": "npm run build:prepare && concurrently -n tsc,esbuild -c blue,yellow \"tsc -b tsconfig.json --watch\" \"node esbuild.mjs --watch\""
+    },
+    "dependencies": {
+        "isa-language": "0.0.1",
+        "vscode-languageclient": "~9.0.1",
+        "vscode-languageserver": "~9.0.1"
+    },
+    "devDependencies": {
+        "@types/vscode": "~1.67.0",
+        "concurrently": "~8.2.1",
+        "esbuild": "~0.25.5"
+    },
+    "vsce": {
+      "dependencies": false
+    }
+}

@@ -4,7 +4,7 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of **111 tests** organized into logical groups within the `tests/` directory. All tests are passing with 0 skipped and 0 failed.
+The test suite consists of **111+ tests** organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
 
 ### Test Organization
 
@@ -51,6 +51,7 @@ Tests are organized into the following directories:
   - `test_arm_integration_end_to_end.py` - End-to-end workflow tests for ARM ISA subset
   - `test_arm_integration_labels_loops.py` - Labels and loops tests with QEMU
   - Helper files: `test_helpers.py`, `test_helpers_basic.py`, `test_helpers_compilation.py`, `test_helpers_qemu.py`, `test_helpers_integration.py`
+
 
 ## Running Tests
 
