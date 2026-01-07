@@ -1,0 +1,3 @@
+"""TriCore ISA tests."""
+
+

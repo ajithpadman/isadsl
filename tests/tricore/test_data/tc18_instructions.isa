@@ -1,0 +1,24 @@
+#include "tc18_formats.isa"
+#include "tc18_registers.isa"
+instructions {
+    instruction ABS {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x1C
+       }
+       operands:s2,d 
+       assembly_syntax: "ABS {d}, {s2}"
+       behavior:{
+        result = (D[s2] >= 0) ? D[s2] : (0 - D[s2]);
+        D[d] = result;
+        if(result > 0x7FFFFFFF){
+            PSW.V = 1;
+        }
+        else{
+            PSW.V =0;
+        }
+
+       }
+    }
+}

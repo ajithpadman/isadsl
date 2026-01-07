@@ -1,0 +1,5 @@
+#include "tc18_instructions.isa"
+architecture TriCore18{
+    word_size: 32
+    endianness: little
+}

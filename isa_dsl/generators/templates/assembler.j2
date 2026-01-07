@@ -296,9 +296,18 @@
                     # Register list is captured as a string like "{r0, r1, r2, r3}"
                     # Store as-is and let the encoding function parse it
                     operand_dict[operand] = value_str
-                # Remove register prefix if present (e.g., "R0" -> "0")
-                elif value_str.upper().startswith('R') and value_str[1:].isdigit():
+                # Remove register prefix if present (e.g., "R0" -> "0", "D0" -> "0", "A0" -> "0")
+                # Check against all register file names from ISA
+                {%- set register_prefixes = [] %}
+                {%- for reg in isa.registers %}
+                {%- if reg.is_register_file() %}
+                {%- set _ = register_prefixes.append(reg.name.upper()) %}
+                {%- endif %}
+                {%- endfor %}
+                {%- if register_prefixes %}
+                elif ({%- for prefix in register_prefixes %}{% if not loop.first %} or {% endif %}value_str.upper().startswith('{{ prefix }}'){%- endfor %}) and len(value_str) > 1 and value_str[1:].isdigit():
                     operand_dict[operand] = int(value_str[1:])
+                {%- endif %}
                 # Remove immediate prefix if present (e.g., "#42" -> "42")
                 elif value_str.startswith('#') and (value_str[1:].isdigit() or 
                       (value_str[1:].startswith('0x') or value_str[1:].startswith('0X'))):
@@ -713,10 +722,15 @@
             raise ValueError(f"Virtual register '{name}' cannot be used as operand index")
         {%- endfor %}
         
-        # Handle register names like R0, R1, etc.
-        if name.upper().startswith('R') and name[1:].isdigit():
-            return int(name[1:])
-        # Add more register name resolution as needed
+        # Handle register names dynamically based on ISA register files
+        # Check against all register file names from ISA
+        {%- for reg in isa.registers %}
+        {%- if reg.is_register_file() %}
+        if name.upper().startswith('{{ reg.name.upper() }}') and len(name) > len('{{ reg.name }}') and name[len('{{ reg.name }}'):].isdigit():
+            return int(name[len('{{ reg.name }}'):])
+        {%- endif %}
+        {%- endfor %}
+        # If no match found, return 0
         return 0
 
     def _determine_instruction_width(self, instruction_word: int) -> int:

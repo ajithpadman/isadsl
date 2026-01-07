@@ -1,0 +1,145 @@
+formats {
+  //16bit formats
+  format SB 16 { 
+    op1:[0:7]
+    disp8:[8:15]  
+    identification_fields:op1
+  }
+  format SBC 16 {
+    op1:[0:7]
+    disp4:[8:11]
+    const4:[12:15]
+    identification_fields:op1
+  }
+  format SBR 16 {
+    op1:[0:7]
+    disp4:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SBRN 16 {
+    op1:[0:7]
+    disp4:[8:11]
+    n:[12:15]
+    identification_fields:op1
+  }
+  format SC 16 {
+    op1:[0:7]
+    const8:[8:15]
+    identification_fields:op1
+  }
+  format SLR 16 {
+    op1:[0:7]
+    d:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SLRO 16 {
+    op1:[0:7]
+    d:[8:11]
+    off4:[12:15]
+    identification_fields:op1
+  }
+  format SR 16 {
+    op1:[0:7]
+    s1_d:[8:11]
+    op2:[12:13]
+    identification_fields:op1,op2
+  }
+  format SRC 16 {
+    op1:[0:7]
+    s1_d:[8:11]
+    const4:[12:15]
+    identification_fields:op1
+  }
+  format SRO 16 {
+    op1:[0:7]
+    off4:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SRR 16 {
+    op1:[0:7]
+    s1_d:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SRRS 16 {
+    op1:[0:5]
+    n:[6:7]
+    s1_d:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SSR 16 {
+    op1:[0:7]
+    s1:[8:11]
+    s2:[12:15]
+    identification_fields:op1
+  }
+  format SSRO 16 {
+    op1:[0:7]
+    s1:[8:11]
+    off4:[12:15]
+    identification_fields:op1
+  }
+  //32 bit formats   
+  format ABS 32 {
+    op1:[0:7]
+    s1_d:[8:11]
+    off18_17_14:[12:15]
+    off18_5_0:[16:21]
+    off18_13_10:[22:25]
+    op2:[26:27]
+    off18_9_6:[30:31]
+  }
+  format ABSB 32 {
+    op1:[0:7]
+    bpos3:[8:10]
+    b:[11:11]
+    off18_17_14:[12:15]
+    off18_5_0:[16:21]
+    off18_13_10:[22:25]
+    op2:[26:27]
+    off18_9_6:[30:31]
+    identification_fields: op1,op2
+  }
+  
+  format B 32 {
+    op1:[0:7]
+    disp24_23_16:[8:15]
+    disp24_15_0:[16:31]
+    identification_fields:op1
+  }
+
+  format BIT 32 {
+    op1:[0:7]
+    s1:[8:11]
+    s2:[12:15]
+    pos1:[16:20]
+    op2:[21:22]
+    pos2:[23:27]
+    d:[28:31]
+    identification_fields:op1,op2
+  }
+  format BO 32 {
+    op1:[0:7]
+    s1_d:[8:11]
+    s2:[12:15]
+    off10_5_0:[16:21]
+    op2:[22:27]
+    off10_9_6:[28:31]
+    identification_fields:op1,op2
+  }
+  format RR 32 {
+    op1:[0:7]
+    s1:[8:11]
+    s2:[12:15]
+    n:[16:17]
+    reserved:[18:19]
+    op2:[20:27]
+    d:[28:31]
+    identification_fields:op1,op2
+  }
+
+}

@@ -1,0 +1,86 @@
+// TriCore 1.8 ISA Register Definitions
+// This file defines all registers for TriCore 1.8 Instruction Set Architecture
+// Based on TriCore TC1.8 Architecture Manual
+
+registers {
+    // Data Registers (D0-D15) - 32-bit general purpose data registers
+    gpr D 32 [16]
+    
+    // Address Registers (A0-A15) - 32-bit address/pointer registers
+    gpr A 32 [16]
+    
+    // Virtual Registers (E0-E15) - 64-bit registers formed by concatenating even-odd D register pairs
+    // E0 = D0|D1, E2 = D2|D3, E4 = D4|D5, etc.
+    virtual register E0 64 = {D[0]|D[1]}
+    virtual register E2 64 = {D[2]|D[3]}
+    virtual register E4 64 = {D[4]|D[5]}
+    virtual register E6 64 = {D[6]|D[7]}
+    virtual register E8 64 = {D[8]|D[9]}
+    virtual register E10 64 = {D[10]|D[11]}
+    virtual register E12 64 = {D[12]|D[13]}
+    virtual register E14 64 = {D[14]|D[15]}
+
+    virtual register Q0 128 = {D[0]|D[1]|D[2]|D[3]}
+    virtual register Q4 128 = {D[4]|D[5]|D[6]|D[7]}
+    virtual register Q8 128 = {D[8]|D[9]|D[10]|D[11]}
+    virtual register E10 128 = {D[12]|D[13]|D[14]|D[15]}
+
+    virtual register P0 64 = {A[0]|A[1]}
+    virtual register P2 64 = {A[2]|A[3]}
+    virtual register P4 64 = {A[4]|A[5]}
+    virtual register P6 64 = {A[6]|A[7]}
+    virtual register P8 64 = {A[8]|A[9]}
+    virtual register P10 64 = {A[10]|A[11]}
+    virtual register P12 64 = {A[12]|A[13]}
+    virtual register P14 64 = {A[14]|A[15]}
+    
+    // Register Aliases - Common aliases for address registers
+    alias SP = A[10]    // Stack Pointer (SP)
+    sfr ISP 32          //Interrupt stack pointer
+    alias RA = A[11]    // Return Address (RA)
+
+    
+    // Program Counter
+    sfr PC 32 {
+        reserved:[0:0]
+        PC:[1:31]
+    }
+    
+    // Program Status Word (PSW) - Main status register
+    sfr PSW 32 {
+        CDC:[0:6]
+        CDE:[7:7]
+        GW:[8:8]
+        IS:[9:9]
+        IO:[10:11]
+        PRS1:[12:13]
+        S:[14:14]
+        PRS2:[15:15]
+        reserved1:[16:23]
+        reserved2:[24:26]
+        SAV:[27:27] //sticky advance overflow
+        AV:[28:28] //Advance overflow
+        SV:[29:29] //Sticky overflow
+        V:[30:30] //Overflow
+        C:[31:31] //Carry
+    }
+    
+    // Previous Context Information Word (PCXI) - Used for context switching
+    sfr PCXI 32 {
+        PCXO: [0:15]      
+        PCXS: [16:19]     
+        UL:[20:20]
+        PIE: [21:21]     
+        PCPN: [22:29]    
+        reserved: [30:31]
+    }
+
+    sfr PRPS 32 {
+        PRPS:[0:2]
+        reserved:[3:31]
+    }
+
+    
+   
+}
+
