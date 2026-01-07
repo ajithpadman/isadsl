@@ -45,6 +45,9 @@ output/
 test_output/
 *.pyc
 
+# Test binary files
+tests/**/*.bin
+
 # OS
 .DS_Store
 Thumbs.db

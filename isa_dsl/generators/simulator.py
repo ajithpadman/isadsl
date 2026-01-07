@@ -46,14 +46,33 @@ class SimulatorGenerator:
                 # Regular register write
                 target = self._generate_lvalue_code(stmt.target)
                 expr = self._generate_expr_code(stmt.expr)
-                return f"        {target} = {expr} & 0xFFFFFFFF"
+                
+                # Check if target is a register with fields (not a field access)
+                # If it's a simple register name (string) or RegisterAccess, check if it has fields
+                use_value_assignment = False
+                if isinstance(stmt.target, str):
+                    reg = self.isa.get_register(stmt.target)
+                    if reg and reg.fields and len(reg.fields) > 0:
+                        use_value_assignment = True
+                elif isinstance(stmt.target, RegisterAccess):
+                    reg = self.isa.get_register(stmt.target.reg_name)
+                    if reg and reg.fields and len(reg.fields) > 0:
+                        use_value_assignment = True
+                
+                if use_value_assignment:
+                    # Register has fields - use .value assignment to preserve Register object
+                    return f"        {target}.value = {expr} & 0xFFFFFFFF"
+                else:
+                    # No fields or field access - direct assignment
+                    return f"        {target} = {expr} & 0xFFFFFFFF"
         elif isinstance(stmt, RTLConditional):
             condition = self._generate_expr_code(stmt.condition)
             code = f"        if {condition}:\n"
             for then_stmt in stmt.then_statements:
                 # Add extra indentation for then block
                 stmt_code = self._generate_rtl_code(then_stmt)
-                # Increase indentation by 4 spaces
+                # The stmt_code has 8 spaces, we need 12 for if block (8 + 4)
+                # So we add 4 more spaces to each line
                 for line in stmt_code.split('\n'):
                     if line.strip():
                         code += "    " + line + "\n"
@@ -62,6 +81,8 @@ class SimulatorGenerator:
                 for else_stmt in stmt.else_statements:
                     # Add extra indentation for else block
                     stmt_code = self._generate_rtl_code(else_stmt)
+                    # The stmt_code has 8 spaces, we need 12 for else block (8 + 4)
+                    # So we add 4 more spaces to each line
                     for line in stmt_code.split('\n'):
                         if line.strip():
                             code += "    " + line + "\n"
@@ -96,7 +117,8 @@ class SimulatorGenerator:
         elif isinstance(lvalue, FieldAccess):
             # Resolve alias if needed
             resolved_name, _ = self._resolve_register_alias(lvalue.reg_name, None)
-            return f"self.{resolved_name}_{lvalue.field_name}"
+            # Direct field access: PSW.V
+            return f"self.{resolved_name}.{lvalue.field_name}"
         elif isinstance(lvalue, Variable):
             # Temporary variable
             return lvalue.name
@@ -153,7 +175,8 @@ class SimulatorGenerator:
                 return f"self.{resolved_name}[{resolved_index}]"
             return f"self.{resolved_name}[{index}]"
         elif isinstance(expr, FieldAccess):
-            return f"self.{expr.reg_name}_{expr.field_name}"
+            # Direct field access: PSW.V
+            return f"self.{expr.reg_name}.{expr.field_name}"
         elif isinstance(expr, Variable):
             # Temporary variable reference
             return expr.name

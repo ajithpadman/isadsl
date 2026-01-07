@@ -1,0 +1,151 @@
+architecture RegisterFieldsTest {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [8]
+        
+        // Program Status Word with fields
+        sfr PSW 32 {
+            reserved1: [0:27]
+            AV: [28:28]   // Advance overflow
+            SV: [29:29]   // Sticky overflow
+            V: [30:30]    // Overflow
+            C: [31:31]    // Carry
+        }
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            reserved: [15:31]
+        }
+        
+        format I_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            imm: [12:31]
+        }
+    }
+    
+    instructions {
+        // Instruction to set individual fields
+        instruction SET_V {
+            format: I_TYPE
+            encoding: {
+                opcode=0x01
+                rd=0
+                rs1=0
+                imm=0
+            }
+            operands: rd
+            assembly_syntax: "SET_V {rd}"
+            behavior: {
+                PSW.V = 1;
+            }
+        }
+        
+        // Instruction to set multiple fields
+        instruction SET_FLAGS {
+            format: I_TYPE
+            encoding: {
+                opcode=0x02
+                rd=0
+                rs1=0
+                imm=0
+            }
+            operands: rd
+            assembly_syntax: "SET_FLAGS {rd}"
+            behavior: {
+                PSW.V = 1;
+                PSW.SV = 1;
+                PSW.AV = 1;
+                PSW.C = 1;
+            }
+        }
+        
+        // Instruction to clear a field
+        instruction CLEAR_V {
+            format: I_TYPE
+            encoding: {
+                opcode=0x03
+                rd=0
+                rs1=0
+                imm=0
+            }
+            operands: rd
+            assembly_syntax: "CLEAR_V {rd}"
+            behavior: {
+                PSW.V = 0;
+            }
+        }
+        
+        // Instruction to set full register
+        // Note: immediate field is 20 bits (bits 12-31), so we shift it to get full 32-bit value
+        instruction SET_PSW {
+            format: I_TYPE
+            encoding: {
+                opcode=0x04
+            }
+            operands: rd, imm
+            assembly_syntax: "SET_PSW {rd}, {imm}"
+            behavior: {
+                PSW = imm << 12;
+            }
+        }
+        
+        // Instruction to read field and use in condition
+        instruction CHECK_V {
+            format: R_TYPE
+            encoding: {
+                opcode=0x05
+            }
+            operands: rd
+            assembly_syntax: "CHECK_V {rd}"
+            behavior: {
+                if (PSW.V != 0) {
+                    R[rd] = 1;
+                } else {
+                    R[rd] = 0;
+                }
+            }
+        }
+        
+        // Instruction to update field based on another field
+        instruction COPY_V_TO_SV {
+            format: I_TYPE
+            encoding: {
+                opcode=0x06
+                rd=0
+                rs1=0
+                imm=0
+            }
+            operands: rd
+            assembly_syntax: "COPY_V_TO_SV {rd}"
+            behavior: {
+                PSW.SV = PSW.V;
+            }
+        }
+        
+        // Instruction to do arithmetic on full register
+        instruction INC_PSW {
+            format: I_TYPE
+            encoding: {
+                opcode=0x07
+                rd=0
+                rs1=0
+                imm=0
+            }
+            operands: rd
+            assembly_syntax: "INC_PSW {rd}"
+            behavior: {
+                PSW = PSW + 1;
+            }
+        }
+    }
+}
+

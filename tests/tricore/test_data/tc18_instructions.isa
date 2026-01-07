@@ -11,10 +11,16 @@ instructions {
        assembly_syntax: "ABS {d}, {s2}"
        behavior:{
         result = (D[s2] >= 0) ? D[s2] : (0 - D[s2]);
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = av>0?1:0;
+        PSW.SV = av >0?1:PSW.SV;
         D[d] = result;
         if(result > 0x7FFFFFFF){
             PSW.V = 1;
             PSW.SV =1;
+
         }
         else{
             PSW.V =0;

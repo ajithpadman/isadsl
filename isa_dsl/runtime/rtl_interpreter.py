@@ -277,14 +277,26 @@ class RTLInterpreter:
         if reg_name not in self.registers:
             raise ValueError(f"Unknown register: {reg_name}")
 
-        reg_value = self.registers[reg_name]
-        if isinstance(reg_value, list):
+        reg_obj = self.registers[reg_name]
+        
+        # Check if it's a Register wrapper (has field support)
+        if hasattr(reg_obj, '_get_field'):
+            # It's a Register wrapper - use direct field access
+            return reg_obj._get_field(field_name)
+        
+        if isinstance(reg_obj, list):
             raise ValueError(f"Cannot access field on register file: {reg_name}")
 
-        # For now, we'll need the field definition to extract bits
-        # This is a simplified version - in practice, we'd need the ISA model
-        # to know the field bit positions
-        return reg_value & 0xFFFFFFFF
+        # Fallback: extract bits manually if we have ISA model
+        if self.isa:
+            reg = self.isa.get_register(reg_name)
+            if reg:
+                field = reg.get_field(field_name)
+                if field:
+                    width = field.msb - field.lsb + 1
+                    return (reg_obj >> field.lsb) & ((1 << width) - 1)
+        
+        return reg_obj & 0xFFFFFFFF
 
     def _set_lvalue(self, lvalue: RTLLValue, value: int):
         """Set the value of an lvalue."""
@@ -327,8 +339,29 @@ class RTLInterpreter:
             if reg_name not in self.registers:
                 raise ValueError(f"Unknown register: {reg_name}")
 
-            # For field access, we need to update specific bits
-            # This is simplified - in practice, we'd need field definitions
+            reg_obj = self.registers[reg_name]
+            
+            # Check if it's a Register wrapper (has field support)
+            if hasattr(reg_obj, '_set_field'):
+                # It's a Register wrapper - use direct field assignment
+                reg_obj._set_field(field_name, value)
+                return
+            
+            # Fallback: update bits manually if we have ISA model
+            if self.isa:
+                reg = self.isa.get_register(reg_name)
+                if reg:
+                    field = reg.get_field(field_name)
+                    if field:
+                        msb, lsb = field.msb, field.lsb
+                        width = msb - lsb + 1
+                        mask = ((1 << width) - 1) << lsb
+                        # Clear field bits and set new value
+                        reg_obj = (reg_obj & ~mask) | ((value & ((1 << width) - 1)) << lsb)
+                        self.registers[reg_name] = reg_obj & 0xFFFFFFFF
+                        return
+            
+            # Last resort: just set the value (may overwrite other fields)
             self.registers[reg_name] = value
         
         elif isinstance(lvalue, Variable):

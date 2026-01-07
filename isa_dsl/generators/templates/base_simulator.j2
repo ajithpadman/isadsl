@@ -10,8 +10,186 @@ This simulator was automatically generated from the ISA specification.
 {% endblock %}
 
 {% block imports %}
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import sys
+{% endblock %}
+
+{% block register_class %}
+class Register:
+    """Register wrapper that supports both integer and field access (C union-like)."""
+    
+    def __init__(self, width: int, fields: List[Tuple[str, int, int]] = None):
+        """
+        Args:
+            width: Register width in bits
+            fields: List of (field_name, msb, lsb) tuples
+        """
+        self._value = 0
+        self._width = width
+        self._mask = (1 << width) - 1
+        self._fields = {}
+        
+        if fields:
+            for field_name, msb, lsb in fields:
+                self._fields[field_name] = (msb, lsb)
+    
+    def _get_field(self, field_name: str) -> int:
+        """Get field value using bit extraction."""
+        if field_name not in self._fields:
+            raise AttributeError(f"Register has no field '{field_name}'")
+        msb, lsb = self._fields[field_name]
+        width = msb - lsb + 1
+        # Use object.__getattribute__ to avoid recursion
+        value = object.__getattribute__(self, '_value')
+        return (value >> lsb) & ((1 << width) - 1)
+    
+    def _set_field(self, field_name: str, value: int):
+        """Set field value using bit manipulation."""
+        if field_name not in self._fields:
+            raise AttributeError(f"Register has no field '{field_name}'")
+        msb, lsb = self._fields[field_name]
+        width = msb - lsb + 1
+        mask = ((1 << width) - 1) << lsb
+        # Clear field bits and set new value - use object.__setattr__ to avoid recursion
+        current_value = object.__getattribute__(self, '_value')
+        new_value = (current_value & ~mask) | ((value & ((1 << width) - 1)) << lsb)
+        new_value &= self._mask  # Ensure within width
+        object.__setattr__(self, '_value', new_value)
+    
+    @property
+    def value(self) -> int:
+        """Get full register value."""
+        return self._value
+    
+    @value.setter
+    def value(self, val: int):
+        """Set full register value."""
+        self._value = val & self._mask
+    
+    # Integer-like behavior
+    def __int__(self) -> int:
+        return self._value
+    
+    def __index__(self) -> int:
+        return self._value
+    
+    def __add__(self, other):
+        return self._value + int(other)
+    
+    def __radd__(self, other):
+        return int(other) + self._value
+    
+    def __sub__(self, other):
+        return self._value - int(other)
+    
+    def __rsub__(self, other):
+        return int(other) - self._value
+    
+    def __mul__(self, other):
+        return self._value * int(other)
+    
+    def __rmul__(self, other):
+        return int(other) * self._value
+    
+    def __and__(self, other):
+        return self._value & int(other)
+    
+    def __or__(self, other):
+        return self._value | int(other)
+    
+    def __xor__(self, other):
+        return self._value ^ int(other)
+    
+    def __lshift__(self, other):
+        return self._value << int(other)
+    
+    def __rshift__(self, other):
+        return self._value >> int(other)
+    
+    def __eq__(self, other):
+        return self._value == int(other)
+    
+    def __ne__(self, other):
+        return self._value != int(other)
+    
+    def __lt__(self, other):
+        return self._value < int(other)
+    
+    def __le__(self, other):
+        return self._value <= int(other)
+    
+    def __gt__(self, other):
+        return self._value > int(other)
+    
+    def __ge__(self, other):
+        return self._value >= int(other)
+    
+    def __iadd__(self, other):
+        self._value = (self._value + int(other)) & self._mask
+        return self
+    
+    def __isub__(self, other):
+        self._value = (self._value - int(other)) & self._mask
+        return self
+    
+    def __imul__(self, other):
+        self._value = (self._value * int(other)) & self._mask
+        return self
+    
+    def __iand__(self, other):
+        self._value = (self._value & int(other)) & self._mask
+        return self
+    
+    def __ior__(self, other):
+        self._value = (self._value | int(other)) & self._mask
+        return self
+    
+    def __ixor__(self, other):
+        self._value = (self._value ^ int(other)) & self._mask
+        return self
+    
+    def __ilshift__(self, other):
+        self._value = (self._value << int(other)) & self._mask
+        return self
+    
+    def __irshift__(self, other):
+        self._value = (self._value >> int(other)) & self._mask
+        return self
+    
+    def __repr__(self) -> str:
+        return f"Register(value=0x{self._value:x}, fields={list(self._fields.keys())})"
+    
+    def __str__(self) -> str:
+        return f"0x{self._value:x}"
+    
+    def __bool__(self) -> bool:
+        """Boolean evaluation - use full register value."""
+        return self._value != 0
+    
+    def __getattr__(self, name: str):
+        """Dynamic field access using __getattr__."""
+        if name in self._fields:
+            return self._get_field(name)
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
+    def __setattr__(self, name: str, value):
+        """Dynamic field assignment using __setattr__."""
+        # During initialization, _fields might not exist yet - use object.__setattr__ to avoid recursion
+        if not hasattr(self, '__dict__') or '_fields' not in self.__dict__:
+            object.__setattr__(self, name, value)
+            return
+        
+        # Allow setting of private/internal attributes - use object.__setattr__ to avoid recursion
+        if name.startswith('_'):
+            object.__setattr__(self, name, value)
+        # Check if it's a field
+        elif name in self._fields:
+            # It's a field - use field setter (which uses object.__setattr__ internally)
+            self._set_field(name, int(value))
+        else:
+            # Not a field - set as normal attribute
+            object.__setattr__(self, name, value)
+
 {% endblock %}
 
 {% block class_definition %}

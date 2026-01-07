@@ -18,6 +18,11 @@
         Returns:
             List of instruction words
         """
+        # Clear state from previous assembly
+        self.instructions = []
+        self.labels = {}
+        self.symbols = {}
+        
         lines = self._preprocess(source)
         
         # First pass: collect labels and determine instruction widths

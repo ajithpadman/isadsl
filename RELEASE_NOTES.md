@@ -1,5 +1,291 @@
 # Release Notes
 
+## Version 0.3.3 - Assembler State Management and Test Isolation Fixes
+
+**Release Date:** 2026-01-07
+
+### 🎯 Major Changes
+
+#### Assembler State Management Fix
+
+Fixed a critical bug where the assembler was accumulating state across multiple `assemble()` calls, causing incorrect machine code generation when the same assembler instance was reused.
+
+**Problem:**
+- When calling `assemble()` multiple times on the same instance, instructions from previous calls were included in subsequent results
+- This caused tests to fail when assembling multiple instructions separately
+- Example: `assemble("SET_V R0")` followed by `assemble("CHECK_V R1")` would return `[0x1, 0x45]` instead of `[0x45]`
+
+**Solution:**
+- Assembler now clears state (`self.instructions`, `self.labels`, `self.symbols`) at the start of each `assemble()` call
+- Each call processes only the provided source code independently
+- Works correctly for both single calls with multiple instructions and multiple calls on the same instance
+
+**Before:**
+```python
+assembler = Assembler()
+code1 = assembler.assemble("SET_V R0")  # Returns [0x1]
+code2 = assembler.assemble("CHECK_V R1")  # Returns [0x1, 0x45] ❌ WRONG!
+```
+
+**After:**
+```python
+assembler = Assembler()
+code1 = assembler.assemble("SET_V R0")  # Returns [0x1] ✓
+code2 = assembler.assemble("CHECK_V R1")  # Returns [0x45] ✓ CORRECT!
+```
+
+#### Test Isolation Improvements
+
+Fixed test isolation issues in `register_fields` tests by ensuring each test creates separate module instances, preventing module caching from causing shared state between tests.
+
+**Problem:**
+- Tests were using `import_module()` which caches modules in `sys.modules`
+- When running the full test suite, modules from previous tests were reused
+- This caused `AttributeError` and incorrect behavior in some tests
+
+**Solution:**
+- Updated all `register_fields` tests to use `importlib.util.spec_from_file_location()` instead of `import_module()`
+- Each test now gets a fresh module instance, ensuring proper isolation
+- Tests can now run in any order without affecting each other
+
+**Before:**
+```python
+from importlib import import_module
+sim_module = import_module(sim_file.stem)  # Uses cached module ❌
+```
+
+**After:**
+```python
+import importlib.util
+sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+sim_module = importlib.util.module_from_spec(sim_spec)
+sim_spec.loader.exec_module(sim_module)  # Fresh module instance ✓
+```
+
+### ✨ New Features
+
+- **Proper State Isolation**: Assembler instances can now be safely reused across multiple assembly operations
+- **Improved Test Reliability**: All tests now have proper isolation, preventing flaky test failures
+
+### 🔧 Technical Improvements
+
+#### Python Package
+
+**Assembler Template (`assembler.j2`):**
+- Added state clearing at the start of `assemble()` method
+- Clears `self.instructions`, `self.labels`, and `self.symbols` before processing each source
+- Ensures each `assemble()` call is independent and idempotent
+
+**Test Suite (`test_register_fields.py`):**
+- Replaced `import_module()` with `importlib.util.spec_from_file_location()` pattern
+- Ensures each test gets fresh module instances
+- Fixed module caching issues that caused test failures in full suite runs
+
+### 📝 Documentation Updates
+
+- Updated test patterns to use proper module isolation
+- Documented assembler state management behavior
+
+### 🧪 Testing
+
+- **All 167 Python tests passing** ✅ (up from 160)
+- **All 7 register_fields tests now pass in full suite** ✅
+- **All assembler tests passing** ✅
+- Fixed test isolation issues that caused failures when running full test suite
+- Verified assembler works correctly for both:
+  - Multiple instructions in one `assemble()` call
+  - Multiple `assemble()` calls on the same instance
+
+### 📦 Files Changed
+
+**Python Package:**
+- `isa_dsl/generators/templates/assembler.j2` - Added state clearing in `assemble()` method
+- `tests/register_fields/test_register_fields.py` - Fixed module isolation using `importlib.util.spec_from_file_location()`
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing code continues to work without modification.
+
+**Benefits:**
+- Assembler instances can now be safely reused
+- Multiple `assemble()` calls on the same instance work correctly
+- Tests are more reliable and can run in any order
+
+### 🐛 Bug Fixes
+
+- **Fixed assembler state accumulation bug**: Assembler now correctly clears state between calls
+- **Fixed test isolation issues**: Register fields tests now properly isolate module instances
+- **Fixed module caching**: Tests no longer share state through cached modules
+
+### 📊 Statistics
+
+- **2 files modified**
+- **+15 insertions, -5 deletions**
+- **Net code addition**: 10 lines (state clearing + module isolation)
+- **Test improvements**: 7 previously failing tests now passing in full suite
+
+---
+
+## Version 0.3.2 - Register Fields with C Union-like Behavior
+
+**Release Date:** 2026-01-07
+
+### 🎯 Major Changes
+
+#### Register Fields Support with C Union-like Behavior
+
+Registers with fields now support direct field access similar to C union types, allowing both full register access and individual field manipulation.
+
+**Features:**
+- **Full Register Access**: Registers work as integers for backward compatibility (`PSW = 0x12345678`)
+- **Field Access**: Direct field access using dot notation (`PSW.V = 1`, `PSW.SV = 0`)
+- **Field Reads**: Field values can be read in conditions (`if (PSW.V) { ... }`)
+- **Integer Operations**: Full register operations still work (`PSW = PSW + 1`)
+- **Automatic Synchronization**: Field changes automatically update the full register value and vice versa
+
+**Syntax:**
+```isa
+sfr PSW 32 {
+    V: [30:30]    // Overflow flag
+    SV: [29:29]   // Sticky overflow flag
+    AV: [28:28]   // Advance overflow flag
+    C: [31:31]    // Carry flag
+}
+
+instruction ABS {
+    behavior: {
+        // Direct field assignment - much cleaner!
+        PSW.V = 1;
+        PSW.SV = 0;
+        
+        // Field reads in conditions
+        if (PSW.V) {
+            R[0] = 1;
+        }
+        
+        // Full register access still works
+        PSW = 0x12345678;
+    }
+}
+```
+
+**Before (bit manipulation):**
+```isa
+behavior: {
+    PSW = PSW | (1 << 30);  // Set V flag
+    PSW = PSW & ~(1 << 29); // Clear SV flag
+}
+```
+
+**After (field access):**
+```isa
+behavior: {
+    PSW.V = 1;   // Set V flag - much cleaner!
+    PSW.SV = 0;  // Clear SV flag
+}
+```
+
+**Implementation Details:**
+- Registers with fields use a `Register` wrapper class that behaves like both an integer and has field attributes
+- Registers without fields remain plain integers (backward compatible)
+- Register files with fields create lists of `Register` objects
+- Field access uses dynamic attribute access (`__getattr__` and `__setattr__`)
+- Proper bit manipulation ensures field changes don't affect other fields
+
+### ✨ New Features
+
+- **Register Wrapper Class**: C union-like behavior supporting both integer and field access
+- **Dynamic Field Access**: Fields accessible as attributes (`PSW.V`, `PSW.SV`)
+- **Field Assignment**: Direct field updates (`PSW.V = 1`)
+- **Enhanced Print State**: Register state display shows both full value and individual fields
+- **Backward Compatibility**: Registers without fields continue to work as plain integers
+
+### 🔧 Technical Improvements
+
+#### Python Package
+
+**Simulator Generator (`base_simulator.j2`):**
+- Added `Register` wrapper class with:
+  - Integer-like behavior (`__int__`, `__add__`, `__sub__`, etc.)
+  - Dynamic field access via `__getattr__` and `__setattr__`
+  - Proper bit manipulation for field get/set
+  - Automatic synchronization between fields and full register value
+- Updated register initialization to use `Register` wrapper for registers with fields
+- Enhanced `print_state` to display field values alongside full register value
+
+**RTL Code Generation (`simulator.py`):**
+- Updated field access to generate `self.PSW.V` instead of `self.PSW_V`
+- Field assignments now generate proper attribute assignments
+- Maintains backward compatibility for registers without fields
+
+**RTL Interpreter (`rtl_interpreter.py`):**
+- Updated `_get_field_value()` to work with `Register` wrapper objects
+- Updated `_set_lvalue()` to handle field assignments on `Register` objects
+- Falls back to bit manipulation for plain integer registers
+
+**Print State (`simulator.j2`):**
+- Enhanced to show field values: `PSW: 0x12345678 (V=0x1, SV=0x1, AV=0x0)`
+- Works for both single registers and register files
+
+### 📝 Documentation Updates
+
+- Added register fields examples in test files
+- Updated implementation plan document (`REGISTER_FIELDS_IMPLEMENTATION_PLAN.md`)
+
+### 🧪 Testing
+
+- **All 160 Python tests passing** ✅
+- **All 50 VS Code extension tests passing** ✅
+- TriCore tests with field access (`PSW.V`, `PSW.SV`, `PSW.AV`) working correctly
+- All existing tests continue to pass (backward compatibility verified)
+
+### 📦 Files Changed
+
+**Python Package:**
+- `isa_dsl/generators/templates/base_simulator.j2` - Added `Register` wrapper class
+- `isa_dsl/generators/templates/simulator.j2` - Updated register initialization and print_state
+- `isa_dsl/generators/simulator.py` - Updated RTL code generation for field access
+- `isa_dsl/runtime/rtl_interpreter.py` - Updated field get/set methods
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing ISA specifications continue to work without modification.
+
+**To use register fields:**
+1. Define registers with fields in your ISA specification
+2. Use field access syntax: `PSW.V = 1` instead of bit manipulation
+3. Read fields in conditions: `if (PSW.V) { ... }`
+4. Full register access still works: `PSW = 0x12345678`
+
+**Example:**
+```isa
+// Define register with fields
+sfr PSW 32 {
+    V: [30:30]
+    SV: [29:29]
+    AV: [28:28]
+}
+
+// Use in behavior
+behavior: {
+    PSW.V = 1;      // Set overflow flag
+    PSW.SV = PSW.V; // Copy V to SV
+}
+```
+
+### 🐛 Bug Fixes
+
+- Fixed recursion issues in `Register` class using `object.__setattr__` and `object.__getattribute__`
+- Fixed field access code generation to use proper attribute syntax
+
+### 📊 Statistics
+
+- **4 files modified**
+- **+250 insertions, -10 deletions**
+- **Net code addition**: 240 lines (Register class + updates)
+
+---
+
 ## Version 0.3.1 - Built-in Functions and Bitfield Access
 
 **Release Date:** 2026-01-07

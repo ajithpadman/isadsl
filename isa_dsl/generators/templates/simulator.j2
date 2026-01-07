@@ -4,11 +4,36 @@
         # Initialize registers
 {%- for reg in isa.registers %}
         {%- if reg.is_vector_register() %}
+        # Vector registers: nested lists of integers (no fields for now)
         self.{{ reg.name }} = [[0] * {{ reg.lanes }} for _ in range({{ reg.count if reg.count else 1 }})]
         {%- elif reg.is_register_file() %}
-        self.{{ reg.name }} = [0] * {{ reg.count }}
+        # Register file: list of Register objects or integers
+        {%- if reg.fields %}
+        # Register has fields - use Register wrapper
+        self.{{ reg.name }} = [
+            Register({{ reg.width }}, [
+                {%- for field in reg.fields %}
+                ('{{ field.name }}', {{ field.msb }}, {{ field.lsb }}){% if not loop.last %},{% endif %}
+                {%- endfor %}
+            ]) for _ in range({{ reg.count }})
+        ]
         {%- else %}
+        # No fields - use plain integers
+        self.{{ reg.name }} = [0] * {{ reg.count }}
+        {%- endif %}
+        {%- else %}
+        # Single register
+        {%- if reg.fields %}
+        # Register has fields - use Register wrapper
+        self.{{ reg.name }} = Register({{ reg.width }}, [
+            {%- for field in reg.fields %}
+            ('{{ field.name }}', {{ field.msb }}, {{ field.lsb }}){% if not loop.last %},{% endif %}
+            {%- endfor %}
+        ])
+        {%- else %}
+        # No fields - use plain integer
         self.{{ reg.name }} = 0
+        {%- endif %}
         {%- endif %}
 {%- endfor %}
         # Register aliases map (for fast lookup)
@@ -562,9 +587,29 @@
             print()
         {%- elif reg.is_register_file() %}
         for i in range({{ reg.count }}):
-            print(f"  {{ reg.name }}[{i}]: 0x{self.{{ reg.name }}[i]:08x}")
+            reg_val = int(self.{{ reg.name }}[i])
+            print(f"  {{ reg.name }}[{i}]: 0x{reg_val:08x}", end="")
+            {%- if reg.fields %}
+            print(" (", end="")
+            {%- for field in reg.fields %}
+            print(f"{{ field.name }}=0x{self.{{ reg.name }}[i].{{ field.name }}:x}", end="")
+            {%- if not loop.last %}, {% endif %}
+            {%- endfor %}
+            print(")", end="")
+            {%- endif %}
+            print()
         {%- else %}
-        print(f"  {{ reg.name }}: 0x{self.{{ reg.name }}:08x}")
+        reg_val = int(self.{{ reg.name }})
+        print(f"  {{ reg.name }}: 0x{reg_val:08x}", end="")
+        {%- if reg.fields %}
+        print(" (", end="")
+        {%- for field in reg.fields %}
+        print(f"{{ field.name }}=0x{self.{{ reg.name }}.{{ field.name }}:x}", end="")
+        {%- if not loop.last %}, {% endif %}
+        {%- endfor %}
+        print(")", end="")
+        {%- endif %}
+        print()
         {%- endif %}
 {%- endfor %}
         print()
