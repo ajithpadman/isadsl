@@ -11,6 +11,12 @@
         self.{{ reg.name }} = 0
         {%- endif %}
 {%- endfor %}
+        # Register aliases map (for fast lookup)
+        self._register_aliases = {
+{%- for alias in isa.register_aliases %}
+            '{{ alias.alias_name }}': ('{{ alias.target_reg_name }}', {{ alias.target_index if alias.is_indexed() else 'None' }}),
+{%- endfor %}
+        }
 {% endblock %}
 
 {% block load_methods %}
@@ -137,7 +143,14 @@
 
 {% block execution_methods %}
     def _execute_instruction_by_mnemonic(self, instruction_word: int, mnemonic: str) -> bool:
-        """Execute instruction by mnemonic name."""
+        """Execute instruction by mnemonic name, checking aliases."""
+        # Check instruction aliases first
+        {%- for alias in isa.instruction_aliases %}
+        if mnemonic == '{{ alias.alias_mnemonic }}':
+            # Resolve to target instruction
+            return self._execute_instruction_by_mnemonic(instruction_word, '{{ alias.target_mnemonic }}')
+        {%- endfor %}
+        # Check direct instructions
         {%- for instr in isa.instructions %}
         if mnemonic == '{{ instr.mnemonic }}':
             self._execute_{{ instr.mnemonic }}(instruction_word)
@@ -193,6 +206,59 @@
             return instruction.format.width
         else:
             return 32  # Default
+    
+    def _resolve_register_alias(self, name: str, index: Optional[int] = None) -> tuple[str, Optional[int]]:
+        """Resolve a register alias to the actual register name and index."""
+        if name in self._register_aliases:
+            target_name, target_index = self._register_aliases[name]
+            # If alias has an index, use it; otherwise use provided index
+            return (target_name, target_index if target_index is not None else index)
+        return (name, index)
+    
+    def _read_virtual_register(self, vreg_name: str) -> int:
+        """Read virtual register by concatenating component registers."""
+        {%- for vreg in isa.virtual_registers %}
+        if vreg_name == '{{ vreg.name }}':
+            value = 0
+            bit_offset = 0
+            # Read components in order: first component is LSB, last is MSB
+            {%- for comp in vreg.components %}
+            {%- if comp.is_indexed() %}
+            # Component: {{ comp.reg_name }}[{{ comp.index }}]
+            reg_value = self.{{ comp.reg_name }}[{{ comp.index }}] & ((1 << {{ isa.get_register(comp.reg_name).width }}) - 1)
+            {%- else %}
+            # Component: {{ comp.reg_name }}
+            reg_value = self.{{ comp.reg_name }} & ((1 << {{ isa.get_register(comp.reg_name).width }}) - 1)
+            {%- endif %}
+            value |= (reg_value << bit_offset)
+            bit_offset += {{ isa.get_register(comp.reg_name).width }}
+            {%- endfor %}
+            return value & ((1 << {{ vreg.width }}) - 1)
+        {%- endfor %}
+        raise ValueError(f"Unknown virtual register: {vreg_name}")
+    
+    def _write_virtual_register(self, vreg_name: str, value: int):
+        """Write virtual register by splitting to component registers."""
+        {%- for vreg in isa.virtual_registers %}
+        if vreg_name == '{{ vreg.name }}':
+            bit_offset = 0
+            # Write components in order: first component is LSB, last is MSB
+            {%- for comp in vreg.components %}
+            {%- set reg = isa.get_register(comp.reg_name) %}
+            mask = (1 << {{ reg.width }}) - 1
+            reg_value = (value >> bit_offset) & mask
+            {%- if comp.is_indexed() %}
+            # Component: {{ comp.reg_name }}[{{ comp.index }}]
+            self.{{ comp.reg_name }}[{{ comp.index }}] = reg_value
+            {%- else %}
+            # Component: {{ comp.reg_name }}
+            self.{{ comp.reg_name }} = reg_value
+            {%- endif %}
+            bit_offset += {{ reg.width }}
+            {%- endfor %}
+            return
+        {%- endfor %}
+        raise ValueError(f"Unknown virtual register: {vreg_name}")
 
     def _execute_non_bundle_instruction(self, instruction_word: int) -> bool:
         """Execute a single instruction word, skipping bundle checks (used for bundle slots)."""

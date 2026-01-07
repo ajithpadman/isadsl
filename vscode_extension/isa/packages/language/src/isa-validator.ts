@@ -1,4 +1,5 @@
 import type { ValidationAcceptor, ValidationChecks } from 'langium';
+import { AstUtils } from 'langium';
 import type { IsaAstType } from './generated/ast.js';
 import type { IsaServices } from './isa-module.js';
 import { 
@@ -11,7 +12,9 @@ import {
     type BundleFormat,
     type BundleSlot,
     type ISASpecFull,
-    type ISASpecPartial
+    type ISASpecPartial,
+    type VirtualRegister,
+    type VirtualRegisterComponent
 } from './generated/ast.js';
 
 /**
@@ -30,7 +33,8 @@ export function registerValidationChecks(services: IsaServices) {
         BundleFormat: validator.checkBundleFormat,
         BundleSlot: validator.checkBundleSlot,
         ISASpecFull: validator.checkISASpecFull,
-        ISASpecPartial: validator.checkISASpecPartial
+        ISASpecPartial: validator.checkISASpecPartial,
+        VirtualRegister: validator.checkVirtualRegister
     };
     registry.register(checks, validator);
 }
@@ -229,6 +233,99 @@ export class IsaValidator {
     checkRegisterField(field: RegisterField, accept: ValidationAcceptor): void {
         if (field.lsb > field.msb) {
             accept('error', `Register field '${field.name}': LSB (${field.lsb}) must be <= MSB (${field.msb})`, { node: field });
+        }
+    }
+
+    /**
+     * Validate virtual register.
+     */
+    checkVirtualRegister(vreg: VirtualRegister, accept: ValidationAcceptor): void {
+        // Check width is positive
+        if (vreg.width <= 0) {
+            accept('error', `Virtual register '${vreg.name}' must have a positive width`, { node: vreg, property: 'width' });
+        }
+
+        // Check components exist
+        if (!vreg.components || vreg.components.first === undefined) {
+            accept('error', `Virtual register '${vreg.name}' must have at least one component`, { node: vreg, property: 'components' });
+            return;
+        }
+
+        // Collect all components (first + rest)
+        const allComponents: VirtualRegisterComponent[] = [];
+        if (vreg.components.first) {
+            allComponents.push(vreg.components.first);
+        }
+        if (vreg.components.rest) {
+            allComponents.push(...vreg.components.rest);
+        }
+
+        if (allComponents.length === 0) {
+            accept('error', `Virtual register '${vreg.name}' must have at least one component`, { node: vreg, property: 'components' });
+            return;
+        }
+
+        // Get root node to traverse AST
+        const root = AstUtils.getContainerOfType(vreg, (node): node is any => 
+            node.$type === 'ISASpecFull' || node.$type === 'ISASpecPartial'
+        );
+        
+        if (!root) {
+            return;
+        }
+
+        // Get all registers from the AST
+        const allRegisters: Register[] = [];
+        for (const node of AstUtils.streamAllContents(root)) {
+            if (node.$type === 'Register' && (node as Register).name) {
+                allRegisters.push(node as Register);
+            }
+        }
+
+        // Validate each component and calculate total width
+        let totalWidth = 0;
+
+        for (const comp of allComponents) {
+            let regName: string;
+            let regIndex: number | undefined;
+
+            if (comp.indexed_register) {
+                regName = comp.indexed_register.reg_name;
+                regIndex = comp.indexed_register.index;
+            } else if (comp.simple_register) {
+                regName = comp.simple_register;
+                regIndex = undefined;
+            } else {
+                accept('error', `Virtual register '${vreg.name}' component is invalid`, { node: comp });
+                continue;
+            }
+
+            // Find the register
+            const reg = allRegisters.find(r => r.name === regName);
+            if (!reg) {
+                accept('error', `Virtual register '${vreg.name}' component '${regName}' does not exist`, { node: comp });
+                continue;
+            }
+
+            // Check if indexed register is valid
+            if (regIndex !== undefined) {
+                if (!reg.count) {
+                    accept('error', `Virtual register '${vreg.name}' component '${regName}' is not a register file (cannot use indexing)`, { node: comp });
+                    continue;
+                }
+                if (regIndex < 0 || regIndex >= reg.count) {
+                    accept('error', `Virtual register '${vreg.name}' component '${regName}[${regIndex}]' index out of range (0-${reg.count - 1})`, { node: comp });
+                    continue;
+                }
+            }
+
+            // Add component width
+            totalWidth += reg.width;
+        }
+
+        // Check total width matches virtual register width
+        if (totalWidth !== vreg.width) {
+            accept('error', `Virtual register '${vreg.name}' width (${vreg.width}) does not match sum of component widths (${totalWidth})`, { node: vreg, property: 'width' });
         }
     }
 

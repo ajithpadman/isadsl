@@ -32,9 +32,12 @@ class ModelMerger:
             name=base.name,  # Use base name
             properties=base.properties.copy(),
             registers=base.registers.copy(),
+            virtual_registers=base.virtual_registers.copy(),
+            register_aliases=base.register_aliases.copy(),
             formats=base.formats.copy(),
             bundle_formats=base.bundle_formats.copy(),
-            instructions=base.instructions.copy()
+            instructions=base.instructions.copy(),
+            instruction_aliases=base.instruction_aliases.copy()
         )
         
         # Merge properties
@@ -109,6 +112,48 @@ class ModelMerger:
                 merged.instructions.remove(existing)
             merged.instructions.append(instr)
         
+        # Merge virtual registers
+        for vreg in additional.virtual_registers:
+            existing = next((v for v in merged.virtual_registers if v.name == vreg.name), None)
+            if existing:
+                if check_duplicates:
+                    locations = []
+                    if base_file:
+                        locations.append((base_file, None))
+                    if additional_file:
+                        locations.append((additional_file, None))
+                    raise DuplicateDefinitionError(vreg.name, locations)
+                merged.virtual_registers.remove(existing)
+            merged.virtual_registers.append(vreg)
+        
+        # Merge register aliases
+        for alias in additional.register_aliases:
+            existing = next((a for a in merged.register_aliases if a.alias_name == alias.alias_name), None)
+            if existing:
+                if check_duplicates:
+                    locations = []
+                    if base_file:
+                        locations.append((base_file, None))
+                    if additional_file:
+                        locations.append((additional_file, None))
+                    raise DuplicateDefinitionError(alias.alias_name, locations)
+                merged.register_aliases.remove(existing)
+            merged.register_aliases.append(alias)
+        
+        # Merge instruction aliases
+        for alias in additional.instruction_aliases:
+            existing = next((a for a in merged.instruction_aliases if a.alias_mnemonic == alias.alias_mnemonic), None)
+            if existing:
+                if check_duplicates:
+                    locations = []
+                    if base_file:
+                        locations.append((base_file, None))
+                    if additional_file:
+                        locations.append((additional_file, None))
+                    raise DuplicateDefinitionError(alias.alias_mnemonic, locations)
+                merged.instruction_aliases.remove(existing)
+            merged.instruction_aliases.append(alias)
+        
         return merged
     
     @staticmethod
@@ -127,9 +172,12 @@ class ModelMerger:
             name=extending.name,  # Use extending architecture's name
             properties=base.properties.copy(),
             registers=base.registers.copy(),
+            virtual_registers=base.virtual_registers.copy(),
+            register_aliases=base.register_aliases.copy(),
             formats=base.formats.copy(),
             bundle_formats=base.bundle_formats.copy(),
-            instructions=base.instructions.copy()
+            instructions=base.instructions.copy(),
+            instruction_aliases=base.instruction_aliases.copy()
         )
         
         # Override/add properties
@@ -166,6 +214,27 @@ class ModelMerger:
             if existing:
                 extended.instructions.remove(existing)
             extended.instructions.append(instr)
+        
+        # Override/add virtual registers
+        for vreg in extending.virtual_registers:
+            existing = next((v for v in extended.virtual_registers if v.name == vreg.name), None)
+            if existing:
+                extended.virtual_registers.remove(existing)
+            extended.virtual_registers.append(vreg)
+        
+        # Override/add register aliases
+        for alias in extending.register_aliases:
+            existing = next((a for a in extended.register_aliases if a.alias_name == alias.alias_name), None)
+            if existing:
+                extended.register_aliases.remove(existing)
+            extended.register_aliases.append(alias)
+        
+        # Override/add instruction aliases
+        for alias in extending.instruction_aliases:
+            existing = next((a for a in extended.instruction_aliases if a.alias_mnemonic == alias.alias_mnemonic), None)
+            if existing:
+                extended.instruction_aliases.remove(existing)
+            extended.instruction_aliases.append(alias)
         
         return extended
 

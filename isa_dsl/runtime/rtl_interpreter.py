@@ -4,24 +4,27 @@ from typing import Dict, Any, Optional
 from ..model.isa_model import (
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLConstant,
     RTLLValue, RegisterAccess, FieldAccess, RTLStatement, RTLAssignment,
-    RTLConditional, RTLMemoryAccess, Instruction
+    RTLConditional, RTLMemoryAccess, Instruction, ISASpecification,
+    VirtualRegister, RegisterAlias
 )
 
 
 class RTLInterpreter:
     """Interprets and executes RTL expressions and statements."""
 
-    def __init__(self, registers: Dict[str, Any], memory: Optional[Dict[int, int]] = None):
+    def __init__(self, registers: Dict[str, Any], memory: Optional[Dict[int, int]] = None, isa: Optional[ISASpecification] = None):
         """
         Initialize the RTL interpreter.
 
         Args:
             registers: Dictionary mapping register names to their values
             memory: Dictionary mapping addresses to memory values
+            isa: Optional ISA specification for resolving virtual registers and aliases
         """
         self.registers = registers
         self.memory = memory if memory is not None else {}
         self.operand_values: Dict[str, int] = {}
+        self.isa = isa
 
     def set_operands(self, operands: Dict[str, int]):
         """Set operand values for the current instruction."""
@@ -174,11 +177,14 @@ class RTLInterpreter:
         reg_name = access.reg_name
         index = self._evaluate_expression(access.index)
 
-        # Check if it's an operand reference
-        if reg_name in self.operand_values:
-            # This is likely an operand reference like rd, rs1, etc.
-            # We need to get the actual register value
-            pass
+        # Resolve register alias if needed
+        reg_name, index = self._resolve_register_alias(reg_name, index)
+
+        # Check if it's a virtual register
+        if self.isa:
+            vreg = self.isa.get_virtual_register(reg_name)
+            if vreg:
+                return self._read_virtual_register(vreg)
 
         # Get register file
         if reg_name not in self.registers:
@@ -219,6 +225,16 @@ class RTLInterpreter:
             reg_name = lvalue.reg_name
             index = self._evaluate_expression(lvalue.index)
 
+            # Resolve register alias if needed
+            reg_name, index = self._resolve_register_alias(reg_name, index)
+
+            # Check if it's a virtual register
+            if self.isa:
+                vreg = self.isa.get_virtual_register(reg_name)
+                if vreg:
+                    self._write_virtual_register(vreg, value)
+                    return
+
             if reg_name not in self.registers:
                 raise ValueError(f"Unknown register: {reg_name}")
 
@@ -236,6 +252,9 @@ class RTLInterpreter:
             reg_name = lvalue.reg_name
             field_name = lvalue.field_name
 
+            # Resolve register alias if needed
+            reg_name, _ = self._resolve_register_alias(reg_name, None)
+
             if reg_name not in self.registers:
                 raise ValueError(f"Unknown register: {reg_name}")
 
@@ -249,4 +268,107 @@ class RTLInterpreter:
         if value & 0x80000000:
             return value - 0x100000000
         return value
+    
+    def _resolve_register_alias(self, name: str, index: Optional[int]) -> tuple[str, Optional[int]]:
+        """Resolve a register alias to the actual register name and index.
+        
+        Returns:
+            Tuple of (register_name, index) where index may be updated if alias targets indexed register.
+        """
+        if not self.isa:
+            return (name, index)
+        
+        # Check if name is an alias
+        for alias in self.isa.register_aliases:
+            if alias.alias_name == name:
+                # Alias found - use target register
+                target_name = alias.target_reg_name
+                # If alias has an index, use it; otherwise use provided index
+                target_index = alias.target_index if alias.is_indexed() else index
+                return (target_name, target_index)
+        
+        return (name, index)
+    
+    def _read_virtual_register(self, vreg: VirtualRegister) -> int:
+        """Read virtual register by concatenating component registers."""
+        value = 0
+        bit_offset = 0
+        
+        # Read components in order: first component is LSB, last is MSB
+        # For little-endian: R[0]|R[1] means R[0] is LSB, R[1] is MSB
+        for comp in vreg.components:
+            reg = self.isa.get_register(comp.reg_name)
+            if not reg:
+                raise ValueError(f"Virtual register '{vreg.name}' component '{comp.reg_name}' not found")
+            
+            if comp.is_indexed():
+                # Indexed register from register file
+                if not reg.is_register_file():
+                    raise ValueError(f"Register {comp.reg_name} is not a register file")
+                if comp.index < 0 or (reg.count and comp.index >= reg.count):
+                    raise IndexError(f"Register index {comp.index} out of range")
+                
+                if comp.reg_name not in self.registers:
+                    raise ValueError(f"Unknown register: {comp.reg_name}")
+                
+                reg_file = self.registers[comp.reg_name]
+                if not isinstance(reg_file, list):
+                    raise ValueError(f"Register {comp.reg_name} is not a register file")
+                
+                if comp.index >= len(reg_file):
+                    raise IndexError(f"Register index {comp.index} out of range")
+                
+                reg_value = reg_file[comp.index] & ((1 << reg.width) - 1)
+            else:
+                # Simple register (SFR)
+                if comp.reg_name not in self.registers:
+                    raise ValueError(f"Unknown register: {comp.reg_name}")
+                
+                reg_value = self.registers[comp.reg_name] & ((1 << reg.width) - 1)
+            
+            value |= (reg_value << bit_offset)
+            bit_offset += reg.width
+        
+        return value & ((1 << vreg.width) - 1)
+    
+    def _write_virtual_register(self, vreg: VirtualRegister, value: int):
+        """Write virtual register by splitting to component registers."""
+        bit_offset = 0
+        
+        # Write components in order: first component is LSB, last is MSB
+        # For little-endian: R[0]|R[1] means R[0] is LSB, R[1] is MSB
+        for comp in vreg.components:
+            reg = self.isa.get_register(comp.reg_name)
+            if not reg:
+                raise ValueError(f"Virtual register '{vreg.name}' component '{comp.reg_name}' not found")
+            
+            mask = (1 << reg.width) - 1
+            reg_value = (value >> bit_offset) & mask
+            
+            if comp.is_indexed():
+                # Indexed register from register file
+                if not reg.is_register_file():
+                    raise ValueError(f"Register {comp.reg_name} is not a register file")
+                if comp.index < 0 or (reg.count and comp.index >= reg.count):
+                    raise IndexError(f"Register index {comp.index} out of range")
+                
+                if comp.reg_name not in self.registers:
+                    raise ValueError(f"Unknown register: {comp.reg_name}")
+                
+                reg_file = self.registers[comp.reg_name]
+                if not isinstance(reg_file, list):
+                    raise ValueError(f"Register {comp.reg_name} is not a register file")
+                
+                if comp.index >= len(reg_file):
+                    raise IndexError(f"Register index {comp.index} out of range")
+                
+                reg_file[comp.index] = reg_value
+            else:
+                # Simple register (SFR)
+                if comp.reg_name not in self.registers:
+                    raise ValueError(f"Unknown register: {comp.reg_name}")
+                
+                self.registers[comp.reg_name] = reg_value
+            
+            bit_offset += reg.width
 

@@ -4,7 +4,8 @@ from typing import List, Dict, Set
 from .isa_model import (
     ISASpecification, Register, InstructionFormat, Instruction,
     RTLExpression, RegisterAccess, FieldAccess, RTLAssignment,
-    RTLConditional, RTLMemoryAccess, RTLTernary, RTLBinaryOp, RTLUnaryOp
+    RTLConditional, RTLMemoryAccess, RTLTernary, RTLBinaryOp, RTLUnaryOp,
+    VirtualRegister, RegisterAlias, InstructionAlias
 )
 
 
@@ -30,6 +31,9 @@ class ISAValidator:
         self._validate_instructions()
         self._validate_encodings()
         self._validate_rtl_expressions()
+        self._validate_virtual_registers()
+        self._validate_register_aliases()
+        self._validate_instruction_aliases()
         return self.errors
 
     def _validate_formats(self):
@@ -229,10 +233,151 @@ class ISAValidator:
         else:
             field = reg.get_field(access.field_name)
             if not field:
+                    self.errors.append(
+                        ValidationError(
+                            f"Unknown field '{access.field_name}' in register '{access.reg_name}'",
+                            f"instruction {context}"
+                        )
+                    )
+    
+    def _validate_virtual_registers(self):
+        """Validate virtual register definitions."""
+        register_names = {reg.name for reg in self.isa.registers}
+        
+        for vreg in self.isa.virtual_registers:
+            # Check for name conflicts
+            if vreg.name in register_names:
                 self.errors.append(
                     ValidationError(
-                        f"Unknown field '{access.field_name}' in register '{access.reg_name}'",
-                        f"instruction {context}"
+                        f"Virtual register '{vreg.name}' conflicts with existing register name",
+                        f"virtual register {vreg.name}"
                     )
                 )
+            
+            # Validate components
+            total_width = 0
+            for comp in vreg.components:
+                reg = self.isa.get_register(comp.reg_name)
+                if not reg:
+                    self.errors.append(
+                        ValidationError(
+                            f"Virtual register '{vreg.name}' component '{comp.reg_name}' does not exist",
+                            f"virtual register {vreg.name}"
+                        )
+                    )
+                    continue
+                
+                if comp.is_indexed():
+                    # Indexed register - must be a register file
+                    if not reg.is_register_file():
+                        self.errors.append(
+                            ValidationError(
+                                f"Virtual register '{vreg.name}' component '{comp.reg_name}' is not a register file (cannot use indexing)",
+                                f"virtual register {vreg.name}"
+                            )
+                        )
+                    elif comp.index < 0 or (reg.count and comp.index >= reg.count):
+                        self.errors.append(
+                            ValidationError(
+                                f"Virtual register '{vreg.name}' component '{comp.reg_name}[{comp.index}]' index out of range (0-{reg.count-1})",
+                                f"virtual register {vreg.name}"
+                            )
+                        )
+                
+                total_width += reg.width
+            
+            # Check total width matches virtual register width
+            if total_width != vreg.width:
+                self.errors.append(
+                    ValidationError(
+                        f"Virtual register '{vreg.name}' width mismatch: declared {vreg.width} bits, components total {total_width} bits",
+                        f"virtual register {vreg.name}"
+                    )
+                )
+    
+    def _validate_register_aliases(self):
+        """Validate register alias definitions."""
+        register_names = {reg.name for reg in self.isa.registers}
+        virtual_register_names = {vreg.name for vreg in self.isa.virtual_registers}
+        alias_names = {alias.alias_name for alias in self.isa.register_aliases}
+        
+        for alias in self.isa.register_aliases:
+            # Check for name conflicts
+            if alias.alias_name in register_names:
+                self.errors.append(
+                    ValidationError(
+                        f"Register alias '{alias.alias_name}' conflicts with existing register name",
+                        f"alias {alias.alias_name}"
+                    )
+                )
+            if alias.alias_name in virtual_register_names:
+                self.errors.append(
+                    ValidationError(
+                        f"Register alias '{alias.alias_name}' conflicts with existing virtual register name",
+                        f"alias {alias.alias_name}"
+                    )
+                )
+            
+            # Check target register exists
+            reg = self.isa.get_register(alias.target_reg_name)
+            if not reg:
+                self.errors.append(
+                    ValidationError(
+                        f"Register alias '{alias.alias_name}' target '{alias.target_reg_name}' does not exist",
+                        f"alias {alias.alias_name}"
+                    )
+                )
+            elif alias.is_indexed():
+                # Indexed target - must be a register file
+                if not reg.is_register_file():
+                    self.errors.append(
+                        ValidationError(
+                            f"Register alias '{alias.alias_name}' target '{alias.target_reg_name}' is not a register file (cannot use indexing)",
+                            f"alias {alias.alias_name}"
+                        )
+                    )
+                elif alias.target_index < 0 or (reg.count and alias.target_index >= reg.count):
+                    self.errors.append(
+                        ValidationError(
+                            f"Register alias '{alias.alias_name}' target '{alias.target_reg_name}[{alias.target_index}]' index out of range (0-{reg.count-1})",
+                            f"alias {alias.alias_name}"
+                        )
+                    )
+            
+            # Check for circular aliases (simple check - alias pointing to another alias)
+            # This is a basic check; full circular detection would require graph traversal
+            if alias.target_reg_name in alias_names:
+                # Could be circular, but allow it for now (e.g., SP = R[13], R13 = SP)
+                # Full circular detection would need to be more sophisticated
+                pass
+    
+    def _validate_instruction_aliases(self):
+        """Validate instruction alias definitions."""
+        instruction_mnemonics = {instr.mnemonic for instr in self.isa.instructions}
+        alias_mnemonics = {alias.alias_mnemonic for alias in self.isa.instruction_aliases}
+        
+        for alias in self.isa.instruction_aliases:
+            # Check for name conflicts
+            if alias.alias_mnemonic in instruction_mnemonics:
+                self.errors.append(
+                    ValidationError(
+                        f"Instruction alias '{alias.alias_mnemonic}' conflicts with existing instruction mnemonic",
+                        f"alias instruction {alias.alias_mnemonic}"
+                    )
+                )
+            
+            # Check target instruction exists
+            target_instr = self.isa.get_instruction(alias.target_mnemonic)
+            if not target_instr:
+                self.errors.append(
+                    ValidationError(
+                        f"Instruction alias '{alias.alias_mnemonic}' target '{alias.target_mnemonic}' does not exist",
+                        f"alias instruction {alias.alias_mnemonic}"
+                    )
+                )
+            
+            # Check for circular aliases (simple check)
+            if alias.target_mnemonic in alias_mnemonics:
+                # Could be circular, but allow it for now
+                pass
 

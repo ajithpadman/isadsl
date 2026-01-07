@@ -42,7 +42,7 @@ PropertyValue returns string:
 
 RegisterBlock:
     'registers' '{'
-        (registers+=Register)*
+        (virtual_registers+=VirtualRegister | aliases+=RegisterAlias | registers+=Register)*
     '}'
 ;
 
@@ -50,6 +50,30 @@ Register:
     type=RegisterType name=ID width=INT ('[' count=INT ']')? (vector_props=VectorProperties)? ('{'
         (fields+=RegisterField)*
     '}')?
+;
+
+VirtualRegister:
+    'virtual' 'register' name=ID width=INT '=' '{' components=VirtualRegisterComponents '}'
+;
+
+VirtualRegisterComponents:
+    first=VirtualRegisterComponent ('|' rest+=VirtualRegisterComponent)*
+;
+
+VirtualRegisterComponent:
+    simple_register=ID | indexed_register=IndexedRegister
+;
+
+IndexedRegister:
+    reg_name=ID '[' index=INT ']'
+;
+
+RegisterAlias:
+    'alias' alias_name=ID '=' target=RegisterReference
+;
+
+RegisterReference:
+    simple_target=ID | indexed_target=IndexedRegister
 ;
 
 VectorProperties:
@@ -95,8 +119,12 @@ FormatField:
 
 InstructionBlock:
     'instructions' '{'
-        (instructions+=Instruction)*
+        (instructions+=Instruction | instruction_aliases+=InstructionAlias)*
     '}'
+;
+
+InstructionAlias:
+    'alias' 'instruction' alias_mnemonic=ID '=' target_mnemonic=ID ('{' ('assembly_syntax' ':' assembly_syntax=STRING)? '}')?
 ;
 
 Instruction:

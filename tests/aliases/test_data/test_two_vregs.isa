@@ -1,0 +1,8 @@
+architecture Test {
+    registers {
+        gpr R 32 [16]
+        virtual register E 64 = {R[0]|R[1]}
+        virtual register E2 64 = {R[2]|R[3]}
+    }
+}
+

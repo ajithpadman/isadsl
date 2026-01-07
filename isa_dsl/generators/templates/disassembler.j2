@@ -61,6 +61,36 @@
         {%- endfor %}
         
         return f"UNKNOWN 0x{instruction_word:08x}"
+    
+    def _get_register_name(self, reg_name: str, index: int) -> str:
+        """Get register name, preferring alias if available."""
+        # Check if there's an alias for this register[index]
+        {%- for alias in isa.register_aliases %}
+        {%- if alias.is_indexed() %}
+        if reg_name == '{{ alias.target_reg_name }}' and index == {{ alias.target_index }}:
+            return '{{ alias.alias_name }}'
+        {%- endif %}
+        {%- endfor %}
+        # Check if there's an alias for the register name itself (simple register)
+        {%- for alias in isa.register_aliases %}
+        {%- if not alias.is_indexed() %}
+        if reg_name == '{{ alias.target_reg_name }}':
+            return '{{ alias.alias_name }}'
+        {%- endif %}
+        {%- endfor %}
+        # Default: return register name with index if applicable
+        if index is not None:
+            return f"{reg_name}[{index}]"
+        return reg_name
+    
+    def _get_instruction_mnemonic(self, target_mnemonic: str) -> str:
+        """Get instruction mnemonic, preferring alias if available."""
+        # Check if there's an alias for this instruction
+        {%- for alias in isa.instruction_aliases %}
+        if target_mnemonic == '{{ alias.target_mnemonic }}':
+            return '{{ alias.alias_mnemonic }}'
+        {%- endfor %}
+        return target_mnemonic
 {% endblock %}
 
 {% block identify_width_method %}
@@ -346,8 +376,47 @@
         {%- endfor %}
         {%- endif %}
         
+        # Check if this instruction has aliases - use alias mnemonic and assembly_syntax if available
+        {%- set alias_found = None %}
+        {%- for alias in isa.instruction_aliases %}
+        {%- if alias.target_mnemonic == instr.mnemonic %}
+        {%- set alias_found = alias %}
+        {%- endif %}
+        {%- endfor %}
+        
         # Format output using assembly_syntax if provided, otherwise use default format
+        {%- if alias_found %}
+        # Use alias mnemonic and assembly_syntax
+        {%- if alias_found.assembly_syntax %}
+        try:
+            formatted = "{{ alias_found.assembly_syntax }}".format(**operand_dict)
+            return formatted
+        except (KeyError, ValueError):
+            operands = [str(v) for v in operand_dict.values()]
+            if operands:
+                return "{{ alias_found.alias_mnemonic.upper() }} " + ", ".join(operands)
+            else:
+                return "{{ alias_found.alias_mnemonic.upper() }}"
+        {%- else %}
         {%- if instr.assembly_syntax %}
+        try:
+            formatted = "{{ instr.assembly_syntax }}".format(**operand_dict)
+            return formatted
+        except (KeyError, ValueError):
+            operands = [str(v) for v in operand_dict.values()]
+            if operands:
+                return "{{ alias_found.alias_mnemonic.upper() }} " + ", ".join(operands)
+            else:
+                return "{{ alias_found.alias_mnemonic.upper() }}"
+        {%- else %}
+        operands = [str(v) for v in operand_dict.values()]
+        if operands:
+            return "{{ alias_found.alias_mnemonic.upper() }} " + ", ".join(operands)
+        else:
+            return "{{ alias_found.alias_mnemonic.upper() }}"
+        {%- endif %}
+        {%- endif %}
+        {%- elif instr.assembly_syntax %}
         # Use custom assembly syntax format string
         try:
             # Format the assembly syntax string with operand values

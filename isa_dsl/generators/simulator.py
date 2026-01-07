@@ -23,9 +23,30 @@ class SimulatorGenerator:
         )
         
         if isinstance(stmt, RTLAssignment):
-            target = self._generate_lvalue_code(stmt.target)
-            expr = self._generate_expr_code(stmt.expr)
-            return f"        {target} = {expr} & 0xFFFFFFFF"
+            # Check if target is a virtual register
+            from ..model.isa_model import RegisterAccess
+            is_virtual = False
+            vreg_name = None
+            if isinstance(stmt.target, str):
+                vreg = self.isa.get_virtual_register(stmt.target)
+                if vreg:
+                    is_virtual = True
+                    vreg_name = stmt.target
+            elif isinstance(stmt.target, RegisterAccess):
+                vreg = self.isa.get_virtual_register(stmt.target.reg_name)
+                if vreg:
+                    is_virtual = True
+                    vreg_name = stmt.target.reg_name
+            
+            if is_virtual:
+                # Virtual register write - use helper method
+                expr = self._generate_expr_code(stmt.expr)
+                return f"        self._write_virtual_register('{vreg_name}', {expr} & 0xFFFFFFFF)"
+            else:
+                # Regular register write
+                target = self._generate_lvalue_code(stmt.target)
+                expr = self._generate_expr_code(stmt.expr)
+                return f"        {target} = {expr} & 0xFFFFFFFF"
         elif isinstance(stmt, RTLConditional):
             condition = self._generate_expr_code(stmt.condition)
             code = f"        if {condition}:\n"
@@ -61,14 +82,31 @@ class SimulatorGenerator:
         
         # Handle string (simple register name like PC)
         if isinstance(lvalue, str):
-            return f"self.{lvalue}"
+            # Check for register alias (virtual registers are handled in assignment)
+            resolved_name, _ = self._resolve_register_alias(lvalue, None)
+            return f"self.{resolved_name}"
         
         if isinstance(lvalue, RegisterAccess):
             index = self._generate_expr_code(lvalue.index)
-            return f"self.{lvalue.reg_name}[{index}]"
+            # Check for register alias (virtual registers are handled in assignment)
+            resolved_name, resolved_index = self._resolve_register_alias(lvalue.reg_name, index)
+            if resolved_index is not None:
+                return f"self.{resolved_name}[{resolved_index}]"
+            return f"self.{resolved_name}[{index}]"
         elif isinstance(lvalue, FieldAccess):
-            return f"self.{lvalue.reg_name}_{lvalue.field_name}"
+            # Resolve alias if needed
+            resolved_name, _ = self._resolve_register_alias(lvalue.reg_name, None)
+            return f"self.{resolved_name}_{lvalue.field_name}"
         return "unknown"
+    
+    def _resolve_register_alias(self, name: str, index) -> tuple:
+        """Resolve a register alias to the actual register name and index."""
+        for alias in self.isa.register_aliases:
+            if alias.alias_name == name:
+                target_name = alias.target_reg_name
+                target_index = alias.target_index if alias.is_indexed() else index
+                return (target_name, target_index)
+        return (name, index)
 
     def _generate_expr_code(self, expr) -> str:
         """Generate code for an expression."""
@@ -82,15 +120,30 @@ class SimulatorGenerator:
         elif isinstance(expr, OperandReference):
             # Check if this is actually a register name (not an operand)
             # Register names are SFRs (single registers) defined in the ISA
-            reg = self.isa.get_register(expr.name)
+            # Check if it's a virtual register
+            vreg = self.isa.get_virtual_register(expr.name)
+            if vreg:
+                return f"self._read_virtual_register('{expr.name}')"
+            # Check for register alias
+            resolved_name, _ = self._resolve_register_alias(expr.name, None)
+            reg = self.isa.get_register(resolved_name)
             if reg and not reg.is_register_file() and not reg.is_vector_register():
                 # This is a simple register (SFR) like PC
-                return f"self.{expr.name}"
+                return f"self.{resolved_name}"
             # Otherwise, it's an operand reference (variable name in generated code)
             return expr.name
         elif isinstance(expr, RegisterAccess):
             index = self._generate_expr_code(expr.index)
-            return f"self.{expr.reg_name}[{index}]"
+            # Check if this is a virtual register
+            vreg = self.isa.get_virtual_register(expr.reg_name)
+            if vreg:
+                # Virtual register - use helper method
+                return f"self._read_virtual_register('{expr.reg_name}')"
+            # Check for register alias
+            resolved_name, resolved_index = self._resolve_register_alias(expr.reg_name, index)
+            if resolved_index is not None:
+                return f"self.{resolved_name}[{resolved_index}]"
+            return f"self.{resolved_name}[{index}]"
         elif isinstance(expr, FieldAccess):
             return f"self.{expr.reg_name}_{expr.field_name}"
         elif isinstance(expr, RTLBinaryOp):
@@ -107,9 +160,15 @@ class SimulatorGenerator:
             return f"({then_expr} if {condition} else {else_expr})"
         elif isinstance(expr, str):
             # Simple register name - check if it's a register
-            reg = self.isa.get_register(expr)
+            # Check if it's a virtual register
+            vreg = self.isa.get_virtual_register(expr)
+            if vreg:
+                return f"self._read_virtual_register('{expr}')"
+            # Check for register alias
+            resolved_name, _ = self._resolve_register_alias(expr, None)
+            reg = self.isa.get_register(resolved_name)
             if reg and not reg.is_register_file() and not reg.is_vector_register():
-                return f"self.{expr}"
+                return f"self.{resolved_name}"
             # Otherwise treat as operand reference
             return expr
         return "0"

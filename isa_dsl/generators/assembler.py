@@ -30,7 +30,11 @@ class AssemblerGenerator:
         
         # Add custom filter for computing bit masks
         def mask_filter(width):
-            if width is None or width < 0:
+            if width is None:
+                return 0
+            # Handle negative width (msb/lsb swapped) by using absolute value
+            width = abs(width)
+            if width <= 0:
                 return 0
             return (1 << width) - 1
         

@@ -36,6 +36,7 @@ class AssemblySyntaxProcessor:
         lines = content.split('\n')
         assembly_syntax_map: Dict[str, str] = {}
         current_instruction: Optional[str] = None
+        current_alias: Optional[str] = None
         modified_lines = []
         
         i = 0
@@ -47,6 +48,16 @@ class AssemblySyntaxProcessor:
             instr_match = re.match(r'\s*instruction\s+(\w+)\s*\{', line)
             if instr_match:
                 current_instruction = instr_match.group(1)
+                current_alias = None  # Reset alias when we see an instruction
+                modified_lines.append(line)
+                i += 1
+                continue
+            
+            # Track current instruction alias
+            alias_match = re.match(r'\s*alias\s+instruction\s+(\w+)\s*=', line)
+            if alias_match:
+                current_alias = alias_match.group(1)
+                current_instruction = None  # Reset instruction when we see an alias
                 modified_lines.append(line)
                 i += 1
                 continue
@@ -64,14 +75,19 @@ class AssemblySyntaxProcessor:
                     if re.search(r'[A-Za-z_][A-Za-z0-9_]*\{', asm_content):
                         # Store it and skip this line
                         if current_instruction:
-                            assembly_syntax_map[current_instruction] = asm_content
+                            assembly_syntax_map[f"instruction:{current_instruction}"] = asm_content
+                        elif current_alias:
+                            assembly_syntax_map[f"alias:{current_alias}"] = asm_content
                         # Don't add this line to modified_lines
                         i += 1
                         continue
             
-            # Reset current_instruction when we see a closing brace
-            if line.strip() == '}' and current_instruction:
-                current_instruction = None
+            # Reset current_instruction/alias when we see a closing brace
+            if line.strip() == '}':
+                if current_instruction:
+                    current_instruction = None
+                if current_alias:
+                    current_alias = None
             
             modified_lines.append(line)
             i += 1
@@ -88,13 +104,23 @@ class AssemblySyntaxProcessor:
         
         Args:
             textx_model: The parsed textX model
-            assembly_syntax_map: Map of instruction names to syntax strings
+            assembly_syntax_map: Map of instruction/alias names to syntax strings
         """
         if hasattr(textx_model, 'instructions') and hasattr(textx_model.instructions, 'instructions'):
             for instr_tx in textx_model.instructions.instructions:
                 instr_name = instr_tx.mnemonic if hasattr(instr_tx, 'mnemonic') else None
-                if instr_name and instr_name in assembly_syntax_map:
+                key = f"instruction:{instr_name}" if instr_name else None
+                if key and key in assembly_syntax_map:
                     # Set the assembly_syntax directly as a string
                     # The converter will extract it using str() which will work
-                    setattr(instr_tx, 'assembly_syntax', assembly_syntax_map[instr_name])
+                    setattr(instr_tx, 'assembly_syntax', assembly_syntax_map[key])
+        
+        # Also inject into instruction aliases
+        if hasattr(textx_model, 'instructions') and hasattr(textx_model.instructions, 'instruction_aliases'):
+            for alias_tx in textx_model.instructions.instruction_aliases:
+                alias_name = alias_tx.alias_mnemonic if hasattr(alias_tx, 'alias_mnemonic') else None
+                key = f"alias:{alias_name}" if alias_name else None
+                if key and key in assembly_syntax_map:
+                    # Set the assembly_syntax directly as a string
+                    setattr(alias_tx, 'assembly_syntax', assembly_syntax_map[key])
 

@@ -116,10 +116,13 @@
         return self._matches_assembly_syntax(line.strip()) is not None
 
     def _get_instruction_mnemonics(self) -> List[str]:
-        """Get list of valid instruction mnemonics."""
+        """Get list of valid instruction mnemonics, including aliases."""
         return [
 {%- for instr in isa.instructions %}
             '{{ instr.mnemonic.upper() }}',
+{%- endfor %}
+{%- for alias in isa.instruction_aliases %}
+            '{{ alias.alias_mnemonic.upper() }}',
 {%- endfor %}
         ]
 
@@ -188,6 +191,17 @@
         Returns (mnemonic, operand_dict) if matched, None otherwise.
         """
         line_stripped = line.strip()
+        
+        # Check instruction aliases first (they may have custom assembly_syntax)
+        {%- for alias in isa.instruction_aliases %}
+        {%- if alias.assembly_syntax %}
+        # Try to match alias {{ alias.alias_mnemonic }} with assembly_syntax: {{ alias.assembly_syntax }}
+        match_result = self._parse_assembly_syntax_{{ alias.alias_mnemonic }}(line_stripped)
+        if match_result:
+            # Resolve to target instruction
+            return ('{{ alias.target_mnemonic.upper() }}', match_result)
+        {%- endif %}
+        {%- endfor %}
         
 {%- for instr in isa.instructions %}
 {%- if instr.assembly_syntax and not instr.is_bundle() %}
@@ -340,6 +354,32 @@
 {%- endif %}
 {%- endfor %}
 
+{%- for alias in isa.instruction_aliases %}
+{%- if alias.assembly_syntax %}
+    def _parse_assembly_syntax_{{ alias.alias_mnemonic }}(self, line: str) -> Optional[Dict[str, int]]:
+        """Parse {{ alias.alias_mnemonic }} instruction alias using assembly_syntax pattern."""
+        pattern = "{{ alias.assembly_syntax }}"
+        # Extract mnemonic from pattern (first word)
+        pattern_parts = pattern.split()
+        if not pattern_parts:
+            return None
+        expected_mnemonic = pattern_parts[0].upper()
+        
+        # Check if line starts with this mnemonic (case-insensitive)
+        line_parts = line.split()
+        if not line_parts:
+            return None
+        line_mnemonic = line_parts[0].upper()
+        
+        # Check if it matches the alias mnemonic
+        if line_mnemonic != expected_mnemonic and line_mnemonic != '{{ alias.alias_mnemonic.upper() }}':
+            return None
+        
+        # Parse using the pattern
+        return self._parse_assembly_syntax_pattern(pattern, line)
+{%- endif %}
+{%- endfor %}
+
     def _assemble_instruction(self, line: str, address: int) -> Optional[int]:
         """Assemble a single instruction line."""
         # Check for bundle syntax: bundle{instr1, instr2, ...}
@@ -351,6 +391,37 @@
         syntax_match = self._matches_assembly_syntax(line_stripped)
         if syntax_match:
             mnemonic, operand_dict = syntax_match
+            # Handle instruction aliases: if target instruction needs more operands,
+            # try to infer them from the alias pattern
+            {%- for alias in isa.instruction_aliases %}
+            {%- if alias.assembly_syntax %}
+            {%- set target_instr = isa.get_instruction(alias.target_mnemonic) %}
+            {%- if target_instr %}
+            if mnemonic == '{{ alias.target_mnemonic.upper() }}':
+                # This came from alias {{ alias.alias_mnemonic }}
+                # Check if we need to add missing operands
+                {%- set alias_ops = [] %}
+                {%- if '{rd}' in alias.assembly_syntax %}{% set _ = alias_ops.append('rd') %}{% endif %}
+                {%- if '{rs1}' in alias.assembly_syntax %}{% set _ = alias_ops.append('rs1') %}{% endif %}
+                {%- if '{rs2}' in alias.assembly_syntax %}{% set _ = alias_ops.append('rs2') %}{% endif %}
+                {%- if '{imm}' in alias.assembly_syntax %}{% set _ = alias_ops.append('imm') %}{% endif %}
+                {%- for op in target_instr.operands %}
+                {%- if op not in alias_ops %}
+                # Missing operand {{ op }} - infer from alias semantics
+                {%- if op == 'rs1' and 'rd' in alias_ops %}
+                # For PUSH-like aliases, set rs1=rd (push value in rd)
+                if '{{ op }}' not in operand_dict and 'rd' in operand_dict:
+                    operand_dict['{{ op }}'] = operand_dict['rd']
+                {%- elif op == 'rd' and 'rs1' in alias_ops %}
+                # For POP-like aliases, set rd=rs1 (pop to rd)
+                if '{{ op }}' not in operand_dict and 'rs1' in operand_dict:
+                    operand_dict['{{ op }}'] = operand_dict['rs1']
+                {%- endif %}
+                {%- endif %}
+                {%- endfor %}
+            {%- endif %}
+            {%- endif %}
+            {%- endfor %}
             # Convert operand_dict to list in the order expected by encoding
             return self._encode_instruction_from_dict(mnemonic, operand_dict)
         
@@ -450,6 +521,22 @@
         """Encode an instruction from operand dictionary."""
 {%- for instr in isa.instructions %}
         if mnemonic == '{{ instr.mnemonic.upper() }}':
+            # Handle missing operands for instruction aliases
+            {%- for alias in isa.instruction_aliases %}
+            {%- if alias.target_mnemonic == instr.mnemonic and alias.assembly_syntax %}
+            {%- set target_instr = isa.get_instruction(alias.target_mnemonic) %}
+            {%- if target_instr %}
+            {%- set alias_has_rd = '{rd}' in alias.assembly_syntax %}
+            {%- set alias_has_rs1 = '{rs1}' in alias.assembly_syntax %}
+            {%- if alias_has_rd and not alias_has_rs1 and 'rs1' in target_instr.operands %}
+            # Alias {{ alias.alias_mnemonic }} only provides rd, but {{ instr.mnemonic }} needs rs1 too
+            # For PUSH-like semantics, set rs1=rd
+            if 'rs1' not in operand_dict and 'rd' in operand_dict:
+                operand_dict['rs1'] = operand_dict['rd']
+            {%- endif %}
+            {%- endif %}
+            {%- endif %}
+            {%- endfor %}
             # Convert operand_dict to list in operand order
             {%- if instr.operand_specs %}
             operand_list = []
@@ -463,6 +550,17 @@
             {%- for op in instr.operands %}
             if '{{ op }}' in operand_dict:
                 operand_list.append(operand_dict['{{ op }}'])
+            else:
+                # Missing operand {{ op }} - try to infer from aliases
+                {%- if op == 'rs1' %}
+                # For instructions like STM that need rs1, if we have rd from an alias, use rd
+                if 'rd' in operand_dict:
+                    operand_list.append(operand_dict['rd'])
+                else:
+                    operand_list.append(0)  # Default value
+                {%- else %}
+                operand_list.append(0)  # Default value
+                {%- endif %}
             {%- endfor %}
             return self._encode_{{ instr.mnemonic }}(operand_list)
             {%- else %}
@@ -591,7 +689,30 @@
     {%- endif %}
 {%- endfor %}
     def _resolve_register(self, name: str) -> int:
-        """Resolve a register name to a number."""
+        """Resolve a register name to a number, handling aliases."""
+        # Check register aliases first
+        {%- for alias in isa.register_aliases %}
+        if name.upper() == '{{ alias.alias_name.upper() }}':
+            {%- if alias.is_indexed() %}
+            # Alias targets indexed register {{ alias.target_reg_name }}[{{ alias.target_index }}]
+            # Resolve to the index value
+            return {{ alias.target_index }}
+            {%- else %}
+            # Alias targets simple register {{ alias.target_reg_name }}
+            # Continue to resolve the target register
+            name = '{{ alias.target_reg_name }}'
+            {%- endif %}
+        {%- endfor %}
+        
+        # Check virtual registers (virtual registers are accessed by name, not index)
+        {%- for vreg in isa.virtual_registers %}
+        if name.upper() == '{{ vreg.name.upper() }}':
+            # Virtual registers are accessed by name in assembly
+            # They will be handled specially during encoding
+            # For now, return a special marker or handle in operand encoding
+            raise ValueError(f"Virtual register '{name}' cannot be used as operand index")
+        {%- endfor %}
+        
         # Handle register names like R0, R1, etc.
         if name.upper().startswith('R') and name[1:].isdigit():
             return int(name[1:])

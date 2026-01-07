@@ -2,6 +2,8 @@
 
 A powerful Domain Specific Language (DSL) for describing Instruction Set Architectures (ISA) using textX. This DSL enables you to specify instruction formats, registers, instruction encodings, and behavior in RTL (Register Transfer Level) notation, with automatic code generation for simulators, assemblers, disassemblers, and documentation.
 
+**Repository**: [https://github.com/ajithpadman/isadsl.git](https://github.com/ajithpadman/isadsl.git)
+
 ## Features
 
 - **Complete ISA Specification**: Define instruction formats, registers (GPRs, SFRs, and vector registers), and instruction encodings
@@ -25,27 +27,32 @@ A powerful Domain Specific Language (DSL) for describing Instruction Set Archite
 
 ## Installation
 
-### Prerequisites
+### From PyPI (Recommended)
 
+Install the package directly from PyPI using pip:
+
+```bash
+pip install isa-dsl
+```
+
+### From Source
+
+If you want to install from source or contribute to the project:
+
+**Prerequisites:**
 - Python 3.8 or higher
 - [UV](https://github.com/astral-sh/uv) (recommended) or pip
 
-### Using UV (Recommended)
-
-[UV](https://github.com/astral-sh/uv) is a fast Python package manager. Install it first:
+**Using UV:**
 
 ```bash
-# Install UV
+# Install UV first
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # Or on Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
 
-Then install the project:
-
-```bash
 # Clone the repository
-git clone <repository-url>
-cd isa-dsl
+git clone https://github.com/ajithpadman/isadsl.git
+cd isadsl
 
 # Install the project and dependencies
 uv sync
@@ -54,12 +61,12 @@ uv sync
 uv sync --dev
 ```
 
-### Using pip (Alternative)
+**Using pip:**
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd isa-dsl
+git clone https://github.com/ajithpadman/isadsl.git
+cd isadsl
 
 # Install dependencies
 pip install -r requirements.txt
@@ -70,30 +77,85 @@ pip install -e .
 
 ## Quick Start
 
-1. **Define your ISA** in a `.isa` file (see `examples/arm_cortex_a9.isa` for a multi-file example)
+### 1. Create an ISA Specification
 
-2. **Generate tools**:
+Create a `.isa` file defining your instruction set architecture. Here's a simple example:
 
-```bash
-# Using UV
-uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
-
-# Or using Python directly
-python -m isa_dsl.cli generate examples/arm_cortex_a9.isa --output output/
+```isa
+architecture SimpleRISC {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [8]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode=0 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "ADD R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+    }
+}
 ```
 
-3. **Use the generated tools**:
+### 2. Generate Tools
+
+Generate simulator, assembler, disassembler, and documentation:
 
 ```bash
-# Validate your ISA
-uv run isa-dsl validate examples/arm_cortex_a9.isa
+isa-dsl generate your_isa.isa --output output/
+```
 
-# Get ISA information
-uv run isa-dsl info examples/arm_cortex_a9.isa
+This creates:
+- `output/simulator.py` - Instruction simulator
+- `output/assembler.py` - Assembler for your ISA
+- `output/disassembler.py` - Disassembler for binary code
+- `output/documentation.md` - ISA documentation
 
-# Run the generated simulator
+### 3. Use the Generated Tools
+
+**Validate your ISA:**
+```bash
+isa-dsl validate your_isa.isa
+```
+
+**Get ISA information:**
+```bash
+isa-dsl info your_isa.isa
+```
+
+**Assemble code:**
+```bash
+python output/assembler.py program.s -o program.bin
+```
+
+**Disassemble binary:**
+```bash
+python output/disassembler.py program.bin
+```
+
+**Run simulator:**
+```bash
 python output/simulator.py program.bin
 ```
+
+For more complex examples, see the [examples](examples/) directory or check the [DSL Specification](docs/DSL_Specification.md).
 
 ## Documentation
 
@@ -126,147 +188,111 @@ uv run isa-dsl generate examples/arm_cortex_a9.isa --output output/
 
 ## Command-Line Interface
 
-The `isa-dsl` command provides several subcommands:
+After installation, the `isa-dsl` command is available. It provides several subcommands:
 
 ### Generate Tools
 
 ```bash
-uv run isa-dsl generate <isa_file> --output <output_dir>
+isa-dsl generate <isa_file> --output <output_dir>
 ```
 
-Options:
+**Options:**
 - `--simulator` / `--no-simulator`: Generate simulator (default: enabled)
 - `--assembler` / `--no-assembler`: Generate assembler (default: enabled)
 - `--disassembler` / `--no-disassembler`: Generate disassembler (default: enabled)
 - `--docs` / `--no-docs`: Generate documentation (default: enabled)
 
+**Example:**
+```bash
+isa-dsl generate examples/arm_cortex_a9.isa --output output/
+```
+
 ### Validate ISA
 
 ```bash
-uv run isa-dsl validate <isa_file>
+isa-dsl validate <isa_file>
 ```
+
+Validates the ISA specification and reports any errors or warnings.
 
 ### Display ISA Information
 
 ```bash
-uv run isa-dsl info <isa_file>
+isa-dsl info <isa_file>
 ```
+
+Displays summary information about the ISA specification.
+
+## Features
+
+- **Virtual Registers**: Concatenate multiple registers to form wider virtual registers
+- **Register Aliases**: Define alternative names for registers (e.g., `SP = R[13]`)
+- **Instruction Aliases**: Define alternative mnemonics with custom assembly syntax
+- **Variable-Length Instructions**: Support for instructions of different widths
+- **Instruction Bundling**: Bundle multiple instructions into a single instruction word
+- **SIMD/Vector Support**: Built-in support for vector registers and SIMD operations
+- **Multi-File Support**: Organize large ISA specifications across multiple files using `#include`
+- **VS Code Extension**: Full IDE support with syntax highlighting, code completion, and error diagnostics
 
 ## Testing
 
-The project includes a comprehensive test suite with **111 automated tests** covering:
-
-- **Core functionality**: ISA parsing, validation, RTL interpretation
-- **Code generation**: Assembler, simulator, disassembler, documentation generators
-- **Advanced features**: Variable-length instructions, instruction bundling, distributed operands
-- **Integration tests**: End-to-end workflows, QEMU verification, ARM toolchain integration
-- **Multi-file support**: Include processing, inheritance, merge modes
-- **Assembly syntax**: Formatting, literal braces, backward compatibility
-- **VS Code Extension**: Language server tests (18 tests) for LSP functionality
-
-### Running Tests
-
-```bash
-# Run all Python tests
-uv run pytest
-
-# Run with verbose output
-uv run pytest -v
-
-# Run with coverage
-uv run pytest --cov
-
-# Run specific test suite
-uv run pytest tests/arm/
-
-# Run VS Code extension tests
-cd vscode_extension/isa/packages/language && npm test
-```
+The project includes a comprehensive test suite with **126 automated tests** covering all features. All tests pass successfully.
 
 **Test Status**: 
-- ✅ All 111 Python tests passing, 0 skipped, 0 failed
+- ✅ All 126 Python tests passing
 - ✅ All 18 VS Code extension tests passing
-- ✅ Continuous Integration (CI) runs all tests automatically on push/PR
+- ✅ Continuous Integration (CI) runs all tests automatically
+
+To run tests from source:
+```bash
+# After cloning and installing from source
+pytest
+```
 
 ## Development
 
-### Setup Development Environment
+To contribute to the project:
 
 ```bash
-# Install UV if not already installed
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Clone the repository
+git clone https://github.com/ajithpadman/isadsl.git
+cd isadsl
 
-# Sync dependencies (including dev dependencies)
+# Install in development mode
+pip install -e ".[dev]"
+
+# Or using UV
 uv sync --dev
 
 # Run tests
-uv run pytest
-
-# Run tests with coverage
-uv run pytest --cov
+pytest
 ```
-
-### Code Quality
-
-- All test functions are limited to 50 lines or less
-- All test files are limited to 500 lines or less
-- Helper functions are organized as class methods in separate files
-- Comprehensive test coverage across all major features
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.8 or higher
 - textX >= 3.0.0
 - Jinja2 >= 3.1.0
 - Click >= 8.1.0
 
-For development:
-- pytest >= 7.4.0
-- pytest-cov >= 4.1.0
-
-## Deployment
-
-### Production Readiness
-
-✅ **Ready for deployment** - The project is production-ready with:
-
-- Comprehensive test suite (111 tests, all passing)
-- Well-documented API and CLI interface
-- Modular, maintainable codebase
-- Complete documentation
-- Example ISA specifications
-- Validation and error handling
-
-### Installation for Production
-
-```bash
-# Using UV (recommended)
-uv sync
-
-# Or using pip
-pip install -r requirements.txt
-pip install -e .
-```
-
-### Building Distribution Packages
-
-```bash
-# Build wheel and source distribution
-python -m build
-
-# Or using UV
-uv build
-```
+Dependencies are automatically installed when installing from PyPI.
 
 ## License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please ensure that:
-- All tests pass (`uv run pytest`)
-- Code follows existing style conventions
-- Documentation is updated for new features
-- Test functions are kept under 50 lines
-- Test files are kept under 500 lines
+Contributions are welcome! Please see the [GitHub repository](https://github.com/ajithpadman/isadsl.git) for contribution guidelines.
+
+**Before contributing:**
+- Ensure all tests pass (`pytest`)
+- Follow existing code style conventions
+- Update documentation for new features
+- Add tests for new functionality
+
+## Links
+
+- **GitHub Repository**: [https://github.com/ajithpadman/isadsl.git](https://github.com/ajithpadman/isadsl.git)
+- **Documentation**: See the [docs/](docs/) directory for complete documentation
+- **Examples**: Check [examples/](examples/) for ISA specification examples

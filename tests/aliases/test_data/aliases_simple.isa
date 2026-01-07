@@ -1,0 +1,66 @@
+architecture AliasesISA {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+        
+        // Register aliases
+        alias SP = R[13]
+        alias LR = R[14]
+        alias PC_ALIAS = PC
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [31:28]
+            rd: [27:24]
+            rs1: [24:20]
+            rs2: [20:16]
+            func: [15:0]
+        }
+    }
+    
+    instructions {
+        instruction ADD {
+            format: R_TYPE
+            encoding: { opcode: 0 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "ADD R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+        
+        instruction STM {
+            format: R_TYPE
+            encoding: { opcode: 1 }
+            operands: rd, rs1
+            assembly_syntax: "STM R{rd}, R{rs1}"
+            behavior: {
+                MEM[R[rd]] = R[rs1];
+            }
+        }
+        
+        instruction LDM {
+            format: R_TYPE
+            encoding: { opcode: 2 }
+            operands: rd, rs1
+            assembly_syntax: "LDM R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = MEM[R[rs1]];
+            }
+        }
+        
+        // Instruction aliases
+        alias instruction PUSH = STM {
+            assembly_syntax: "PUSH R{rd}"
+        }
+        
+        alias instruction POP = LDM {
+            assembly_syntax: "POP R{rd}"
+        }
+    }
+}
+

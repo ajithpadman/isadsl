@@ -11,7 +11,8 @@ from .isa_model import (
     RTLStatement, RTLAssignment, RTLConditional, RTLMemoryAccess, RTLForLoop,
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLLValue,
     RegisterAccess, FieldAccess, RTLConstant, OperandReference,
-    BundleFormat, BundleSlot, OperandSpec
+    BundleFormat, BundleSlot, OperandSpec, VirtualRegister, VirtualRegisterComponent,
+    RegisterAlias, InstructionAlias
 )
 
 
@@ -44,8 +45,11 @@ class TextXModelConverter:
                 name=spec_obj.name if hasattr(spec_obj, 'name') else 'Unknown',
                 properties=[],
                 registers=[],
+                virtual_registers=[],
+                register_aliases=[],
                 formats=[],
-                instructions=[]
+                instructions=[],
+                instruction_aliases=[]
             )
         else:
             model = isa_model
@@ -57,8 +61,82 @@ class TextXModelConverter:
         
         # Extract registers using textX object model
         if hasattr(spec_obj, 'registers') and spec_obj.registers is not None:
+            # Extract virtual registers
+            if hasattr(spec_obj.registers, 'virtual_registers'):
+                for vreg_tx in spec_obj.registers.virtual_registers:
+                    components = []
+                    if hasattr(vreg_tx, 'components') and vreg_tx.components:
+                        comp_list = vreg_tx.components
+                        # Process first component
+                        if hasattr(comp_list, 'first') and comp_list.first:
+                            comp_tx = comp_list.first
+                            if hasattr(comp_tx, 'indexed_register') and comp_tx.indexed_register:
+                                # Indexed register
+                                idx_reg = comp_tx.indexed_register
+                                components.append(VirtualRegisterComponent(
+                                    reg_name=idx_reg.reg_name,
+                                    index=int(idx_reg.index)
+                                ))
+                            elif hasattr(comp_tx, 'simple_register') and comp_tx.simple_register:
+                                # Simple register
+                                components.append(VirtualRegisterComponent(
+                                    reg_name=str(comp_tx.simple_register),
+                                    index=None
+                                ))
+                        # Process rest components
+                        if hasattr(comp_list, 'rest') and comp_list.rest:
+                            for comp_tx in comp_list.rest:
+                                if hasattr(comp_tx, 'indexed_register') and comp_tx.indexed_register:
+                                    # Indexed register
+                                    idx_reg = comp_tx.indexed_register
+                                    components.append(VirtualRegisterComponent(
+                                        reg_name=idx_reg.reg_name,
+                                        index=int(idx_reg.index)
+                                    ))
+                                elif hasattr(comp_tx, 'simple_register') and comp_tx.simple_register:
+                                    # Simple register
+                                    components.append(VirtualRegisterComponent(
+                                        reg_name=str(comp_tx.simple_register),
+                                        index=None
+                                    ))
+                    
+                    vreg = VirtualRegister(
+                        name=vreg_tx.name,
+                        width=vreg_tx.width,
+                        components=components
+                    )
+                    model.virtual_registers.append(vreg)
+            
+            # Extract register aliases
+            if hasattr(spec_obj.registers, 'aliases'):
+                for alias_tx in spec_obj.registers.aliases:
+                    target_reg_name = None
+                    target_index = None
+                    
+                    if hasattr(alias_tx, 'target') and alias_tx.target:
+                        target = alias_tx.target
+                        if hasattr(target, 'indexed_target') and target.indexed_target:
+                            # Indexed register target
+                            idx_reg = target.indexed_target
+                            target_reg_name = idx_reg.reg_name
+                            target_index = int(idx_reg.index)
+                        elif hasattr(target, 'simple_target') and target.simple_target:
+                            # Simple register target
+                            target_reg_name = str(target.simple_target)
+                            target_index = None
+                    
+                    if target_reg_name:
+                        alias = RegisterAlias(
+                            alias_name=alias_tx.alias_name,
+                            target_reg_name=target_reg_name,
+                            target_index=target_index
+                        )
+                        model.register_aliases.append(alias)
+            
+            # Extract regular registers
             if hasattr(spec_obj.registers, 'registers'):
                 for r in spec_obj.registers.registers:
+                    # Regular register
                     vector_props = getattr(r, 'vector_props', None)
                     element_width = None
                     lanes = None
@@ -230,6 +308,24 @@ class TextXModelConverter:
                         behavior=behavior
                     )
                     model.instructions.append(instr)
+            
+            # Extract instruction aliases
+            if hasattr(spec_obj.instructions, 'instruction_aliases'):
+                for alias_tx in spec_obj.instructions.instruction_aliases:
+                    assembly_syntax = None
+                    # Check if assembly_syntax attribute exists and has a value
+                    if hasattr(alias_tx, 'assembly_syntax'):
+                        asm_syntax_val = getattr(alias_tx, 'assembly_syntax', None)
+                        # textX returns the string value directly (without quotes)
+                        if asm_syntax_val is not None and str(asm_syntax_val).strip():
+                            assembly_syntax = str(asm_syntax_val).strip()
+                    
+                    alias = InstructionAlias(
+                        alias_mnemonic=str(alias_tx.alias_mnemonic),
+                        target_mnemonic=str(alias_tx.target_mnemonic),
+                        assembly_syntax=assembly_syntax
+                    )
+                    model.instruction_aliases.append(alias)
         
         # Second pass: resolve any format references that weren't resolved by textX scope provider
         # Even though the scope provider finds formats, textX might not assign them to the instruction

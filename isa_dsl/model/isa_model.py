@@ -57,6 +57,75 @@ class Register(TextXObject):
 
 
 @dataclass
+class VirtualRegisterComponent(TextXObject):
+    """A component of a virtual register (can be simple register or indexed register)."""
+    reg_name: str
+    index: Optional[int] = None  # None for simple registers, int for indexed registers
+    
+    def is_indexed(self) -> bool:
+        """Check if this is an indexed register (e.g., R[0])."""
+        return self.index is not None
+
+
+@dataclass
+class VirtualRegister(TextXObject):
+    """A virtual register formed by concatenating physical registers."""
+    name: str
+    width: int
+    components: List[VirtualRegisterComponent]  # List of register components to concatenate
+    
+    def get_component_registers(self, isa: 'ISASpecification') -> List[Tuple[Register, Optional[int]]]:
+        """Get the physical registers that form this virtual register.
+        
+        Returns:
+            List of tuples (Register, index) where index is None for simple registers
+            and an int for indexed registers from register files.
+        """
+        result = []
+        for comp in self.components:
+            reg = isa.get_register(comp.reg_name)
+            if reg:
+                result.append((reg, comp.index))
+        return result
+
+
+@dataclass
+class RegisterAlias(TextXObject):
+    """An alias name for a register."""
+    alias_name: str
+    target_reg_name: str  # Name of the register file or simple register
+    target_index: Optional[int] = None  # Index if targeting register file element
+    
+    def is_indexed(self) -> bool:
+        """Check if alias targets an indexed register."""
+        return self.target_index is not None
+    
+    def resolve(self, isa: 'ISASpecification') -> Optional[Tuple[Register, Optional[int]]]:
+        """Resolve alias to actual register and index.
+        
+        Returns:
+            Tuple of (Register, index) where index is None for simple registers
+            and an int for indexed registers from register files.
+        """
+        reg = isa.get_register(self.target_reg_name)
+        if reg:
+            return (reg, self.target_index)
+        return None
+
+
+@dataclass
+class InstructionAlias(TextXObject):
+    """An alias mnemonic for an instruction."""
+    alias_mnemonic: str
+    target_mnemonic: str  # Mnemonic of the actual instruction
+    assembly_syntax: Optional[str] = None  # Optional custom assembly syntax
+    
+    def resolve(self, isa: 'ISASpecification') -> Optional['Instruction']:
+        """Resolve alias to actual instruction."""
+        return isa.get_instruction(self.target_mnemonic)
+
+
+@dataclass
 class FormatField(TextXObject):
     """A field within an instruction format."""
     name: str
@@ -482,9 +551,12 @@ class ISASpecification(TextXObject):
     name: str
     properties: List[Property] = field(default_factory=list)
     registers: List[Register] = field(default_factory=list)
+    virtual_registers: List[VirtualRegister] = field(default_factory=list)
+    register_aliases: List[RegisterAlias] = field(default_factory=list)
     formats: List[InstructionFormat] = field(default_factory=list)
     bundle_formats: List[BundleFormat] = field(default_factory=list)
     instructions: List[Instruction] = field(default_factory=list)
+    instruction_aliases: List[InstructionAlias] = field(default_factory=list)
 
     def get_property(self, name: str) -> Optional[Any]:
         """Get a property value by name."""
@@ -494,10 +566,29 @@ class ISASpecification(TextXObject):
         return None
 
     def get_register(self, name: str) -> Optional[Register]:
-        """Get a register by name."""
+        """Get a register by name, checking aliases."""
+        # First check direct register names
         for reg in self.registers:
             if reg.name == name:
                 return reg
+        # Check virtual registers
+        for vreg in self.virtual_registers:
+            if vreg.name == name:
+                # Virtual registers are not returned as Register objects
+                # They need special handling
+                return None
+        # Check register aliases
+        for alias in self.register_aliases:
+            if alias.alias_name == name:
+                reg = self.get_register(alias.target_reg_name)
+                return reg
+        return None
+    
+    def get_virtual_register(self, name: str) -> Optional[VirtualRegister]:
+        """Get a virtual register by name."""
+        for vreg in self.virtual_registers:
+            if vreg.name == name:
+                return vreg
         return None
 
     def get_format(self, name: str) -> Optional[InstructionFormat]:
@@ -515,10 +606,15 @@ class ISASpecification(TextXObject):
         return None
 
     def get_instruction(self, mnemonic: str) -> Optional[Instruction]:
-        """Get an instruction by mnemonic."""
+        """Get an instruction by mnemonic, checking aliases."""
+        # First check direct instruction mnemonics
         for instr in self.instructions:
             if instr.mnemonic == mnemonic:
                 return instr
+        # Check instruction aliases
+        for alias in self.instruction_aliases:
+            if alias.alias_mnemonic == mnemonic:
+                return alias.resolve(self)
         return None
 
     def decode_instruction(self, instruction_word: int) -> Optional[Instruction]:
