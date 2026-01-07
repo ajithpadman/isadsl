@@ -23,8 +23,11 @@ class SimulatorGenerator:
         )
         
         if isinstance(stmt, RTLAssignment):
+            from ..model.isa_model import RegisterAccess, Variable
+            # Check if target is a temporary variable
+            is_temporary = isinstance(stmt.target, Variable)
+            
             # Check if target is a virtual register
-            from ..model.isa_model import RegisterAccess
             is_virtual = False
             vreg_name = None
             if isinstance(stmt.target, str):
@@ -38,14 +41,18 @@ class SimulatorGenerator:
                     is_virtual = True
                     vreg_name = stmt.target.reg_name
             
-            if is_virtual:
+            expr = self._generate_expr_code(stmt.expr)
+            
+            if is_temporary:
+                # Temporary variable - don't apply mask to preserve signed values
+                target = self._generate_lvalue_code(stmt.target)
+                return f"        {target} = {expr}"
+            elif is_virtual:
                 # Virtual register write - use helper method
-                expr = self._generate_expr_code(stmt.expr)
                 return f"        self._write_virtual_register('{vreg_name}', {expr} & 0xFFFFFFFF)"
             else:
                 # Regular register write
                 target = self._generate_lvalue_code(stmt.target)
-                expr = self._generate_expr_code(stmt.expr)
                 
                 # Check if target is a register with fields (not a field access)
                 # If it's a simple register name (string) or RegisterAccess, check if it has fields
@@ -228,6 +235,18 @@ class SimulatorGenerator:
                 # Short alias for zero_extend
                 if len(expr.args) == 2:
                     return f"self._zero_extend({args_str})"
+            elif func_name == "to_signed":
+                # to_signed(value, width) - cast to signed and extend to 32 bits
+                if len(expr.args) == 2:
+                    return f"self._sign_extend({args_str})"
+                else:
+                    raise ValueError(f"to_signed requires 2 arguments (value, width), got {len(expr.args)}")
+            elif func_name == "to_unsigned":
+                # to_unsigned(value, width) - cast to unsigned and extend to 32 bits
+                if len(expr.args) == 2:
+                    return f"self._zero_extend({args_str})"
+                else:
+                    raise ValueError(f"to_unsigned requires 2 arguments (value, width), got {len(expr.args)}")
             # Default: call as method (for user-defined functions if we add that later)
             return f"self.{expr.function_name}({args_str})"
         elif isinstance(expr, str):

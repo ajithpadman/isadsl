@@ -240,8 +240,11 @@ UnaryOperator returns string:
     '-' | '!' | '~'
 ;
 
+// RTLLValue: Structured to avoid ambiguity
+// The parser will use lookahead to distinguish between RegisterAccess (ID '['), 
+// FieldAccess (ID '.'), and simple ID
 RTLLValue:
-    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID | variable=ID
+    RegisterAccess | FieldAccess | ID
 ;
 
 RegisterAccess:

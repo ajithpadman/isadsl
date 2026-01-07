@@ -522,3 +522,428 @@ def test_zext_alias(builtins_isa_file):
             if str(tmpdir_path) in sys.path:
                 sys.path.remove(str(tmpdir_path))
 
+
+def test_to_signed_8(builtins_isa_file):
+    """Test to_signed with 8-bit value"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: to_signed with positive 8-bit value
+            # 0x12345678: bits [7:0] = 0x78 (positive), sign-extended = 0x00000078
+            assembly_code = "TO_SIGNED_8 R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x12345678
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [7:0] = 0x78, to_signed(0x78, 8) = 0x00000078
+            expected = 0x78
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+            # Test: to_signed with negative 8-bit value
+            sim.R[1] = 0x123456FF
+            sim.R[0] = 0
+            sim.pc = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [7:0] = 0xFF, to_signed(0xFF, 8) = 0xFFFFFFFF (sign-extended)
+            expected = 0xFFFFFFFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_to_signed_16(builtins_isa_file):
+    """Test to_signed with 16-bit value"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: to_signed with positive 16-bit value
+            # 0x12345678: bits [15:0] = 0x5678 (positive), sign-extended = 0x00005678
+            assembly_code = "TO_SIGNED_16 R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x12345678
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [15:0] = 0x5678, to_signed(0x5678, 16) = 0x00005678
+            expected = 0x5678
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+            # Test: to_signed with negative 16-bit value
+            sim.R[1] = 0x1234FFFF
+            sim.R[0] = 0
+            sim.pc = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [15:0] = 0xFFFF, to_signed(0xFFFF, 16) = 0xFFFFFFFF (sign-extended)
+            expected = 0xFFFFFFFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_to_unsigned_8(builtins_isa_file):
+    """Test to_unsigned with 8-bit value"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: to_unsigned with 8-bit value
+            # 0x123456FF: bits [7:0] = 0xFF, zero-extended = 0x000000FF
+            assembly_code = "TO_UNSIGNED_8 R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x123456FF
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [7:0] = 0xFF, to_unsigned(0xFF, 8) = 0x000000FF
+            expected = 0xFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_to_unsigned_16(builtins_isa_file):
+    """Test to_unsigned with 16-bit value"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: to_unsigned with 16-bit value
+            # 0x1234FFFF: bits [15:0] = 0xFFFF, zero-extended = 0x0000FFFF
+            assembly_code = "TO_UNSIGNED_16 R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x1234FFFF
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [15:0] = 0xFFFF, to_unsigned(0xFFFF, 16) = 0x0000FFFF
+            expected = 0xFFFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_to_signed_with_extract_bits(builtins_isa_file):
+    """Test to_signed with extract_bits function"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: Extract bits [15:8] and cast to signed
+            # 0x1234FF78: bits [15:8] = 0xFF, to_signed = 0xFFFFFFFF
+            assembly_code = "TO_SIGNED_EXTRACT R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x1234FF78
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [15:8] = 0xFF, to_signed(0xFF, 8) = 0xFFFFFFFF
+            expected = 0xFFFFFFFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_to_unsigned_with_extract_bits(builtins_isa_file):
+    """Test to_unsigned with extract_bits function"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: Extract bits [15:8] and cast to unsigned
+            # 0x1234FF78: bits [15:8] = 0xFF, to_unsigned = 0x000000FF
+            assembly_code = "TO_UNSIGNED_EXTRACT R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0x1234FF78
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Bits [15:8] = 0xFF, to_unsigned(0xFF, 8) = 0x000000FF
+            expected = 0xFF
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+
+
+def test_abs_bytes_packing(builtins_isa_file):
+    """Test byte-wise absolute value calculation and packing with 0xFFF1F1F1"""
+    isa = parse_isa_file(str(builtins_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_gen = SimulatorGenerator(isa)
+        sim_file = sim_gen.generate(tmpdir_path)
+        
+        asm_gen = AssemblerGenerator(isa)
+        asm_file = asm_gen.generate(tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            import importlib.util
+            sim_spec = importlib.util.spec_from_file_location("simulator", sim_file)
+            sim_module = importlib.util.module_from_spec(sim_spec)
+            sim_spec.loader.exec_module(sim_module)
+            Simulator = sim_module.Simulator
+            
+            asm_spec = importlib.util.spec_from_file_location("assembler", asm_file)
+            asm_module = importlib.util.module_from_spec(asm_spec)
+            asm_spec.loader.exec_module(asm_module)
+            Assembler = asm_module.Assembler
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Test: Calculate absolute value of each byte in 0xFFF1F1F1
+            # Byte breakdown: 0xFF (byte 3), 0xF1 (byte 2), 0xF1 (byte 1), 0xF1 (byte 0)
+            # Byte 3 (0xFF): signed = -1, abs = 1 → 0x01
+            # Byte 2 (0xF1): signed = -15, abs = 15 → 0x0F
+            # Byte 1 (0xF1): signed = -15, abs = 15 → 0x0F
+            # Byte 0 (0xF1): signed = -15, abs = 15 → 0x0F
+            # Expected result: 0x010F0F0F
+            assembly_code = "ABS_BYTES R0, R1"
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            with open(binary_file, 'wb') as f:
+                for word in machine_code:
+                    f.write(word.to_bytes(4, byteorder='little'))
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            sim.R[1] = 0xFFF1F1F1
+            sim.R[0] = 0
+            
+            executed = sim.step()
+            assert executed, "Instruction should execute successfully"
+            
+            # Verify the packed result
+            expected = 0x010F0F0F
+            assert sim.R[0] == expected, f"Expected {expected:08x}, got {sim.R[0]:08x}"
+            
+            # Verify individual bytes are correct
+            byte3 = (sim.R[0] >> 24) & 0xFF
+            byte2 = (sim.R[0] >> 16) & 0xFF
+            byte1 = (sim.R[0] >> 8) & 0xFF
+            byte0 = sim.R[0] & 0xFF
+            
+            assert byte3 == 0x01, f"Byte 3 should be 0x01, got 0x{byte3:02x}"
+            assert byte2 == 0x0F, f"Byte 2 should be 0x0F, got 0x{byte2:02x}"
+            assert byte1 == 0x0F, f"Byte 1 should be 0x0F, got 0x{byte1:02x}"
+            assert byte0 == 0x0F, f"Byte 0 should be 0x0F, got 0x{byte0:02x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+

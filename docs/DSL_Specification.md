@@ -741,6 +741,101 @@ instruction EXTRACT_BITS {
 
 **Note**: `extract_bits(value, msb, lsb)` is equivalent to `value[msb:lsb]`, but the function form can be more readable in complex expressions.
 
+#### Type Casting Functions
+
+The ISA DSL provides explicit type casting functions for converting bitfield extractions to signed or unsigned integers. These functions make the intent clearer than using `sign_extend`/`zero_extend` for type casting operations.
+
+##### Signed Cast
+
+**Function**: `to_signed(value, width)`
+
+Treats the lower `width` bits of `value` as a signed integer and returns the 32-bit signed representation (sign-extends to 32 bits). The returned value is a Python signed integer, allowing correct comparisons like `>= 0` and `< 0` to work as expected.
+
+```isa
+behavior: {
+    // Extract byte and treat as signed
+    signed_byte = to_signed(D[s2][31:24], 8);
+    
+    // Extract 16-bit field and treat as signed
+    signed_half = to_signed(R[rs1][15:0], 16);
+    
+    // Use with bitfield access
+    R[rd] = to_signed(R[rs1][7:0], 8);
+}
+```
+
+**Example**:
+```isa
+instruction CAST_SIGNED {
+    format: R_TYPE
+    encoding: { opcode=7 }
+    operands: rd, rs1
+    behavior: {
+        // Extract lower 8 bits and treat as signed
+        R[rd] = to_signed(R[rs1][7:0], 8);
+    }
+}
+```
+
+##### Unsigned Cast
+
+**Function**: `to_unsigned(value, width)`
+
+Treats the lower `width` bits of `value` as an unsigned integer and returns the 32-bit representation (zero-extends to 32 bits).
+
+```isa
+behavior: {
+    // Extract byte and treat as unsigned
+    unsigned_byte = to_unsigned(D[s2][23:16], 8);
+    
+    // Extract 16-bit field and treat as unsigned
+    unsigned_half = to_unsigned(R[rs1][15:0], 16);
+    
+    // Use with bitfield access
+    R[rd] = to_unsigned(R[rs1][7:0], 8);
+}
+```
+
+**Example**:
+```isa
+instruction CAST_UNSIGNED {
+    format: R_TYPE
+    encoding: { opcode=8 }
+    operands: rd, rs1
+    behavior: {
+        // Extract lower 8 bits and treat as unsigned
+        R[rd] = to_unsigned(R[rs1][7:0], 8);
+    }
+}
+```
+
+**Note**: `to_signed(value, width)` is semantically equivalent to `sign_extend(value, width)`, and `to_unsigned(value, width)` is equivalent to `zero_extend(value, width)`. However, the `to_signed`/`to_unsigned` functions provide clearer intent when the purpose is type casting rather than extension.
+
+**Practical Example - Byte-wise Absolute Value**:
+```isa
+instruction ABS_B {
+    format: RR
+    encoding: { op1=0x0B, op2=0x5C }
+    operands: s2, d
+    behavior: {
+        // Extract each byte and treat as signed
+        byte3 = to_signed(D[s2][31:24], 8);
+        byte2 = to_signed(D[s2][23:16], 8);
+        byte1 = to_signed(D[s2][15:8], 8);
+        byte0 = to_signed(D[s2][7:0], 8);
+        
+        // Calculate absolute value of each byte
+        abs3 = (byte3 >= 0) ? byte3 : (0 - byte3);
+        abs2 = (byte2 >= 0) ? byte2 : (0 - byte2);
+        abs1 = (byte1 >= 0) ? byte1 : (0 - byte1);
+        abs0 = (byte0 >= 0) ? byte0 : (0 - byte0);
+        
+        // Repack bytes
+        D[d] = (abs3 << 24) | (abs2 << 16) | (abs1 << 8) | abs0;
+    }
+}
+```
+
 #### Combining Built-in Functions
 
 Built-in functions can be combined with bitfield access and other operations:

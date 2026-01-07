@@ -1,5 +1,85 @@
 # Release Notes
 
+## Version 0.3.5 - Signed Integer Support for `to_signed` Built-in Function
+
+**Release Date:** 2026-01-07
+
+### 🎯 Major Changes
+
+#### Fixed `to_signed` Built-in Function to Return Proper Signed Integers
+
+The `to_signed(value, width)` built-in function now correctly returns signed integer values that Python can properly compare, enabling correct absolute value calculations and signed comparisons in RTL behavior blocks.
+
+**Problem Fixed:**
+- Previously, `to_signed(0xF1, 8)` would return `0xFFFFFFF1` (4294967281 as unsigned), causing comparisons like `>= 0` to always be `True` even for negative values
+- This broke absolute value calculations that relied on signed comparisons
+
+**Solution:**
+- Updated `_sign_extend` helper in generated simulators to convert unsigned bit patterns to Python signed integers
+- Updated `to_signed` in the RTL interpreter to return signed values
+- Modified code generator to preserve signed values in temporary variables (skip `& 0xFFFFFFFF` mask for variables)
+
+**Example:**
+```isa
+behavior: {
+    signed3 = to_signed(temp3, 8);  // Now returns -15 for 0xF1, not 4294967281
+    abs3 = (signed3 >= 0) ? signed3 : (0 - signed3);  // Now works correctly!
+}
+```
+
+### ✨ Improvements
+
+- **Correct Signed Comparisons**: `to_signed` now returns values that Python correctly interprets as signed
+- **Fixed Absolute Value Calculations**: Byte-wise absolute value operations now work correctly
+- **Preserved Signed Values**: Temporary variables maintain signed values for intermediate calculations
+- **Backward Compatible**: Register writes still use unsigned 32-bit values (as expected)
+
+### 📝 Technical Details
+
+**Files Modified:**
+- `isa_dsl/generators/templates/simulator.j2` - Added signed conversion to `_sign_extend`
+- `isa_dsl/runtime/rtl_interpreter.py` - Added signed conversion to `to_signed`
+- `isa_dsl/generators/simulator.py` - Skip mask for temporary variables to preserve signed values
+
+**How It Works:**
+1. Sign extension produces unsigned bit pattern (e.g., `0xFFFFFFF1`)
+2. Signed conversion: `result >= 0x80000000 ? result - 0x100000000 : result` (e.g., `-15`)
+3. Temporary variables store signed values without masking
+4. Comparisons now work correctly: `-15 >= 0` → `False` ✓
+
+### 📦 Files Changed
+
+**Core Implementation:**
+- `isa_dsl/generators/templates/simulator.j2` - Signed conversion in `_sign_extend`
+- `isa_dsl/runtime/rtl_interpreter.py` - Signed conversion in `to_signed`
+- `isa_dsl/generators/simulator.py` - Conditional masking for variables vs registers
+
+**Tests:**
+- `tests/rtl_builtins/test_builtin_functions.py` - `test_abs_bytes_packing` now passes
+
+**Version Updates:**
+- `pyproject.toml` - Version 0.3.4 → 0.3.5
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.3.4 → 0.3.5
+- `vscode_extension/isa/packages/language/package.json` - Version 0.3.4 → 0.3.5
+- `vscode_extension/isa/package.json` - Version 0.3.4 → 0.3.5
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing code continues to work, but signed comparisons with `to_signed` now work correctly.
+
+**Benefits:**
+- Absolute value calculations work correctly with signed byte values
+- Signed comparisons (`>=`, `<`, etc.) work as expected
+- More intuitive behavior matching hardware semantics
+
+### 📊 Statistics
+
+- **3 core files modified**
+- **1 test case fixed**
+- **All 16 built-in function tests passing**
+
+---
+
 ## Version 0.3.4 - Documentation Consistency and Accuracy Improvements
 
 **Release Date:** 2026-01-07

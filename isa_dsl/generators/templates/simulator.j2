@@ -288,18 +288,31 @@
         raise ValueError(f"Unknown virtual register: {vreg_name}")
     
     def _sign_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
-        """Sign extend a value from from_bits to to_bits."""
+        """Sign extend a value from from_bits to to_bits. Returns a signed integer value."""
         if from_bits >= to_bits:
-            return value & ((1 << to_bits) - 1)
-        # Extract the sign bit
-        sign_bit = (value >> (from_bits - 1)) & 1
-        if sign_bit:
-            # Negative: extend with 1s
-            mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
-            return value | mask
+            result = value & ((1 << to_bits) - 1)
         else:
-            # Positive: extend with 0s (already done)
-            return value & ((1 << to_bits) - 1)
+            # Extract the sign bit
+            sign_bit = (value >> (from_bits - 1)) & 1
+            if sign_bit:
+                # Negative: extend with 1s
+                mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
+                result = value | mask
+            else:
+                # Positive: extend with 0s (already done)
+                result = value & ((1 << to_bits) - 1)
+        
+        # Convert to signed integer for Python comparisons
+        # If the result has the sign bit set (>= 0x80000000 for 32-bit), convert to negative
+        if to_bits == 32:
+            if result >= 0x80000000:
+                result = result - 0x100000000
+        elif to_bits < 32:
+            sign_mask = 1 << (to_bits - 1)
+            if result & sign_mask:
+                result = result - (1 << to_bits)
+        
+        return result
     
     def _zero_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
         """Zero extend a value from from_bits to to_bits."""

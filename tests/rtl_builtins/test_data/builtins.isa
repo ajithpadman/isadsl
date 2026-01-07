@@ -18,10 +18,33 @@ architecture BuiltinsTest {
     }
     
     instructions {
+        // Test byte-wise absolute value calculation and packing
+        instruction ABS_BYTES {
+            format: R_TYPE
+            encoding: { opcode=0, func=1 }
+            operands: rd, rs1
+            assembly_syntax: "ABS_BYTES R{rd}, R{rs1}"
+            behavior: {
+                temp3 = extract_bits(R[rs1], 31, 24);
+                temp2 = extract_bits(R[rs1], 23, 16);
+                temp1 = extract_bits(R[rs1], 15, 8);
+                temp0 = extract_bits(R[rs1], 7, 0);
+                signed3 = to_signed(temp3, 8);
+                signed2 = to_signed(temp2, 8);
+                signed1 = to_signed(temp1, 8);
+                signed0 = to_signed(temp0, 8);
+                abs3 = (signed3 >= 0) ? signed3 : (0 - signed3);
+                abs2 = (signed2 >= 0) ? signed2 : (0 - signed2);
+                abs1 = (signed1 >= 0) ? signed1 : (0 - signed1);
+                abs0 = (signed0 >= 0) ? signed0 : (0 - signed0);
+                R[rd] = ((abs3 & 0xFF) << 24) | ((abs2 & 0xFF) << 16) | ((abs1 & 0xFF) << 8) | (abs0 & 0xFF);
+            }
+        }
+        
         // Test extract_bits function: extract bits [15:8] from R[rs1]
         instruction EXTRACT_BITS {
             format: R_TYPE
-            encoding: { opcode=1 }
+            encoding: { opcode=1, func=0 }
             operands: rd, rs1
             assembly_syntax: "EXTRACT_BITS R{rd}, R{rs1}"
             behavior: {
@@ -32,7 +55,7 @@ architecture BuiltinsTest {
         // Test sign_extend(value, from_bits) - 2 args
         instruction SIGN_EXT_8 {
             format: R_TYPE
-            encoding: { opcode=2 }
+            encoding: { opcode=2, func=0 }
             operands: rd, rs1
             assembly_syntax: "SIGN_EXT_8 R{rd}, R{rs1}"
             behavior: {
@@ -123,5 +146,74 @@ architecture BuiltinsTest {
                 R[rd] = zext(temp, 8);
             }
         }
+        
+        // Test to_signed with 8-bit value
+        instruction TO_SIGNED_8 {
+            format: R_TYPE
+            encoding: { opcode=10 }
+            operands: rd, rs1
+            assembly_syntax: "TO_SIGNED_8 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = to_signed(extract_bits(R[rs1], 7, 0), 8);
+            }
+        }
+        
+        // Test to_signed with 16-bit value
+        instruction TO_SIGNED_16 {
+            format: R_TYPE
+            encoding: { opcode=11 }
+            operands: rd, rs1
+            assembly_syntax: "TO_SIGNED_16 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = to_signed(extract_bits(R[rs1], 15, 0), 16);
+            }
+        }
+        
+        // Test to_unsigned with 8-bit value
+        instruction TO_UNSIGNED_8 {
+            format: R_TYPE
+            encoding: { opcode=12 }
+            operands: rd, rs1
+            assembly_syntax: "TO_UNSIGNED_8 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = to_unsigned(extract_bits(R[rs1], 7, 0), 8);
+            }
+        }
+        
+        // Test to_unsigned with 16-bit value
+        instruction TO_UNSIGNED_16 {
+            format: R_TYPE
+            encoding: { opcode=13 }
+            operands: rd, rs1
+            assembly_syntax: "TO_UNSIGNED_16 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = to_unsigned(extract_bits(R[rs1], 15, 0), 16);
+            }
+        }
+        
+        // Test to_signed with extract_bits
+        instruction TO_SIGNED_EXTRACT {
+            format: R_TYPE
+            encoding: { opcode=14 }
+            operands: rd, rs1
+            assembly_syntax: "TO_SIGNED_EXTRACT R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 15, 8);
+                R[rd] = to_signed(temp, 8);
+            }
+        }
+        
+        // Test to_unsigned with extract_bits
+        instruction TO_UNSIGNED_EXTRACT {
+            format: R_TYPE
+            encoding: { opcode=15, func=0 }
+            operands: rd, rs1
+            assembly_syntax: "TO_UNSIGNED_EXTRACT R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 15, 8);
+                R[rd] = to_unsigned(temp, 8);
+            }
+        }
+        
     }
 }

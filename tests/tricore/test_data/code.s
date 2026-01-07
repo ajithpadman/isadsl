@@ -1,1 +1,2 @@
 ABS D3, D2
+ABS.B D4, D2

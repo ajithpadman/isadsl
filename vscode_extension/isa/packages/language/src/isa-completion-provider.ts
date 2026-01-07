@@ -157,6 +157,28 @@ export class IsaCompletionProvider extends DefaultCompletionProvider {
                 }
             },
             {
+                label: 'to_signed',
+                kind: 3, // Function
+                detail: 'to_signed(value, width)',
+                insertText: 'to_signed(${1:value}, ${2:width})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Cast value to signed integer at specified width and extend to 32 bits.\n\nTreats the lower `width` bits of `value` as a signed integer and returns the 32-bit representation (sign-extends to 32 bits).\n\n**Example:** `to_signed(D[s2][31:24], 8)`'
+                }
+            },
+            {
+                label: 'to_unsigned',
+                kind: 3, // Function
+                detail: 'to_unsigned(value, width)',
+                insertText: 'to_unsigned(${1:value}, ${2:width})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Cast value to unsigned integer at specified width and extend to 32 bits.\n\nTreats the lower `width` bits of `value` as an unsigned integer and returns the 32-bit representation (zero-extends to 32 bits).\n\n**Example:** `to_unsigned(D[s2][23:16], 8)`'
+                }
+            },
+            {
                 label: 'sext',
                 kind: 3, // Function
                 detail: 'sext(value, from_bits[, to_bits]) - alias for sign_extend',

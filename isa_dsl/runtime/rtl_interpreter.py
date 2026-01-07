@@ -177,6 +177,43 @@ class RTLInterpreter:
             width = msb - lsb + 1
             return (value >> lsb) & ((1 << width) - 1)
         
+        elif func_name_lower == "to_signed":
+            if len(args) != 2:
+                raise ValueError(f"to_signed requires 2 arguments (value, width), got {len(args)}")
+            value, width = args
+            to_bits = 32  # Always extend to 32 bits
+            # Reuse sign_extend logic
+            if width >= to_bits:
+                result = value & ((1 << to_bits) - 1)
+            else:
+                # Extract the sign bit
+                sign_bit = (value >> (width - 1)) & 1
+                if sign_bit:
+                    # Negative: extend with 1s
+                    mask = ((1 << (to_bits - width)) - 1) << width
+                    result = value | mask
+                else:
+                    # Positive: extend with 0s
+                    result = value & ((1 << to_bits) - 1)
+            
+            # Convert to signed integer for Python comparisons
+            # If the result has the sign bit set (>= 0x80000000 for 32-bit), convert to negative
+            if result >= 0x80000000:
+                result = result - 0x100000000
+            
+            return result
+        
+        elif func_name_lower == "to_unsigned":
+            if len(args) != 2:
+                raise ValueError(f"to_unsigned requires 2 arguments (value, width), got {len(args)}")
+            value, width = args
+            to_bits = 32  # Always extend to 32 bits
+            # Reuse zero_extend logic
+            if width >= to_bits:
+                return value & ((1 << to_bits) - 1)
+            # Just mask to the target width (zero extension)
+            return value & ((1 << to_bits) - 1)
+        
         else:
             raise ValueError(f"Unknown built-in function: {func_name}")
 
