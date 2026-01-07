@@ -169,18 +169,74 @@ export async function installISADSL(context: vscode.ExtensionContext): Promise<v
             outputChannel.append(text);
         });
         
-        installProcess.on('close', (code) => {
+        installProcess.on('close', async (code) => {
             outputChannel.appendLine('');
             if (code === 0) {
                 outputChannel.appendLine('=== Installation Successful ===');
                 outputChannel.appendLine('');
-                outputChannel.appendLine('ISA-DSL has been installed and is available in your workspace.');
-                outputChannel.appendLine('You can now use the ISA-DSL commands from the command palette or context menu.');
                 
-                vscode.window.showInformationMessage(
-                    'ISA-DSL installed successfully!',
-                    'OK'
-                );
+                // Upgrade to latest version after installation
+                outputChannel.appendLine('Upgrading to latest version...');
+                outputChannel.appendLine(`Running: uv tool upgrade isa-dsl`);
+                outputChannel.appendLine('');
+                
+                const useShell = os.platform() === 'win32';
+                const upgradeProcess = spawn(uvPath, ['tool', 'upgrade', 'isa-dsl'], {
+                    cwd: workspacePath,
+                    env: { ...process.env },
+                    shell: useShell
+                });
+                
+                let upgradeStdout = '';
+                let upgradeStderr = '';
+                
+                upgradeProcess.stdout.on('data', (data: Buffer) => {
+                    const text = data.toString();
+                    upgradeStdout += text;
+                    outputChannel.append(text);
+                });
+                
+                upgradeProcess.stderr.on('data', (data: Buffer) => {
+                    const text = data.toString();
+                    upgradeStderr += text;
+                    outputChannel.append(text);
+                });
+                
+                upgradeProcess.on('close', (upgradeCode) => {
+                    outputChannel.appendLine('');
+                    if (upgradeCode === 0) {
+                        outputChannel.appendLine('=== Upgrade Successful ===');
+                        outputChannel.appendLine('');
+                        outputChannel.appendLine('ISA-DSL has been installed and upgraded to the latest version.');
+                        outputChannel.appendLine('You can now use the ISA-DSL commands from the command palette or context menu.');
+                        
+                        vscode.window.showInformationMessage(
+                            'ISA-DSL installed and upgraded successfully!',
+                            'OK'
+                        );
+                    } else {
+                        // Upgrade failed, but installation succeeded
+                        outputChannel.appendLine(`=== Upgrade Warning (exit code: ${upgradeCode}) ===`);
+                        outputChannel.appendLine('Installation succeeded, but upgrade failed. The installed version may not be the latest.');
+                        outputChannel.appendLine('You can still use the ISA-DSL commands from the command palette or context menu.');
+                        
+                        vscode.window.showWarningMessage(
+                            'ISA-DSL installed, but upgrade failed. You may not have the latest version.',
+                            'OK'
+                        );
+                    }
+                });
+                
+                upgradeProcess.on('error', (error: Error) => {
+                    outputChannel.appendLine(`WARNING: Upgrade failed: ${error.message}`);
+                    outputChannel.appendLine('Installation succeeded, but upgrade failed. The installed version may not be the latest.');
+                    outputChannel.appendLine('You can still use the ISA-DSL commands from the command palette or context menu.');
+                    
+                    vscode.window.showWarningMessage(
+                        'ISA-DSL installed, but upgrade failed. You may not have the latest version.',
+                        'OK'
+                    );
+                });
             } else {
                 outputChannel.appendLine(`=== Installation Failed (exit code: ${code}) ===`);
                 vscode.window.showErrorMessage(

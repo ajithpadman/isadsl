@@ -59,13 +59,13 @@ class Simulator:
 {# Instruction execution methods (_execute_*) #}
 {% endblock %}
 
-{% block helper_class %}
-{# External behavior handler class for user-defined instruction behaviors #}
-{% endblock %}
-
 {% block print_state %}
 {# Print state method #}
 {% endblock %}
+{% endblock %}
+
+{% block helper_class %}
+{# External behavior handler class for user-defined instruction behaviors (outside Simulator class) #}
 {% endblock %}
 
 {% block main_function %}

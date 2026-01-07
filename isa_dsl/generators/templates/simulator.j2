@@ -525,6 +525,7 @@
 {% endblock %}
 
 {% block print_state %}
+    # Print state method - part of Simulator class
     def print_state(self):
         """Print the current simulator state."""
         print("=== Simulator State ===")
@@ -546,6 +547,7 @@
         {%- endif %}
 {%- endfor %}
         print()
+
 {% endblock %}
 
 {% block helper_class %}
