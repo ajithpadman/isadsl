@@ -53,7 +53,7 @@ Tests are organized into the following directories:
   - Helper files: `test_helpers.py`, `test_helpers_basic.py`, `test_helpers_compilation.py`, `test_helpers_qemu.py`, `test_helpers_integration.py`
 
 - **`tests/rtl_builtins/`** - RTL built-in functions and bitfield access tests
-  - `test_builtin_functions.py` - Tests for `sign_extend`, `zero_extend`, `extract_bits` functions and bitfield access syntax
+  - `test_builtin_functions.py` - Tests for `sign_extend`, `zero_extend`, `extract_bits`, `to_signed`, `to_unsigned` functions and bitfield access syntax
 
 - **`tests/shift_ternary/`** - Shift operations and ternary expression tests
   - `test_shift_ternary.py` - Tests for shift operators (`<<`, `>>`) and ternary conditional expressions
