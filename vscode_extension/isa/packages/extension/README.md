@@ -1,6 +1,6 @@
 # ISA DSL Language Server
 
-[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
+[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A comprehensive VS Code extension providing language support for the **ISA DSL (Instruction Set Architecture Domain Specific Language)**. This extension offers syntax highlighting, code completion, validation, and seamless integration with the ISA-DSL Python toolchain.
@@ -32,7 +32,7 @@ A comprehensive VS Code extension providing language support for the **ISA DSL (
 - Bitwise shift operations (`<<`, `>>`)
 - Ternary conditional expressions (`condition ? then : else`)
 - Bitfield access syntax (`value[msb:lsb]`)
-- Built-in functions (`sign_extend`, `zero_extend`, `extract_bits` and aliases)
+- Built-in functions (`sign_extend`, `zero_extend`, `extract_bits`, `to_signed`, `to_unsigned` and aliases)
 - External behavior functions for complex instructions
 - Bundle instruction formats for VLIW architectures
 - Instruction aliases for alternative mnemonics

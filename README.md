@@ -15,7 +15,7 @@ A powerful Domain Specific Language (DSL) for describing Instruction Set Archite
   - Memory access operations
   - Vector/SIMD operations
   - Bitfield access (`value[msb:lsb]`)
-  - Built-in functions (`sign_extend`, `zero_extend`, `extract_bits`)
+  - Built-in functions (`sign_extend`, `zero_extend`, `extract_bits`, `to_signed`, `to_unsigned`)
 - **Automatic Code Generation**: Generate production-ready tools:
   - Python-based instruction simulators
   - Assemblers for your ISA
