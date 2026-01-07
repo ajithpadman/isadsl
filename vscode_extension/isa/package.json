@@ -1,7 +1,7 @@
 {
     "name": "isa-workspace",
     "description": "Base workspace package",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "type": "module",
     "private": true,
     "scripts": {

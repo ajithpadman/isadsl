@@ -1,8 +1,8 @@
 # Release Notes
 
-## Version 0.3.0 - Built-in Functions and Bitfield Access
+## Version 0.3.1 - Built-in Functions and Bitfield Access
 
-**Release Date:** 2024-12-XX
+**Release Date:** 2026-01-07
 
 ### 🎯 Major Changes
 
@@ -193,7 +193,7 @@ No breaking changes. Existing ISA specifications continue to work without modifi
 
 ## Version 0.2.0 - Virtual Registers, Register Aliases, and Instruction Aliases
 
-**Release Date:** 2024-01-05
+**Release Date:** 2026-01-06
 
 ### 🎯 Major Changes
 
