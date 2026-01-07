@@ -5,6 +5,10 @@
     "version": "0.2.0",
     "publisher": "ajithpadman",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ajithpadman/isadsl.git"
+    },
     "type": "module",
     "engines": {
         "vscode": "^1.67.0"
@@ -13,22 +17,89 @@
         "Programming Languages"
     ],
     "contributes": {
-        "languages": [{
-            "id": "isa-dsl",
-            "aliases": ["ISA DSL", "isa-dsl"],
-            "extensions": [".isa"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "isa-dsl",
-            "scopeName": "source.isa-dsl",
-            "path": "syntaxes/isa.tmLanguage.json"
-        }],
-        "commands": [{
-            "command": "isa-dsl.showVersion",
-            "title": "Show ISA DSL Extension Version",
-            "category": "ISA DSL"
-        }]
+        "languages": [
+            {
+                "id": "isa-dsl",
+                "aliases": [
+                    "ISA DSL",
+                    "isa-dsl"
+                ],
+                "extensions": [
+                    ".isa"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "isa-dsl",
+                "scopeName": "source.isa-dsl",
+                "path": "syntaxes/isa.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "isa-dsl.showVersion",
+                "title": "Show ISA DSL Extension Version",
+                "category": "ISA DSL"
+            },
+            {
+                "command": "isa-dsl.install",
+                "title": "Install ISA-DSL Python Package",
+                "category": "ISA DSL"
+            },
+            {
+                "command": "isa-dsl.generate",
+                "title": "Generate Tools",
+                "category": "ISA DSL"
+            },
+            {
+                "command": "isa-dsl.validate",
+                "title": "Validate ISA File",
+                "category": "ISA DSL"
+            },
+            {
+                "command": "isa-dsl.info",
+                "title": "Show ISA Info",
+                "category": "ISA DSL"
+            }
+        ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.generate",
+                    "group": "isa-dsl"
+                },
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.validate",
+                    "group": "isa-dsl"
+                },
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.info",
+                    "group": "isa-dsl"
+                }
+            ],
+            "editor/context": [
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.generate",
+                    "group": "isa-dsl"
+                },
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.validate",
+                    "group": "isa-dsl"
+                },
+                {
+                    "when": "resourceExtname == .isa",
+                    "command": "isa-dsl.info",
+                    "group": "isa-dsl"
+                }
+            ]
+        }
     },
     "activationEvents": [
         "onLanguage:isa-dsl"
@@ -37,7 +108,7 @@
     "scripts": {
         "clean": "shx rm -fr *.tsbuildinfo out syntaxes",
         "vscode:prepublish": "npm run build",
-        "build:prepare": "shx mkdir -p ./syntaxes/ && shx cp -f ../language/syntaxes/isa-dsl.tmLanguage.json ./syntaxes/isa.tmLanguage.json || shx cp -f ../language/syntaxes/isa.tmLanguage.json ./syntaxes/isa.tmLanguage.json",
+        "build:prepare": "node -e \"const fs=require('fs');const path=require('path');const dir='./syntaxes';if(!fs.existsSync(dir))fs.mkdirSync(dir,{recursive:true});const src1='../language/syntaxes/isa-dsl.tmLanguage.json';const src2='../language/syntaxes/isa.tmLanguage.json';const dst='./syntaxes/isa.tmLanguage.json';if(fs.existsSync(src1))fs.copyFileSync(src1,dst);else if(fs.existsSync(src2))fs.copyFileSync(src2,dst);\"",
         "build": "npm run build:prepare && tsc -b tsconfig.json && node esbuild.mjs",
         "build:clean": "npm run clean && npm run build",
         "watch": "npm run build:prepare && concurrently -n tsc,esbuild -c blue,yellow \"tsc -b tsconfig.json --watch\" \"node esbuild.mjs --watch\""
@@ -50,9 +121,10 @@
     "devDependencies": {
         "@types/vscode": "~1.67.0",
         "concurrently": "~8.2.1",
-        "esbuild": "~0.25.5"
+        "esbuild": "~0.25.5",
+        "fast-glob": "^3.3.3"
     },
     "vsce": {
-      "dependencies": false
+        "dependencies": false
     }
 }

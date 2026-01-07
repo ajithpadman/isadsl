@@ -1,0 +1,150 @@
+architecture BehaviorFeatures {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+        sfr FLAGS 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:9]
+            rs1: [10:13]
+            rs2: [14:17]
+            imm: [18:31]
+        }
+        
+        format I_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:9]
+            rs1: [10:13]
+            imm: [14:31]
+        }
+    }
+    
+    instructions {
+        // Test 1: Simple temporary variable
+        instruction ADD_TEMP {
+            format: R_TYPE
+            encoding: { opcode=0x01 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "ADD_TEMP R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                temp = R[rs1] + R[rs2];
+                R[rd] = temp;
+            }
+        }
+        
+        // Test 2: Multiple temporary variables
+        instruction COMPLEX_OP {
+            format: R_TYPE
+            encoding: { opcode=0x02 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "COMPLEX_OP R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                sum = R[rs1] + R[rs2];
+                product = R[rs1] * R[rs2];
+                result = sum + product;
+                R[rd] = result;
+            }
+        }
+        
+        // Test 3: Temporary variable in conditional
+        instruction COND_TEMP {
+            format: R_TYPE
+            encoding: { opcode=0x03 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "COND_TEMP R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                diff = R[rs1] - R[rs2];
+                if (diff > 0) {
+                    R[rd] = diff;
+                } else {
+                    R[rd] = 0;
+                }
+            }
+        }
+        
+        // Test 4: Hex value in constant
+        instruction ADD_HEX {
+            format: I_TYPE
+            encoding: { opcode=0x04 }
+            operands: rd, rs1
+            assembly_syntax: "ADD_HEX R{rd}, R{rs1}, 0x{imm}"
+            behavior: {
+                R[rd] = R[rs1] + 0x10;
+            }
+        }
+        
+        // Test 5: Hex value in expression
+        instruction ADD_HEX_EXPR {
+            format: R_TYPE
+            encoding: { opcode=0x05 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "ADD_HEX_EXPR R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2] + 0xFF;
+            }
+        }
+        
+        // Test 6: Multiple hex values
+        instruction HEX_MULTIPLE {
+            format: R_TYPE
+            encoding: { opcode=0x06 }
+            operands: rd, rs1
+            assembly_syntax: "HEX_MULTIPLE R{rd}, R{rs1}"
+            behavior: {
+                temp = R[rs1] + 0x10;
+                R[rd] = temp * 0x02;
+            }
+        }
+        
+        // Test 7: Hex value with temporary variable
+        instruction HEX_TEMP {
+            format: R_TYPE
+            encoding: { opcode=0x07 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "HEX_TEMP R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                temp = R[rs1] + 0x20;
+                R[rd] = temp + R[rs2];
+            }
+        }
+        
+        // Test 8: External behavior instruction
+        instruction EXTERNAL_OP {
+            format: R_TYPE
+            encoding: { opcode=0x10 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "EXTERNAL_OP R{rd}, R{rs1}, R{rs2}"
+            external_behavior: True
+        }
+        
+        // Test 9: External behavior with single operand
+        instruction EXTERNAL_SINGLE {
+            format: I_TYPE
+            encoding: { opcode=0x11 }
+            operands: rd
+            assembly_syntax: "EXTERNAL_SINGLE R{rd}"
+            external_behavior: True
+        }
+        
+        // Test 10: Complex expression with temp and hex
+        instruction COMPLEX_HEX_TEMP {
+            format: R_TYPE
+            encoding: { opcode=0x08 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "COMPLEX_HEX_TEMP R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                temp1 = R[rs1] + 0x100;
+                temp2 = R[rs2] + 0x200;
+                result = temp1 * temp2;
+                R[rd] = result & 0xFFFF;
+            }
+        }
+    }
+}
+

@@ -18,7 +18,7 @@ class SimulatorGenerator:
         """Generate Python code from an RTL statement."""
         from ..model.isa_model import (
             RTLAssignment, RTLConditional, RTLMemoryAccess,
-            RegisterAccess, FieldAccess, RTLConstant, RTLBinaryOp,
+            RegisterAccess, FieldAccess, Variable, RTLConstant, RTLBinaryOp,
             RTLUnaryOp, RTLTernary
         )
         
@@ -78,7 +78,7 @@ class SimulatorGenerator:
 
     def _generate_lvalue_code(self, lvalue) -> str:
         """Generate code for an lvalue."""
-        from ..model.isa_model import RegisterAccess, FieldAccess
+        from ..model.isa_model import RegisterAccess, FieldAccess, Variable
         
         # Handle string (simple register name like PC)
         if isinstance(lvalue, str):
@@ -97,6 +97,9 @@ class SimulatorGenerator:
             # Resolve alias if needed
             resolved_name, _ = self._resolve_register_alias(lvalue.reg_name, None)
             return f"self.{resolved_name}_{lvalue.field_name}"
+        elif isinstance(lvalue, Variable):
+            # Temporary variable
+            return lvalue.name
         return "unknown"
     
     def _resolve_register_alias(self, name: str, index) -> tuple:
@@ -112,11 +115,15 @@ class SimulatorGenerator:
         """Generate code for an expression."""
         from ..model.isa_model import (
             RTLConstant, RegisterAccess, RTLBinaryOp, RTLUnaryOp,
-            RTLTernary, FieldAccess, OperandReference
+            RTLTernary, FieldAccess, OperandReference, Variable
         )
         
         if isinstance(expr, RTLConstant):
+            # Return the integer value (will be formatted in template if needed)
             return str(expr.value)
+        elif isinstance(expr, Variable):
+            # Temporary variable reference
+            return expr.name
         elif isinstance(expr, OperandReference):
             # Check if this is actually a register name (not an operand)
             # Register names are SFRs (single registers) defined in the ISA
@@ -146,6 +153,9 @@ class SimulatorGenerator:
             return f"self.{resolved_name}[{index}]"
         elif isinstance(expr, FieldAccess):
             return f"self.{expr.reg_name}_{expr.field_name}"
+        elif isinstance(expr, Variable):
+            # Temporary variable reference
+            return expr.name
         elif isinstance(expr, RTLBinaryOp):
             left = self._generate_expr_code(expr.left)
             right = self._generate_expr_code(expr.right)

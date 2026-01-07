@@ -10,7 +10,7 @@ from .isa_model import (
     FormatField, Instruction, EncodingSpec, EncodingAssignment, RTLBlock,
     RTLStatement, RTLAssignment, RTLConditional, RTLMemoryAccess, RTLForLoop,
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLLValue,
-    RegisterAccess, FieldAccess, RTLConstant, OperandReference,
+    RegisterAccess, FieldAccess, Variable, RTLConstant, OperandReference,
     BundleFormat, BundleSlot, OperandSpec, VirtualRegister, VirtualRegisterComponent,
     RegisterAlias, InstructionAlias
 )
@@ -270,7 +270,18 @@ class TextXModelConverter:
                         assignments = []
                         if hasattr(instr_tx.encoding, 'assignments'):
                             for a in instr_tx.encoding.assignments:
-                                assignments.append(EncodingAssignment(field=a.field, value=a.value))
+                                # Handle hex or int values
+                                value = a.value
+                                if hasattr(a, 'value') and hasattr(a.value, 'hex_value') and a.value.hex_value:
+                                    # Hex value - convert to int
+                                    value = int(a.value.hex_value, 16)
+                                elif hasattr(a, 'value') and hasattr(a.value, 'int_value') and a.value.int_value is not None:
+                                    # Int value
+                                    value = a.value.int_value
+                                elif hasattr(a, 'value'):
+                                    # Direct value (backward compatibility)
+                                    value = a.value
+                                assignments.append(EncodingAssignment(field=a.field, value=value))
                         encoding = EncodingSpec(assignments=assignments)
                     
                     # Extract behavior using textX object model
@@ -297,6 +308,12 @@ class TextXModelConverter:
                     if hasattr(instr_tx, 'assembly_syntax') and instr_tx.assembly_syntax:
                         assembly_syntax = str(instr_tx.assembly_syntax).strip('"\'')
                     
+                    # Extract external_behavior flag
+                    external_behavior = False
+                    if hasattr(instr_tx, 'external_behavior') and instr_tx.external_behavior is not None:
+                        external_behavior_val = str(instr_tx.external_behavior).lower()
+                        external_behavior = external_behavior_val in ('true', '1', 'yes')
+                    
                     instr = Instruction(
                         mnemonic=instr_tx.mnemonic,
                         format=fmt_ref,
@@ -305,7 +322,8 @@ class TextXModelConverter:
                         operands=operands,
                         operand_specs=operand_specs,
                         assembly_syntax=assembly_syntax,
-                        behavior=behavior
+                        behavior=behavior,
+                        external_behavior=external_behavior
                     )
                     model.instructions.append(instr)
             
@@ -462,7 +480,22 @@ class TextXModelConverter:
             elif hasattr(lvalue_tx, 'field_access') and lvalue_tx.field_access:
                 return self._convert_rtl_lvalue(lvalue_tx.field_access, isa_model)
             elif hasattr(lvalue_tx, 'simple_register') and lvalue_tx.simple_register:
-                return str(lvalue_tx.simple_register)
+                # Check if it's actually a register or a variable
+                reg_name = str(lvalue_tx.simple_register)
+                if isa_model:
+                    reg = isa_model.get_register(reg_name)
+                    if reg and not reg.is_register_file() and not reg.is_vector_register():
+                        # It's a simple register (SFR) like PC
+                        return reg_name
+                    # Check if it's a virtual register
+                    vreg = isa_model.get_virtual_register(reg_name)
+                    if vreg:
+                        return reg_name
+                # Not a register - treat as temporary variable
+                return Variable(name=reg_name)
+            elif hasattr(lvalue_tx, 'variable') and lvalue_tx.variable:
+                # Temporary variable
+                return Variable(name=str(lvalue_tx.variable))
         
         if class_name == 'RegisterAccess':
             reg_name = getattr(lvalue_tx, 'reg_name', None)
@@ -477,8 +510,22 @@ class TextXModelConverter:
                 return FieldAccess(reg_name=reg_name, field_name=field_name)
         
         elif class_name == 'ID' or isinstance(lvalue_tx, str):
-            reg_name = str(lvalue_tx) if not isinstance(lvalue_tx, str) else lvalue_tx
-            return reg_name
+            var_name = str(lvalue_tx) if not isinstance(lvalue_tx, str) else lvalue_tx
+            # Check if it's a register (SFR) or a temporary variable
+            # If it's a register, return as string (backward compatibility)
+            # If it's not a register, it's a temporary variable
+            if isa_model:
+                reg = isa_model.get_register(var_name)
+                if reg and not reg.is_register_file() and not reg.is_vector_register():
+                    # It's a simple register (SFR) like PC
+                    return var_name
+                # Check if it's a virtual register
+                vreg = isa_model.get_virtual_register(var_name)
+                if vreg:
+                    # Virtual register - return as string for backward compatibility
+                    return var_name
+            # Not a register - treat as temporary variable
+            return Variable(name=var_name)
         
         return None
     
@@ -497,20 +544,49 @@ class TextXModelConverter:
                     return self._convert_rtl_expression(getattr(expr_tx, attr), isa_model)
         
         if class_name == 'RTLConstant':
-            value = getattr(expr_tx, 'value', None)
+            # Check hex and binary first (they have priority)
             hex_value = getattr(expr_tx, 'hex_value', None)
             binary_value = getattr(expr_tx, 'binary_value', None)
-            if value is not None:
-                return RTLConstant(value=int(value))
-            elif hex_value is not None:
-                return RTLConstant(value=int(hex_value, 16))
+            value = getattr(expr_tx, 'value', None)
+            if hex_value is not None:
+                # hex_value is a string like "0x10" or "10"
+                hex_str = str(hex_value).strip()
+                if hex_str.startswith('0x') or hex_str.startswith('0X'):
+                    return RTLConstant(value=int(hex_str, 16))
+                else:
+                    return RTLConstant(value=int(hex_str, 16))
             elif binary_value is not None:
-                return RTLConstant(value=int(binary_value, 2))
+                # binary_value is a string like "0b1010" or "1010"
+                bin_str = str(binary_value).strip()
+                if bin_str.startswith('0b') or bin_str.startswith('0B'):
+                    return RTLConstant(value=int(bin_str, 2))
+                else:
+                    return RTLConstant(value=int(bin_str, 2))
+            elif value is not None:
+                return RTLConstant(value=int(value))
         
         elif class_name == 'OperandReference':
             name = getattr(expr_tx, 'name', None)
             if name:
-                return OperandReference(name=str(name))
+                name_str = str(name)
+                # Check if this is actually a variable (not an operand)
+                # Variables are IDs that are not in the instruction's operand list
+                # and not register names
+                if isa_model:
+                    # Check if it's a register
+                    reg = isa_model.get_register(name_str)
+                    if reg:
+                        # It's a register name, not an operand reference
+                        # This shouldn't happen in OperandReference, but handle it
+                        return OperandReference(name=name_str)
+                    # Check if it's a virtual register
+                    vreg = isa_model.get_virtual_register(name_str)
+                    if vreg:
+                        return OperandReference(name=name_str)
+                    # For now, we can't distinguish variables from operands at parse time
+                    # We'll treat all OperandReference as operands, and variables will be
+                    # handled separately when they appear as lvalues
+                return OperandReference(name=name_str)
         
         elif class_name == 'RTLTernary':
             condition = self._convert_rtl_expression(getattr(expr_tx, 'condition', None), isa_model)

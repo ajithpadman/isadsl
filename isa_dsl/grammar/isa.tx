@@ -31,7 +31,11 @@ Property:
 ;
 
 PropertyValue:
-    INT | STRING | ID
+    INT | STRING | ID | BOOL
+;
+
+BOOL:
+    'True' | 'False' | 'true' | 'false'
 ;
 
 RegisterBlock:
@@ -129,6 +133,7 @@ Instruction:
         ('operands' ':' operands_list=OperandList)?
         ('assembly_syntax' ':' assembly_syntax=STRING)?
         ('behavior' ':' behavior=RTLBlock)?
+        ('external_behavior' ':' external_behavior=BOOL)?
     '}'
 ;
 
@@ -157,7 +162,11 @@ EncodingSpec:
 ;
 
 EncodingAssignment:
-    field=ID '=' value=INT
+    field=ID '=' value=EncodingValue
+;
+
+EncodingValue:
+    hex_value=HEX | int_value=INT
 ;
 
 RTLBlock:
@@ -218,7 +227,7 @@ UnaryOperator:
 ;
 
 RTLLValue:
-    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID
+    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID | variable=ID
 ;
 
 RegisterAccess:

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { LanguageClient, TransportKind } from 'vscode-languageclient/node.js';
+import { installISADSL, runGenerateCommand, runValidateCommand, runInfoCommand } from './python-commands.js';
 
 let client: LanguageClient;
 let outputChannel: vscode.OutputChannel;
@@ -58,6 +59,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     });
     
     context.subscriptions.push(showVersionCommand);
+    
+    // Register Python package installation command
+    const installCommand = vscode.commands.registerCommand('isa-dsl.install', () => {
+        installISADSL(context);
+    });
+    context.subscriptions.push(installCommand);
+    
+    // Register CLI commands
+    const generateCommand = vscode.commands.registerCommand('isa-dsl.generate', (uri?: vscode.Uri) => {
+        runGenerateCommand(uri);
+    });
+    context.subscriptions.push(generateCommand);
+    
+    const validateCommand = vscode.commands.registerCommand('isa-dsl.validate', (uri?: vscode.Uri) => {
+        runValidateCommand(uri);
+    });
+    context.subscriptions.push(validateCommand);
+    
+    const infoCommand = vscode.commands.registerCommand('isa-dsl.info', (uri?: vscode.Uri) => {
+        runInfoCommand(uri);
+    });
+    context.subscriptions.push(infoCommand);
     
     client = await startLanguageClient(context);
     

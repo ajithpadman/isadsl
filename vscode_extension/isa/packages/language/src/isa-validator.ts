@@ -9,6 +9,7 @@ import {
     type Register,
     type RegisterField,
     type EncodingAssignment,
+    type EncodingValue,
     type BundleFormat,
     type BundleSlot,
     type ISASpecFull,
@@ -131,13 +132,49 @@ export class IsaValidator {
                         // Check encoding value fits in field width
                         const field = format.fields.find(f => f.name === assignment.field);
                         if (field) {
+                            // Extract numeric value from EncodingValue (can be hex or int)
+                            const encValue = assignment.value as EncodingValue | undefined;
+                            if (!encValue) {
+                                accept('error', `Encoding value is missing for field '${assignment.field}'`, { node: assignment, property: 'value' });
+                                continue;
+                            }
+                            
+                            let value: number;
+                            if (encValue.hex_value !== undefined && encValue.hex_value !== null) {
+                                value = parseInt(encValue.hex_value, 16);
+                            } else if (encValue.int_value !== undefined && encValue.int_value !== null) {
+                                value = encValue.int_value;
+                            } else {
+                                // Fallback for backward compatibility - try to parse as number
+                                const rawValue = assignment.value as any;
+                                if (typeof rawValue === 'number') {
+                                    value = rawValue;
+                                } else if (typeof rawValue === 'string') {
+                                    // Try to parse as hex or decimal
+                                    if (rawValue.startsWith('0x') || rawValue.startsWith('0X')) {
+                                        value = parseInt(rawValue, 16);
+                                    } else {
+                                        value = parseInt(rawValue, 10);
+                                    }
+                                } else {
+                                    accept('error', `Invalid encoding value for field '${assignment.field}'`, { node: assignment, property: 'value' });
+                                    continue;
+                                }
+                            }
+                            
+                            // Check if value is valid number
+                            if (isNaN(value)) {
+                                accept('error', `Encoding value for field '${assignment.field}' is not a valid number`, { node: assignment, property: 'value' });
+                                continue;
+                            }
+                            
                             const fieldWidth = field.msb - field.lsb + 1;
                             const maxValue = (1 << fieldWidth) - 1;
-                            if (assignment.value > maxValue) {
-                                accept('error', `Encoding value ${assignment.value} exceeds field '${assignment.field}' width (max: ${maxValue})`, { node: assignment, property: 'value' });
+                            if (value > maxValue) {
+                                accept('error', `Encoding value ${value} exceeds field '${assignment.field}' width (max: ${maxValue})`, { node: assignment, property: 'value' });
                             }
-                            if (assignment.value < 0) {
-                                accept('error', `Encoding value ${assignment.value} must be non-negative`, { node: assignment, property: 'value' });
+                            if (value < 0) {
+                                accept('error', `Encoding value ${value} must be non-negative`, { node: assignment, property: 'value' });
                             }
                         }
                     }
@@ -333,8 +370,44 @@ export class IsaValidator {
      * Validate encoding assignment.
      */
     checkEncodingAssignment(assignment: EncodingAssignment, accept: ValidationAcceptor): void {
-        if (assignment.value < 0) {
-            accept('error', `Encoding value ${assignment.value} must be non-negative`, { node: assignment, property: 'value' });
+        // Extract numeric value from EncodingValue (can be hex or int)
+        const encValue = assignment.value as EncodingValue | undefined;
+        if (!encValue) {
+            accept('error', `Encoding value is missing`, { node: assignment, property: 'value' });
+            return;
+        }
+        
+        let value: number;
+        if (encValue.hex_value !== undefined && encValue.hex_value !== null) {
+            value = parseInt(encValue.hex_value, 16);
+        } else if (encValue.int_value !== undefined && encValue.int_value !== null) {
+            value = encValue.int_value;
+        } else {
+            // Fallback for backward compatibility - try to parse as number
+            const rawValue = assignment.value as any;
+            if (typeof rawValue === 'number') {
+                value = rawValue;
+            } else if (typeof rawValue === 'string') {
+                // Try to parse as hex or decimal
+                if (rawValue.startsWith('0x') || rawValue.startsWith('0X')) {
+                    value = parseInt(rawValue, 16);
+                } else {
+                    value = parseInt(rawValue, 10);
+                }
+            } else {
+                accept('error', `Invalid encoding value`, { node: assignment, property: 'value' });
+                return;
+            }
+        }
+        
+        // Check if value is valid number
+        if (isNaN(value)) {
+            accept('error', `Encoding value is not a valid number`, { node: assignment, property: 'value' });
+            return;
+        }
+        
+        if (value < 0) {
+            accept('error', `Encoding value ${value} must be non-negative`, { node: assignment, property: 'value' });
         }
     }
 

@@ -17,6 +17,8 @@
             '{{ alias.alias_name }}': ('{{ alias.target_reg_name }}', {{ alias.target_index if alias.is_indexed() else 'None' }}),
 {%- endfor %}
         }
+        # Initialize external behavior handler for user-defined instruction behaviors
+        self.external_behavior = ExternalBehaviorHandler(self)
 {% endblock %}
 
 {% block load_methods %}
@@ -493,7 +495,22 @@
         {%- endfor %}
         
         # Execute behavior
-        {%- if instr.behavior %}
+        {%- if instr.external_behavior %}
+        # Externally defined behavior - call user implementation
+        {%- set external_func_name = instr.mnemonic.lower() %}
+        self.external_behavior.{{ external_func_name }}(
+            {%- if instr.operand_specs %}
+            {%- for op_spec in instr.operand_specs %}
+            {{ op_spec.name }}{% if not loop.last %}, {% endif %}
+            {%- endfor %}
+            {%- elif instr.operands %}
+            {%- for operand in instr.operands %}
+            {{ operand }}{% if not loop.last %}, {% endif %}
+            {%- endfor %}
+            {%- endif %}
+        )
+        {%- elif instr.behavior %}
+        # Temporary variables for this instruction
         {%- for stmt in instr.behavior.statements %}
 {{ generate_rtl_code(stmt, instr) }}
         {%- endfor %}
@@ -529,6 +546,48 @@
         {%- endif %}
 {%- endfor %}
         print()
+{% endblock %}
+
+{% block helper_class %}
+class ExternalBehaviorHandler:
+    """Handler class for externally defined instruction behaviors.
+    
+    This class provides stub methods for instructions with external_behavior=True.
+    Users must subclass this and implement the methods to provide custom behavior
+    for instructions that cannot be fully specified in RTL.
+    """
+    
+    def __init__(self, simulator):
+        """Initialize external behavior handler with reference to simulator."""
+        self.simulator = simulator
+    
+{%- for instr in isa.instructions %}
+{%- if instr.external_behavior %}
+    def {{ instr.mnemonic.lower() }}(self{% if instr.operand_specs %}{% for op_spec in instr.operand_specs %}, {{ op_spec.name }}: int{% endfor %}{% elif instr.operands %}{% for operand in instr.operands %}, {{ operand }}: int{% endfor %}{% endif %}):
+        """
+        Externally defined behavior for {{ instr.mnemonic }} instruction.
+        
+        This method must be implemented by subclassing ExternalBehaviorHandler.
+        {%- if instr.operand_specs %}
+        Args:
+        {%- for op_spec in instr.operand_specs %}
+            {{ op_spec.name }}: Operand {{ op_spec.name }}
+        {%- endfor %}
+        {%- elif instr.operands %}
+        Args:
+        {%- for operand in instr.operands %}
+            {{ operand }}: Operand {{ operand }}
+        {%- endfor %}
+        {%- endif %}
+        """
+        raise NotImplementedError(
+            f"Externally defined behavior for {{ instr.mnemonic.lower() }} must be implemented. "
+            "Subclass ExternalBehaviorHandler and override this method."
+        )
+    
+{%- endif %}
+{%- endfor %}
+
 {% endblock %}
 
 {% block main_function %}

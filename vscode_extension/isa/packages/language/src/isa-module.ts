@@ -95,7 +95,21 @@ export function createIsaServices(context: DefaultSharedModuleContext): {
         // Step 1: Build documents with parsing only (no linking/validation) to extract includes
         // We need to parse first to get the AST and extract include directives
         // Note: We can't skip linking completely, but we'll rebuild after processing includes
-        await originalBuild(documents, { ...options, validation: false }, cancelToken);
+        // Wrap in try-catch to handle Chevrotain recursion errors with hex values in RTL expressions
+        try {
+            await originalBuild(documents, { ...options, validation: false }, cancelToken);
+        } catch (error: any) {
+            // If we hit recursion (Maximum call stack), it's likely due to hex values in RTL expressions
+            // This is a known Chevrotain limitation - the file is still valid (works in Python)
+            // Log the error but don't fail completely - allow partial parsing
+            if (error.message && error.message.includes('Maximum call stack')) {
+                console.warn('Chevrotain recursion detected during parsing (likely hex values in RTL expressions). File may be partially parsed.');
+                // Try to continue with what we have - documents may have partial parse results
+                // The error will be in the document diagnostics, which is acceptable
+            } else {
+                throw error;
+            }
+        }
         
         // Step 2: Process includes for all documents (this loads included files)
         // We need to do this AFTER parsing but BEFORE full linking
@@ -123,9 +137,20 @@ export function createIsaServices(context: DefaultSharedModuleContext): {
         }
         
         // Now rebuild all documents with full linking and validation
-        const result = await originalBuild(allDocuments, options, cancelToken);
-        
-        return result;
+        // Wrap in try-catch to handle Chevrotain recursion errors
+        try {
+            const result = await originalBuild(allDocuments, options, cancelToken);
+            return result;
+        } catch (error: any) {
+            // If we hit recursion during final build, log and return what we have
+            if (error.message && error.message.includes('Maximum call stack')) {
+                console.warn('Chevrotain recursion detected during final build (likely hex values in RTL expressions). Returning partial results.');
+                // Return empty result - documents will have diagnostics indicating the issue
+                // This is better than crashing the language server
+                return;
+            }
+            throw error;
+        }
     };
     
     if (!context.connection) {

@@ -3,9 +3,9 @@
 from typing import Dict, Any, Optional
 from ..model.isa_model import (
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLConstant,
-    RTLLValue, RegisterAccess, FieldAccess, RTLStatement, RTLAssignment,
+    RTLLValue, RegisterAccess, FieldAccess, Variable, RTLStatement, RTLAssignment,
     RTLConditional, RTLMemoryAccess, Instruction, ISASpecification,
-    VirtualRegister, RegisterAlias
+    VirtualRegister, RegisterAlias, OperandReference
 )
 
 
@@ -24,6 +24,7 @@ class RTLInterpreter:
         self.registers = registers
         self.memory = memory if memory is not None else {}
         self.operand_values: Dict[str, int] = {}
+        self.variables: Dict[str, int] = {}  # Temporary variables
         self.isa = isa
 
     def set_operands(self, operands: Dict[str, int]):
@@ -108,6 +109,15 @@ class RTLInterpreter:
             return self._get_register_value(expr)
         elif isinstance(expr, FieldAccess):
             return self._get_field_value(expr)
+        elif isinstance(expr, Variable):
+            # Temporary variable reference
+            return self.variables.get(expr.name, 0)
+        elif isinstance(expr, OperandReference):
+            # Operand reference (e.g., rd, rs1) - get from operand_values
+            # But first check if it's actually a variable (temporary variable)
+            if expr.name in self.variables:
+                return self.variables[expr.name]
+            return self.operand_values.get(expr.name, 0)
         else:
             raise ValueError(f"Unknown expression type: {type(expr)}")
 
@@ -261,6 +271,16 @@ class RTLInterpreter:
             # For field access, we need to update specific bits
             # This is simplified - in practice, we'd need field definitions
             self.registers[reg_name] = value
+        
+        elif isinstance(lvalue, Variable):
+            # Temporary variable assignment
+            self.variables[lvalue.name] = value
+        
+        elif isinstance(lvalue, str):
+            # Simple register name (backward compatibility)
+            if lvalue not in self.registers:
+                raise ValueError(f"Unknown register: {lvalue}")
+            self.registers[lvalue] = value
 
     def _to_signed_32(self, value: int) -> int:
         """Convert a 32-bit value to signed integer."""

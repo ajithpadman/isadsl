@@ -245,6 +245,7 @@ class Instruction(TextXObject):
     operand_specs: List[OperandSpec] = field(default_factory=list)  # New: operand specifications with field mappings
     assembly_syntax: Optional[str] = None  # Format string for disassembly (e.g., "ADD R{rd}, R{rs1}, R{rs2}")
     behavior: Optional['RTLBlock'] = None
+    external_behavior: bool = False  # If True, behavior is externally defined and implemented by user
 
     def is_bundle(self) -> bool:
         """Check if this is a bundle instruction."""
@@ -462,6 +463,12 @@ class FieldAccess(RTLLValue, TextXObject):
     """Register field access (e.g., FLAGS.Z)."""
     reg_name: str
     field_name: str
+
+
+@dataclass
+class Variable(RTLLValue, TextXObject):
+    """Temporary variable (e.g., temp, result)."""
+    name: str
 
 
 @dataclass

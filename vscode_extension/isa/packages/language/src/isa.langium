@@ -37,7 +37,11 @@ Property:
 ;
 
 PropertyValue returns string:
-    INT | STRING | ID
+    INT | STRING | ID | BOOL
+;
+
+terminal BOOL returns boolean:
+    /[Tt]rue|[Ff]alse/
 ;
 
 RegisterBlock:
@@ -135,6 +139,7 @@ Instruction:
         ('operands' ':' operands_list=OperandList)?
         ('assembly_syntax' ':' assembly_syntax=STRING)?
         ('behavior' ':' behavior=RTLBlock)?
+        ('external_behavior' ':' external_behavior=BOOL)?
     '}'
 ;
 
@@ -163,7 +168,11 @@ EncodingSpec:
 ;
 
 EncodingAssignment:
-    field=ID '=' value=INT
+    field=ID '=' value=EncodingValue
+;
+
+EncodingValue:
+    hex_value=HEX | int_value=INT
 ;
 
 RTLBlock:
@@ -196,7 +205,7 @@ RTLExpression:
 ;
 
 RTLAtom:
-    RTLParenthesized | RTLLValue | RTLConstant | OperandReference
+    RTLParenthesized | RTLConstant | RTLLValue | OperandReference
 ;
 
 RTLParenthesized:
@@ -228,7 +237,7 @@ UnaryOperator returns string:
 ;
 
 RTLLValue:
-    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID
+    register_access=RegisterAccess | field_access=FieldAccess | simple_register=ID | variable=ID
 ;
 
 RegisterAccess:
@@ -256,13 +265,18 @@ hidden terminal WS: /\s+/;
 
 terminal ID: /[_a-zA-Z][\w_]*/;
 
-terminal INT returns number: /[0-9]+/;
-
-terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
-
+// HEX and BINARY must come before INT to ensure proper tokenization
+// Otherwise, "0" in "0x0B" would be matched as INT first
+// Using negative lookahead to prevent INT from matching "0" when followed by x/X or b/B
 terminal HEX: /0[xX][0-9a-fA-F]+/;
 
 terminal BINARY: /0[bB][01]+/;
+
+// INT pattern: match digits, but not "0" followed by x/X/b/B (those are HEX/BINARY)
+// This prevents "0" from being matched as INT when it's part of "0x0B" or "0b1010"
+terminal INT returns number: /(0(?![xXbB])|[1-9][0-9]*)/;
+
+terminal STRING: /"(\\.|[^"\\])*"|'(\\.|[^'\\])*'/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 
