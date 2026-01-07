@@ -115,7 +115,8 @@ class SimulatorGenerator:
         """Generate code for an expression."""
         from ..model.isa_model import (
             RTLConstant, RegisterAccess, RTLBinaryOp, RTLUnaryOp,
-            RTLTernary, FieldAccess, OperandReference, Variable
+            RTLTernary, FieldAccess, OperandReference, Variable,
+            RTLBitfieldAccess, RTLFunctionCall
         )
         
         if isinstance(expr, RTLConstant):
@@ -168,6 +169,44 @@ class SimulatorGenerator:
             then_expr = self._generate_expr_code(expr.then_expr)
             else_expr = self._generate_expr_code(expr.else_expr)
             return f"({then_expr} if {condition} else {else_expr})"
+        elif isinstance(expr, RTLBitfieldAccess):
+            base = self._generate_expr_code(expr.base)
+            msb = self._generate_expr_code(expr.msb)
+            lsb = self._generate_expr_code(expr.lsb)
+            # Extract bits: (value >> lsb) & ((1 << (msb - lsb + 1)) - 1)
+            return f"(({base} >> {lsb}) & ((1 << ({msb} - {lsb} + 1)) - 1))"
+        elif isinstance(expr, RTLFunctionCall):
+            args_code = [self._generate_expr_code(arg) for arg in expr.args]
+            args_str = ", ".join(args_code)
+            # Map built-in function names to Python implementations
+            func_name = expr.function_name.lower()
+            if func_name == "sign_extend":
+                if len(expr.args) == 2:
+                    # sign_extend(value, from_bits)
+                    return f"self._sign_extend({args_str})"
+                elif len(expr.args) == 3:
+                    # sign_extend(value, from_bits, to_bits)
+                    return f"self._sign_extend({args_str})"
+            elif func_name == "zero_extend":
+                if len(expr.args) == 2:
+                    # zero_extend(value, from_bits)
+                    return f"self._zero_extend({args_str})"
+                elif len(expr.args) == 3:
+                    # zero_extend(value, from_bits, to_bits)
+                    return f"self._zero_extend({args_str})"
+            elif func_name == "extract_bits":
+                # extract_bits(value, msb, lsb) - same as bitfield access
+                return f"(({args_code[0]} >> {args_code[2]}) & ((1 << ({args_code[1]} - {args_code[2]} + 1)) - 1))"
+            elif func_name == "sext" or func_name == "sx":
+                # Short alias for sign_extend
+                if len(expr.args) == 2:
+                    return f"self._sign_extend({args_str})"
+            elif func_name == "zext" or func_name == "zx":
+                # Short alias for zero_extend
+                if len(expr.args) == 2:
+                    return f"self._zero_extend({args_str})"
+            # Default: call as method (for user-defined functions if we add that later)
+            return f"self.{expr.function_name}({args_str})"
         elif isinstance(expr, str):
             # Simple register name - check if it's a register
             # Check if it's a virtual register

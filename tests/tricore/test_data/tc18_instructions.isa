@@ -14,6 +14,7 @@ instructions {
         D[d] = result;
         if(result > 0x7FFFFFFF){
             PSW.V = 1;
+            PSW.SV =1;
         }
         else{
             PSW.V =0;
@@ -21,4 +22,5 @@ instructions {
 
        }
     }
+
 }

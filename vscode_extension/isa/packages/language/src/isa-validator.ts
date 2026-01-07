@@ -15,7 +15,8 @@ import {
     type ISASpecFull,
     type ISASpecPartial,
     type VirtualRegister,
-    type VirtualRegisterComponent
+    type VirtualRegisterComponent,
+    type RTLFunctionCall
 } from './generated/ast.js';
 
 /**
@@ -35,7 +36,8 @@ export function registerValidationChecks(services: IsaServices) {
         BundleSlot: validator.checkBundleSlot,
         ISASpecFull: validator.checkISASpecFull,
         ISASpecPartial: validator.checkISASpecPartial,
-        VirtualRegister: validator.checkVirtualRegister
+        VirtualRegister: validator.checkVirtualRegister,
+        RTLFunctionCall: validator.checkRTLFunctionCall
     };
     registry.register(checks, validator);
 }
@@ -553,6 +555,45 @@ export class IsaValidator {
                     accept('warning', `Duplicate instruction mnemonic '${instruction.mnemonic}'`, { node: instruction, property: 'mnemonic' });
                 }
                 mnemonicNames.add(instruction.mnemonic);
+            }
+        }
+    }
+
+    /**
+     * Validate RTL function call (built-in functions).
+     */
+    checkRTLFunctionCall(funcCall: RTLFunctionCall, accept: ValidationAcceptor): void {
+        if (!funcCall.function_name) {
+            accept('error', 'Function name is missing', { node: funcCall, property: 'function_name' });
+            return;
+        }
+
+        const funcName = funcCall.function_name.toLowerCase();
+        const validBuiltins = ['sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx'];
+        
+        if (!validBuiltins.includes(funcName)) {
+            accept('warning', `Unknown built-in function '${funcCall.function_name}'. Valid functions: ${validBuiltins.join(', ')}`, 
+                { node: funcCall, property: 'function_name' });
+            return;
+        }
+
+        // Validate argument count
+        const argCount = funcCall.args?.length || 0;
+        
+        if (funcName === 'sign_extend' || funcName === 'sext' || funcName === 'sx') {
+            if (argCount < 2 || argCount > 3) {
+                accept('error', `sign_extend requires 2 or 3 arguments (value, from_bits[, to_bits]), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
+            }
+        } else if (funcName === 'zero_extend' || funcName === 'zext' || funcName === 'zx') {
+            if (argCount < 2 || argCount > 3) {
+                accept('error', `zero_extend requires 2 or 3 arguments (value, from_bits[, to_bits]), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
+            }
+        } else if (funcName === 'extract_bits') {
+            if (argCount !== 3) {
+                accept('error', `extract_bits requires 3 arguments (value, msb, lsb), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
             }
         }
     }

@@ -1,5 +1,196 @@
 # Release Notes
 
+## Version 0.3.0 - Built-in Functions and Bitfield Access
+
+**Release Date:** 2024-12-XX
+
+### 🎯 Major Changes
+
+#### 1. Built-in Functions Support in RTL Expressions
+
+Added support for built-in functions in RTL behavior descriptions, enabling common operations like sign extension, zero extension, and bit extraction.
+
+**Available Functions:**
+- `sign_extend(value, from_bits[, to_bits])` - Sign extend a value from `from_bits` to `to_bits` (default 32)
+- `zero_extend(value, from_bits[, to_bits])` - Zero extend a value from `from_bits` to `to_bits` (default 32)
+- `extract_bits(value, msb, lsb)` - Extract bits from `msb` to `lsb` (inclusive) from a value
+
+**Function Aliases:**
+- `sext` / `sx` - Alias for `sign_extend`
+- `zext` / `zx` - Alias for `zero_extend`
+
+**Syntax:**
+```isa
+instruction ABS {
+    format: RR
+    encoding: { opcode=1 }
+    behavior: {
+        R[rd] = sign_extend(R[rs1][7:0], 8, 32);
+        R[rd] = zero_extend(R[rs1][15:8], 8);
+        R[rd] = extract_bits(R[rs1], 23, 16);
+        R[rd] = sext(R[rs1][7:0], 8);  // Using alias
+    }
+}
+```
+
+**Features:**
+- Full support in Python simulator (RTL interpreter)
+- Argument count validation (2-3 args for extend functions, 3 args for extract_bits)
+- Works with bitfield access and nested expressions
+- All functions properly handle bit widths and sign extension
+
+#### 2. Bitfield Access Support
+
+Added support for accessing specific bit ranges within registers and values using array-like syntax.
+
+**Syntax:**
+```isa
+R[rs1][15:8]    // Extract bits 15 to 8 from register R[rs1]
+value[msb:lsb]  // Extract bits from any RTL expression
+```
+
+**Features:**
+- Can be used with registers, constants, and other RTL expressions
+- Works seamlessly with built-in functions
+- Full support in simulator and RTL interpreter
+- Proper bit extraction and masking
+
+**Example:**
+```isa
+behavior: {
+    // Extract lower 8 bits and sign extend
+    R[rd] = sign_extend(R[rs1][7:0], 8);
+    
+    // Extract middle byte
+    temp = R[rs1][15:8];
+    
+    // Combine with extract_bits function
+    R[rd] = extract_bits(R[rs1], 23, 16);
+}
+```
+
+### ✨ New Features
+
+- **Built-in Functions**: `sign_extend`, `zero_extend`, `extract_bits` with full argument validation
+- **Function Aliases**: Short aliases (`sext`, `sx`, `zext`, `zx`) for convenience
+- **Bitfield Access**: `value[msb:lsb]` syntax for extracting bit ranges
+- **VS Code Autocomplete**: Built-in functions appear in completion suggestions within behavior blocks
+- **VS Code Validation**: Real-time validation of function names and argument counts
+- **Cross-Platform Support**: All features work on both Linux and Windows
+
+### 🔧 Technical Improvements
+
+#### Python Package
+
+**RTL Interpreter (`rtl_interpreter.py`):**
+- Added `_apply_builtin_function()` method to handle all built-in functions
+- Implemented sign extension with proper bit manipulation
+- Implemented zero extension with masking
+- Implemented bit extraction from values
+- Support for function aliases (sext, sx, zext, zx)
+- Proper handling of optional `to_bits` parameter (defaults to 32)
+
+**Simulator Generator (`simulator.j2`):**
+- Added `_sign_extend()` helper method to generated simulators
+- Added `_zero_extend()` helper method to generated simulators
+- Bitfield access properly extracts bits using masking and shifting
+- Functions work correctly in all RTL expression contexts
+
+**Grammar (`isa.tx`):**
+- Added `RTLBitfieldAccess` rule: `base '[' msb ':' lsb ']'`
+- Added `RTLFunctionCall` rule: `function_name '(' args* ')'`
+- Updated `RTLExpression` to include function calls
+- Updated `RTLExpressionAtom` to include bitfield access
+
+**Model (`isa_model.py`):**
+- Added `RTLBitfieldAccess` dataclass with `base`, `msb`, `lsb` fields
+- Added `RTLFunctionCall` dataclass with `function_name` and `args` fields
+- Updated model converter to parse new constructs
+- Updated validator to validate function calls and bitfield access
+
+#### VS Code Extension
+
+**Grammar (`isa.langium`):**
+- Fixed left recursion issue with `RTLBitfieldAccess` by introducing `RTLBitfieldBase`
+- Added `RTLFunctionCall` to `RTLAtom` and `RTLExpression`
+- Proper tokenization precedence for function calls
+
+**Validator (`isa-validator.ts`):**
+- Added `checkRTLFunctionCall()` validation method
+- Validates function names against known built-ins
+- Validates argument counts for each function type
+- Shows warnings for unknown functions
+- Shows errors for incorrect argument counts
+
+**Completion Provider (`isa-completion-provider.ts`):**
+- Added `getRTLBuiltinCompletions()` method
+- Detects RTL expression contexts (behavior blocks)
+- Provides autocomplete for all 7 built-in functions
+- Includes function signatures and documentation
+- Suggests functions after operators and at expression start
+
+**Scope Provider:**
+- Built-in functions are globally available (no special scope needed)
+
+### 📝 Documentation Updates
+
+- Added examples of built-in functions in test files
+- Added bitfield access examples
+- Updated RTL expression documentation
+
+### 🧪 Testing
+
+- **All Python tests passing** ✅
+- **All VS Code extension tests passing** ✅
+- Added comprehensive test suite for built-in functions (`tests/rtl_builtins/`)
+  - 9 test cases covering all functions and aliases
+  - Tests for correct usage, argument validation, and edge cases
+- Added VS Code extension test suite (`builtin-functions.test.ts`)
+  - 17 test cases covering parsing, validation, completion, and AST structure
+- All end-to-end tests passing with new features
+
+### 📦 Files Changed
+
+**Python Package:**
+- `isa_dsl/grammar/isa.tx` - Added bitfield access and function call rules
+- `isa_dsl/model/isa_model.py` - Added model classes
+- `isa_dsl/model/textx_model_converter.py` - Added conversion logic
+- `isa_dsl/model/validator.py` - Added validation
+- `isa_dsl/runtime/rtl_interpreter.py` - Added function execution
+- `isa_dsl/generators/templates/simulator.j2` - Added helper methods
+- `tests/rtl_builtins/` - New comprehensive test suite
+
+**VS Code Extension:**
+- `vscode_extension/isa/packages/language/src/isa.langium` - Grammar updates
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Validation
+- `vscode_extension/isa/packages/language/src/isa-completion-provider.ts` - Autocomplete
+- `vscode_extension/isa/packages/language/test/builtin-functions.test.ts` - Test suite
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing ISA specifications continue to work without modification.
+
+**To use new features:**
+1. Use `sign_extend(value, from_bits[, to_bits])` for sign extension
+2. Use `zero_extend(value, from_bits[, to_bits])` for zero extension
+3. Use `extract_bits(value, msb, lsb)` for bit extraction
+4. Use `value[msb:lsb]` for bitfield access
+5. Use aliases (`sext`, `sx`, `zext`, `zx`) for shorter syntax
+
+### 🐛 Bug Fixes
+
+- Fixed left recursion issue in Langium grammar for bitfield access
+- Fixed `print_state` method placement in generated simulator
+- Improved error handling for Chevrotain recursion issues in VS Code extension
+
+### 📊 Statistics
+
+- **15+ files modified, 2 new test directories**
+- **+1200 insertions, -50 deletions**
+- **Net code addition**: 1150 lines (features + comprehensive tests)
+
+---
+
 ## Version 0.2.0 - Virtual Registers, Register Aliases, and Instruction Aliases
 
 **Release Date:** 2024-01-05

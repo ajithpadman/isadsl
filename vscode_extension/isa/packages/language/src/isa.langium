@@ -201,11 +201,11 @@ RTLForLoop:
 ;
 
 RTLExpression:
-    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLAtom
+    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLFunctionCall | RTLAtom
 ;
 
 RTLAtom:
-    RTLParenthesized | RTLConstant | RTLLValue | OperandReference
+    RTLParenthesized | RTLConstant | RTLLValue | OperandReference | RTLBitfieldAccess | RTLFunctionCall
 ;
 
 RTLParenthesized:
@@ -258,6 +258,18 @@ FieldAccess:
 
 RTLConstant:
     hex_value=HEX | binary_value=BINARY | value=INT
+;
+
+RTLBitfieldBase:
+    RTLLValue | RTLConstant | OperandReference | RTLParenthesized
+;
+
+RTLBitfieldAccess:
+    base=RTLBitfieldBase '[' msb=RTLExpression ':' lsb=RTLExpression ']'
+;
+
+RTLFunctionCall:
+    function_name=ID '(' (args+=RTLExpression (',' args+=RTLExpression)*)? ')'
 ;
 
 // Terminal definitions

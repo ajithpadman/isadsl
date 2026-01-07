@@ -1,0 +1,73 @@
+architecture BitfieldExample {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [28:31]
+            rd: [24:27]
+            rs1: [20:23]
+            rs2: [16:19]
+            func: [0:15]
+        }
+    }
+    
+    instructions {
+        // Example: Extract bits from register
+        instruction EXTRACT {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1
+            assembly_syntax: "EXTRACT R{rd}, R{rs1}"
+            behavior: {
+                // Extract bits [15:8] from R[rs1] and zero-extend to 32 bits
+                R[rd] = zero_extend(R[rs1][15:8], 8);
+            }
+        }
+        
+        // Example: Sign extend a value
+        instruction SIGN_EXT {
+            format: R_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1
+            assembly_syntax: "SIGN_EXT R{rd}, R{rs1}"
+            behavior: {
+                // Sign extend lower 16 bits of R[rs1] to 32 bits
+                R[rd] = sign_extend(R[rs1][15:0], 16);
+            }
+        }
+        
+        // Example: Using bitfield access directly
+        instruction BITFIELD {
+            format: R_TYPE
+            encoding: { opcode=3 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "BITFIELD R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                // Extract bits [msb:lsb] where msb and lsb come from rs2
+                // rs2[7:4] = msb, rs2[3:0] = lsb
+                msb = R[rs2][7:4];
+                lsb = R[rs2][3:0];
+                R[rd] = R[rs1][msb:lsb];
+            }
+        }
+        
+        // Example: Using extract_bits function
+        instruction EXTRACT_BITS {
+            format: R_TYPE
+            encoding: { opcode=4 }
+            operands: rd, rs1
+            assembly_syntax: "EXTRACT_BITS R{rd}, R{rs1}"
+            behavior: {
+                // Extract bits [23:16] using function call
+                R[rd] = extract_bits(R[rs1], 23, 16);
+            }
+        }
+    }
+}
+

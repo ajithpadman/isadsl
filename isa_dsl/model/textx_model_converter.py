@@ -12,7 +12,7 @@ from .isa_model import (
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLLValue,
     RegisterAccess, FieldAccess, Variable, RTLConstant, OperandReference,
     BundleFormat, BundleSlot, OperandSpec, VirtualRegister, VirtualRegisterComponent,
-    RegisterAlias, InstructionAlias
+    RegisterAlias, InstructionAlias, RTLBitfieldAccess, RTLFunctionCall
 )
 
 
@@ -539,7 +539,7 @@ class TextXModelConverter:
         if class_name == 'RTLExpressionAtom':
             if hasattr(expr_tx, 'expr'):
                 return self._convert_rtl_expression(expr_tx.expr, isa_model)
-            for attr in ['value', 'register_access', 'field_access', 'simple_register']:
+            for attr in ['value', 'register_access', 'field_access', 'simple_register', 'bitfield_access']:
                 if hasattr(expr_tx, attr) and getattr(expr_tx, attr) is not None:
                     return self._convert_rtl_expression(getattr(expr_tx, attr), isa_model)
         
@@ -627,6 +627,24 @@ class TextXModelConverter:
             field_name = getattr(expr_tx, 'field_name', None)
             if reg_name and field_name:
                 return FieldAccess(reg_name=reg_name, field_name=field_name)
+        
+        elif class_name == 'RTLBitfieldAccess':
+            base = self._convert_rtl_expression(getattr(expr_tx, 'base', None), isa_model)
+            msb = self._convert_rtl_expression(getattr(expr_tx, 'msb', None), isa_model)
+            lsb = self._convert_rtl_expression(getattr(expr_tx, 'lsb', None), isa_model)
+            if base and msb and lsb:
+                return RTLBitfieldAccess(base=base, msb=msb, lsb=lsb)
+        
+        elif class_name == 'RTLFunctionCall':
+            function_name = getattr(expr_tx, 'function_name', None)
+            args = []
+            if hasattr(expr_tx, 'args') and expr_tx.args:
+                for arg_tx in expr_tx.args:
+                    arg = self._convert_rtl_expression(arg_tx, isa_model)
+                    if arg:
+                        args.append(arg)
+            if function_name:
+                return RTLFunctionCall(function_name=str(function_name), args=args)
         
         elif class_name == 'ID' or isinstance(expr_tx, str):
             name = str(expr_tx) if not isinstance(expr_tx, str) else expr_tx

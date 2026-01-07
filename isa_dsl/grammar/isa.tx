@@ -195,11 +195,11 @@ RTLForLoop:
 ;
 
 RTLExpression:
-    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLExpressionAtom
+    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLFunctionCall | RTLExpressionAtom
 ;
 
 RTLExpressionAtom:
-    RTLLValue | RTLConstant | OperandReference | '(' RTLExpression ')'
+    RTLLValue | RTLConstant | OperandReference | RTLBitfieldAccess | '(' RTLExpression ')'
 ;
 
 OperandReference:
@@ -248,6 +248,18 @@ FieldAccess:
 
 RTLConstant:
     hex_value=HEX | binary_value=BINARY | value=INT
+;
+
+RTLBitfieldBase:
+    RTLLValue | RTLConstant | OperandReference
+;
+
+RTLBitfieldAccess:
+    base=RTLBitfieldBase '[' msb=RTLExpression ':' lsb=RTLExpression ']'
+;
+
+RTLFunctionCall:
+    function_name=ID '(' (args+=RTLExpression (',' args+=RTLExpression)*)? ')'
 ;
 
 HEX:

@@ -64,6 +64,16 @@ export class IsaCompletionProvider extends DefaultCompletionProvider {
             return items;
         }
 
+        // Check if we're in an RTL expression context (behavior block)
+        const rtlCompletions = this.getRTLBuiltinCompletions(doc, params);
+        if (rtlCompletions && rtlCompletions.items.length > 0) {
+            // Merge RTL completions with default completions
+            if (items && items.items) {
+                rtlCompletions.items.push(...items.items);
+            }
+            return rtlCompletions;
+        }
+
         // Find the context hierarchy at the cursor position
         const context = this.findContextHierarchy(doc, params.position);
         
@@ -83,6 +93,119 @@ export class IsaCompletionProvider extends DefaultCompletionProvider {
         }
         
         return items;
+    }
+
+    /**
+     * Get completions for RTL built-in functions when typing in behavior blocks.
+     */
+    private getRTLBuiltinCompletions(doc: any, params: CompletionParams): CompletionList | undefined {
+        const offset = doc.textDocument.offsetAt(params.position);
+        const text = doc.textDocument.getText();
+        const beforeCursor = text.substring(Math.max(0, offset - 200), offset);
+        
+        // Check if we're inside a behavior block
+        const isInBehaviorBlock = beforeCursor.includes('behavior:') || beforeCursor.includes('behavior {');
+        
+        if (!isInBehaviorBlock) {
+            return undefined;
+        }
+
+        // Check if we're typing a function call (after an identifier or at start of expression)
+        const isFunctionContext = 
+            /[a-zA-Z_][a-zA-Z0-9_]*\s*\(?\s*$/.test(beforeCursor) || // After identifier, possibly before (
+            /\([^)]*$/.test(beforeCursor) || // Inside parentheses
+            /[=+\-*\/%&|^<>!]\s*[a-zA-Z_]*$/.test(beforeCursor) || // After operator
+            /^\s*[a-zA-Z_]*$/.test(beforeCursor.trim()); // At start of line
+
+        if (!isFunctionContext) {
+            return undefined;
+        }
+
+        // Provide built-in function completions
+        const builtinFunctions: CompletionItem[] = [
+            {
+                label: 'sign_extend',
+                kind: 3, // Function
+                detail: 'sign_extend(value, from_bits[, to_bits])',
+                insertText: 'sign_extend(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Sign extend a value from `from_bits` to `to_bits` (default 32).\n\n**Example:** `sign_extend(R[rs1][7:0], 8, 16)`'
+                }
+            },
+            {
+                label: 'zero_extend',
+                kind: 3, // Function
+                detail: 'zero_extend(value, from_bits[, to_bits])',
+                insertText: 'zero_extend(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Zero extend a value from `from_bits` to `to_bits` (default 32).\n\n**Example:** `zero_extend(R[rs1][7:0], 8, 16)`'
+                }
+            },
+            {
+                label: 'extract_bits',
+                kind: 3, // Function
+                detail: 'extract_bits(value, msb, lsb)',
+                insertText: 'extract_bits(${1:value}, ${2:msb}, ${3:lsb})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Extract bits from `msb` to `lsb` (inclusive) from a value.\n\n**Example:** `extract_bits(R[rs1], 15, 8)`'
+                }
+            },
+            {
+                label: 'sext',
+                kind: 3, // Function
+                detail: 'sext(value, from_bits[, to_bits]) - alias for sign_extend',
+                insertText: 'sext(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Alias for `sign_extend`. Sign extend a value from `from_bits` to `to_bits` (default 32).'
+                }
+            },
+            {
+                label: 'sx',
+                kind: 3, // Function
+                detail: 'sx(value, from_bits[, to_bits]) - alias for sign_extend',
+                insertText: 'sx(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Alias for `sign_extend`. Sign extend a value from `from_bits` to `to_bits` (default 32).'
+                }
+            },
+            {
+                label: 'zext',
+                kind: 3, // Function
+                detail: 'zext(value, from_bits[, to_bits]) - alias for zero_extend',
+                insertText: 'zext(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Alias for `zero_extend`. Zero extend a value from `from_bits` to `to_bits` (default 32).'
+                }
+            },
+            {
+                label: 'zx',
+                kind: 3, // Function
+                detail: 'zx(value, from_bits[, to_bits]) - alias for zero_extend',
+                insertText: 'zx(${1:value}, ${2:from_bits}${3:, ${4:to_bits}})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Alias for `zero_extend`. Zero extend a value from `from_bits` to `to_bits` (default 32).'
+                }
+            }
+        ];
+
+        return {
+            isIncomplete: false,
+            items: builtinFunctions
+        };
     }
 
     /**

@@ -261,6 +261,27 @@
             return
         {%- endfor %}
         raise ValueError(f"Unknown virtual register: {vreg_name}")
+    
+    def _sign_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
+        """Sign extend a value from from_bits to to_bits."""
+        if from_bits >= to_bits:
+            return value & ((1 << to_bits) - 1)
+        # Extract the sign bit
+        sign_bit = (value >> (from_bits - 1)) & 1
+        if sign_bit:
+            # Negative: extend with 1s
+            mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
+            return value | mask
+        else:
+            # Positive: extend with 0s (already done)
+            return value & ((1 << to_bits) - 1)
+    
+    def _zero_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
+        """Zero extend a value from from_bits to to_bits."""
+        if from_bits >= to_bits:
+            return value & ((1 << to_bits) - 1)
+        # Just mask to the target width (zero extension)
+        return value & ((1 << to_bits) - 1)
 
     def _execute_non_bundle_instruction(self, instruction_word: int) -> bool:
         """Execute a single instruction word, skipping bundle checks (used for bundle slots)."""

@@ -5,7 +5,7 @@ from ..model.isa_model import (
     RTLExpression, RTLTernary, RTLBinaryOp, RTLUnaryOp, RTLConstant,
     RTLLValue, RegisterAccess, FieldAccess, Variable, RTLStatement, RTLAssignment,
     RTLConditional, RTLMemoryAccess, Instruction, ISASpecification,
-    VirtualRegister, RegisterAlias, OperandReference
+    VirtualRegister, RegisterAlias, OperandReference, RTLBitfieldAccess, RTLFunctionCall
 )
 
 
@@ -118,8 +118,67 @@ class RTLInterpreter:
             if expr.name in self.variables:
                 return self.variables[expr.name]
             return self.operand_values.get(expr.name, 0)
+        elif isinstance(expr, RTLBitfieldAccess):
+            base_value = self._evaluate_expression(expr.base)
+            msb_value = self._evaluate_expression(expr.msb)
+            lsb_value = self._evaluate_expression(expr.lsb)
+            # Extract bits: (value >> lsb) & ((1 << (msb - lsb + 1)) - 1)
+            width = msb_value - lsb_value + 1
+            return (base_value >> lsb_value) & ((1 << width) - 1)
+        elif isinstance(expr, RTLFunctionCall):
+            args = [self._evaluate_expression(arg) for arg in expr.args]
+            return self._apply_builtin_function(expr.function_name, args)
         else:
             raise ValueError(f"Unknown expression type: {type(expr)}")
+
+    def _apply_builtin_function(self, func_name: str, args: list) -> int:
+        """Apply a built-in function."""
+        func_name_lower = func_name.lower()
+        
+        if func_name_lower == "sign_extend" or func_name_lower == "sext" or func_name_lower == "sx":
+            if len(args) == 2:
+                value, from_bits = args
+                to_bits = 32  # Default to 32 bits
+            elif len(args) == 3:
+                value, from_bits, to_bits = args
+            else:
+                raise ValueError(f"sign_extend requires 2 or 3 arguments, got {len(args)}")
+            
+            if from_bits >= to_bits:
+                return value & ((1 << to_bits) - 1)
+            # Extract the sign bit
+            sign_bit = (value >> (from_bits - 1)) & 1
+            if sign_bit:
+                # Negative: extend with 1s
+                mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
+                return value | mask
+            else:
+                # Positive: extend with 0s
+                return value & ((1 << to_bits) - 1)
+        
+        elif func_name_lower == "zero_extend" or func_name_lower == "zext" or func_name_lower == "zx":
+            if len(args) == 2:
+                value, from_bits = args
+                to_bits = 32  # Default to 32 bits
+            elif len(args) == 3:
+                value, from_bits, to_bits = args
+            else:
+                raise ValueError(f"zero_extend requires 2 or 3 arguments, got {len(args)}")
+            
+            if from_bits >= to_bits:
+                return value & ((1 << to_bits) - 1)
+            # Just mask to the target width (zero extension)
+            return value & ((1 << to_bits) - 1)
+        
+        elif func_name_lower == "extract_bits":
+            if len(args) != 3:
+                raise ValueError(f"extract_bits requires 3 arguments (value, msb, lsb), got {len(args)}")
+            value, msb, lsb = args
+            width = msb - lsb + 1
+            return (value >> lsb) & ((1 << width) - 1)
+        
+        else:
+            raise ValueError(f"Unknown built-in function: {func_name}")
 
     def _apply_binary_op(self, op: str, left: int, right: int) -> int:
         """Apply a binary operator."""

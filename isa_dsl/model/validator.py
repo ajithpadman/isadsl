@@ -5,7 +5,7 @@ from .isa_model import (
     ISASpecification, Register, InstructionFormat, Instruction,
     RTLExpression, RegisterAccess, FieldAccess, RTLAssignment,
     RTLConditional, RTLMemoryAccess, RTLTernary, RTLBinaryOp, RTLUnaryOp,
-    VirtualRegister, RegisterAlias, InstructionAlias
+    VirtualRegister, RegisterAlias, InstructionAlias, RTLBitfieldAccess, RTLFunctionCall
 )
 
 
@@ -191,6 +191,19 @@ class ISAValidator:
             self._validate_register_access(expr, context)
         elif isinstance(expr, FieldAccess):
             self._validate_field_access(expr, context)
+        elif isinstance(expr, RTLBitfieldAccess):
+            self._validate_rtl_expression(expr.base, context)
+            self._validate_rtl_expression(expr.msb, context)
+            self._validate_rtl_expression(expr.lsb, context)
+        elif isinstance(expr, RTLFunctionCall):
+            # Validate built-in function arguments
+            for arg in expr.args:
+                self._validate_rtl_expression(arg, context)
+            # Validate function name (check if it's a known built-in)
+            valid_builtins = {'sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx'}
+            if expr.function_name.lower() not in valid_builtins:
+                # Warning: unknown function, but don't fail validation
+                pass
 
     def _validate_rtl_lvalue(self, lvalue, context: str):
         """Validate an RTL left-hand value."""

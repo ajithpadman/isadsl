@@ -1,0 +1,127 @@
+architecture BuiltinsTest {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [28:31]
+            rd: [24:27]
+            rs1: [20:23]
+            rs2: [16:19]
+            func: [0:15]
+        }
+    }
+    
+    instructions {
+        // Test extract_bits function: extract bits [15:8] from R[rs1]
+        instruction EXTRACT_BITS {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1
+            assembly_syntax: "EXTRACT_BITS R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = extract_bits(R[rs1], 15, 8);
+            }
+        }
+        
+        // Test sign_extend(value, from_bits) - 2 args
+        instruction SIGN_EXT_8 {
+            format: R_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1
+            assembly_syntax: "SIGN_EXT_8 R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = sign_extend(temp, 8);
+            }
+        }
+        
+        // Test sign_extend(value, from_bits, to_bits) - 3 args
+        instruction SIGN_EXT_8_TO_16 {
+            format: R_TYPE
+            encoding: { opcode=3 }
+            operands: rd, rs1
+            assembly_syntax: "SIGN_EXT_8_TO_16 R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = sign_extend(temp, 8, 16);
+            }
+        }
+        
+        // Test zero_extend(value, from_bits) - 2 args
+        instruction ZERO_EXT_8 {
+            format: R_TYPE
+            encoding: { opcode=4 }
+            operands: rd, rs1
+            assembly_syntax: "ZERO_EXT_8 R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = zero_extend(temp, 8);
+            }
+        }
+        
+        // Test zero_extend(value, from_bits, to_bits) - 3 args
+        instruction ZERO_EXT_8_TO_16 {
+            format: R_TYPE
+            encoding: { opcode=5 }
+            operands: rd, rs1
+            assembly_syntax: "ZERO_EXT_8_TO_16 R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = zero_extend(temp, 8, 16);
+            }
+        }
+        
+        // Test extract_bits function
+        instruction EXTRACT_BITS_FUNC {
+            format: R_TYPE
+            encoding: { opcode=6 }
+            operands: rd, rs1
+            assembly_syntax: "EXTRACT_BITS_FUNC R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = extract_bits(R[rs1], 23, 16);
+            }
+        }
+        
+        // Test bitfield access with sign extension
+        instruction BITFIELD_SIGN_EXT {
+            format: R_TYPE
+            encoding: { opcode=7 }
+            operands: rd, rs1
+            assembly_syntax: "BITFIELD_SIGN_EXT R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 15, 8);
+                R[rd] = sign_extend(temp, 8);
+            }
+        }
+        
+        // Test sext alias
+        instruction SEXT_ALIAS {
+            format: R_TYPE
+            encoding: { opcode=8 }
+            operands: rd, rs1
+            assembly_syntax: "SEXT_ALIAS R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = sext(temp, 8);
+            }
+        }
+        
+        // Test zext alias
+        instruction ZEXT_ALIAS {
+            format: R_TYPE
+            encoding: { opcode=9 }
+            operands: rd, rs1
+            assembly_syntax: "ZEXT_ALIAS R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 7, 0);
+                R[rd] = zext(temp, 8);
+            }
+        }
+    }
+}

@@ -484,6 +484,21 @@ class OperandReference(RTLExpression, TextXObject):
 
 
 @dataclass
+class RTLBitfieldAccess(RTLExpression, TextXObject):
+    """Bitfield extraction from a value (e.g., R[0][15:8])."""
+    base: RTLExpression
+    msb: RTLExpression
+    lsb: RTLExpression
+
+
+@dataclass
+class RTLFunctionCall(RTLExpression, TextXObject):
+    """Built-in function call (e.g., sign_extend(value, bits))."""
+    function_name: str
+    args: List[RTLExpression] = field(default_factory=list)
+
+
+@dataclass
 class BundleSlot(TextXObject):
     """A slot within a bundle format for a sub-instruction."""
     name: str
