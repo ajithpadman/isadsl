@@ -14,17 +14,42 @@ instructions {
         msb = extract_bits(result,31,31);
         lsb = extract_bits(result,30,30);
         av = msb^lsb;
-        PSW.AV = av>0?1:0;
-        PSW.SV = av >0?1:PSW.SV;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SV = (av > 0) ? 1 : PSW.SV;
         D[d] = result;
         if(result > 0x7FFFFFFF){
             PSW.V = 1;
-            PSW.SV =1;
+            PSW.SV = 1;
 
         }
         else{
-            PSW.V =0;
+            PSW.V = 0;
         }
+
+       }
+    }
+    instruction ABS_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x5C
+       }
+       operands:s2,d 
+       assembly_syntax: "ABS.B {d}, {s2}"
+       behavior:{
+        D_31_24 = extract_bits(D[s2], 31,24);
+        D_23_16 = extract_bits(D[s2], 23,16);
+        D_15_8 = extract_bits(D[s2], 15,8);
+        D_7_0 = extract_bits(D[s2], 7,0);
+        result3 = (D_31_24 >= 0) ? D_31_24 : (0 - D_31_24);
+        result_byte3 = extract_bits(result3, 7,0);
+        result2 = (D_23_16 >= 0) ? D_23_16 : (0 - D_23_16);
+        result_byte2 = extract_bits(result2, 7,0);
+        result1 = (D_15_8 >= 0) ? D_15_8 : (0 - D_15_8);
+        result_byte1 = extract_bits(result1, 7,0);
+        result0 = (D_7_0 >= 0) ? D_7_0 : (0 - D_7_0);
+        result_byte0 = extract_bits(result0, 7,0);
+        D[d] = (result_byte3<<24)| (result_byte2<<16)| (result_byte1<<8)|(result_byte0);
 
        }
     }

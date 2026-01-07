@@ -88,21 +88,40 @@ export function createIsaServices(context: DefaultSharedModuleContext): {
     const originalBuild = shared.workspace.DocumentBuilder.build.bind(shared.workspace.DocumentBuilder);
     shared.workspace.DocumentBuilder.build = async (documents, options, cancelToken) => {
         // If we're already processing includes (called from document processor), just build normally
+        // But still wrap in error handling to prevent crashes
         if (isProcessingIncludes) {
-            return await originalBuild(documents, options, cancelToken);
+            try {
+                await Promise.race([
+                    originalBuild(documents, options, cancelToken),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Parsing timeout')), 5000))
+                ]);
+                return;
+            } catch (error: any) {
+                // Handle recursion errors gracefully even in include processing
+                if (error instanceof RangeError || 
+                    (error.message && (error.message.includes('Maximum call stack') || error.message.includes('timeout')))) {
+                    console.warn('Chevrotain recursion detected during include processing. Returning partial results.');
+                    return; // Return void to allow partial results
+                }
+                throw error;
+            }
         }
         
         // Step 1: Build documents with parsing only (no linking/validation) to extract includes
         // We need to parse first to get the AST and extract include directives
         // Note: We can't skip linking completely, but we'll rebuild after processing includes
-        // Wrap in try-catch to handle Chevrotain recursion errors with hex values in RTL expressions
+        // Wrap in try-catch with timeout to handle Chevrotain recursion errors with hex values in RTL expressions
         try {
-            await originalBuild(documents, { ...options, validation: false }, cancelToken);
+            await Promise.race([
+                originalBuild(documents, { ...options, validation: false }, cancelToken),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Parsing timeout')), 5000))
+            ]);
         } catch (error: any) {
-            // If we hit recursion (Maximum call stack), it's likely due to hex values in RTL expressions
+            // If we hit recursion (Maximum call stack or RangeError), it's likely due to hex values in RTL expressions
             // This is a known Chevrotain limitation - the file is still valid (works in Python)
             // Log the error but don't fail completely - allow partial parsing
-            if (error.message && error.message.includes('Maximum call stack')) {
+            if (error instanceof RangeError || 
+                (error.message && (error.message.includes('Maximum call stack') || error.message.includes('timeout')))) {
                 console.warn('Chevrotain recursion detected during parsing (likely hex values in RTL expressions). File may be partially parsed.');
                 // Try to continue with what we have - documents may have partial parse results
                 // The error will be in the document diagnostics, which is acceptable
@@ -137,15 +156,19 @@ export function createIsaServices(context: DefaultSharedModuleContext): {
         }
         
         // Now rebuild all documents with full linking and validation
-        // Wrap in try-catch to handle Chevrotain recursion errors
+        // Wrap in try-catch with timeout to handle Chevrotain recursion errors
         try {
-            const result = await originalBuild(allDocuments, options, cancelToken);
-            return result;
+            await Promise.race([
+                originalBuild(allDocuments, options, cancelToken),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Parsing timeout')), 5000))
+            ]);
+            return;
         } catch (error: any) {
-            // If we hit recursion during final build, log and return what we have
-            if (error.message && error.message.includes('Maximum call stack')) {
+            // If we hit recursion during final build (RangeError or Maximum call stack), log and return what we have
+            if (error instanceof RangeError || 
+                (error.message && (error.message.includes('Maximum call stack') || error.message.includes('timeout')))) {
                 console.warn('Chevrotain recursion detected during final build (likely hex values in RTL expressions). Returning partial results.');
-                // Return empty result - documents will have diagnostics indicating the issue
+                // Return void - documents will have diagnostics indicating the issue
                 // This is better than crashing the language server
                 return;
             }

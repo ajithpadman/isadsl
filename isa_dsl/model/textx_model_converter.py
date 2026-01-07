@@ -543,6 +543,21 @@ class TextXModelConverter:
                 if hasattr(expr_tx, attr) and getattr(expr_tx, attr) is not None:
                     return self._convert_rtl_expression(getattr(expr_tx, attr), isa_model)
         
+        # RTLTernaryExpression is an intermediate rule - unwrap it
+        if class_name == 'RTLTernaryExpression':
+            # Unwrap by converting the underlying expression
+            for attr in ['ternary', 'binary_op', 'unary_op', 'function_call', 'atom']:
+                if hasattr(expr_tx, attr) and getattr(expr_tx, attr) is not None:
+                    return self._convert_rtl_expression(getattr(expr_tx, attr), isa_model)
+            # Fallback: try to find any child expression
+            for attr in dir(expr_tx):
+                if not attr.startswith('_') and hasattr(expr_tx, attr):
+                    child = getattr(expr_tx, attr)
+                    if child is not None and hasattr(child, '__class__'):
+                        result = self._convert_rtl_expression(child, isa_model)
+                        if result:
+                            return result
+        
         if class_name == 'RTLConstant':
             # Check hex and binary first (they have priority)
             hex_value = getattr(expr_tx, 'hex_value', None)

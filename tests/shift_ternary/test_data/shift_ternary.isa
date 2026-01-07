@@ -1,0 +1,117 @@
+architecture ShiftTernary {
+    registers {
+        gpr R 32 [8]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+            reserved: [15:31]
+        }
+        
+        format I_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            imm: [12:31]
+        }
+    }
+    
+    instructions {
+        // Test left shift
+        instruction SHL {
+            format: R_TYPE
+            encoding: {
+                opcode=0x10
+            }
+            operands: rd, rs1, rs2
+            assembly_syntax: "SHL {rd}, {rs1}, {rs2}"
+            behavior: {
+                R[rd] = R[rs1] << R[rs2];
+            }
+        }
+        
+        // Test right shift
+        instruction SHR {
+            format: R_TYPE
+            encoding: {
+                opcode=0x11
+            }
+            operands: rd, rs1, rs2
+            assembly_syntax: "SHR {rd}, {rs1}, {rs2}"
+            behavior: {
+                R[rd] = R[rs1] >> R[rs2];
+            }
+        }
+        
+        // Test ternary expression
+        instruction TERNARY {
+            format: R_TYPE
+            encoding: {
+                opcode=0x12
+            }
+            operands: rd, rs1, rs2
+            assembly_syntax: "TERNARY {rd}, {rs1}, {rs2}"
+            behavior: {
+                R[rd] = (R[rs1] != 0) ? R[rs1] : R[rs2];
+            }
+        }
+        
+        // Test ternary with shift
+        instruction TERNARY_SHIFT {
+            format: R_TYPE
+            encoding: {
+                opcode=0x13
+            }
+            operands: rd, rs1, rs2
+            assembly_syntax: "TERNARY_SHIFT {rd}, {rs1}, {rs2}"
+            behavior: {
+                R[rd] = (R[rs1] != 0) ? (R[rs1] << 2) : (R[rs2] >> 2);
+            }
+        }
+        
+        // Test nested ternary (if supported)
+        instruction NESTED_TERNARY {
+            format: R_TYPE
+            encoding: {
+                opcode=0x14
+            }
+            operands: rd, rs1, rs2
+            assembly_syntax: "NESTED_TERNARY {rd}, {rs1}, {rs2}"
+            behavior: {
+                R[rd] = (R[rs1] > 0) ? 1 : ((R[rs1] < 0) ? -1 : 0);
+            }
+        }
+        
+        // Test shift with immediate
+        instruction SHL_IMM {
+            format: I_TYPE
+            encoding: {
+                opcode=0x15
+            }
+            operands: rd, rs1, imm
+            assembly_syntax: "SHL_IMM {rd}, {rs1}, {imm}"
+            behavior: {
+                R[rd] = R[rs1] << imm;
+            }
+        }
+        
+        // Test right shift with immediate
+        instruction SHR_IMM {
+            format: I_TYPE
+            encoding: {
+                opcode=0x16
+            }
+            operands: rd, rs1, imm
+            assembly_syntax: "SHR_IMM {rd}, {rs1}, {imm}"
+            behavior: {
+                R[rd] = R[rs1] >> imm;
+            }
+        }
+    }
+}
+

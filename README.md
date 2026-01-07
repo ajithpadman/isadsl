@@ -9,9 +9,13 @@ A powerful Domain Specific Language (DSL) for describing Instruction Set Archite
 - **Complete ISA Specification**: Define instruction formats, registers (GPRs, SFRs, and vector registers), and instruction encodings
 - **RTL Behavior**: Specify instruction behavior using Register Transfer Level notation with support for:
   - Arithmetic and logical operations
+  - Bitwise shift operations (`<<`, `>>`)
+  - Ternary conditional expressions (`condition ? then : else`)
   - Conditional statements
   - Memory access operations
   - Vector/SIMD operations
+  - Bitfield access (`value[msb:lsb]`)
+  - Built-in functions (`sign_extend`, `zero_extend`, `extract_bits`)
 - **Automatic Code Generation**: Generate production-ready tools:
   - Python-based instruction simulators
   - Assemblers for your ISA
@@ -227,20 +231,25 @@ Displays summary information about the ISA specification.
 
 - **Virtual Registers**: Concatenate multiple registers to form wider virtual registers
 - **Register Aliases**: Define alternative names for registers (e.g., `SP = R[13]`)
+- **Register Fields**: Access register fields like C union members (e.g., `PSW.V`, `PSW.C`)
 - **Instruction Aliases**: Define alternative mnemonics with custom assembly syntax
 - **Variable-Length Instructions**: Support for instructions of different widths
 - **Instruction Bundling**: Bundle multiple instructions into a single instruction word
 - **SIMD/Vector Support**: Built-in support for vector registers and SIMD operations
 - **Multi-File Support**: Organize large ISA specifications across multiple files using `#include`
+- **Shift Operations**: Left shift (`<<`) and arithmetic right shift (`>>`) operators
+- **Ternary Expressions**: Conditional value selection (`condition ? then : else`)
+- **Bitfield Access**: Extract bit ranges from values (`value[msb:lsb]`)
+- **Built-in Functions**: Sign/zero extension and bit extraction functions
 - **VS Code Extension**: Full IDE support with syntax highlighting, code completion, and error diagnostics
 
 ## Testing
 
-The project includes a comprehensive test suite with **126 automated tests** covering all features. All tests pass successfully.
+The project includes a comprehensive test suite with **170+ test cases** covering all features. All tests pass successfully.
 
 **Test Status**: 
-- ✅ All 126 Python tests passing
-- ✅ All 18 VS Code extension tests passing
+- ✅ All Python tests passing (170+ test cases, 200+ test functions including parametrized tests)
+- ✅ All VS Code extension tests passing
 - ✅ Continuous Integration (CI) runs all tests automatically
 
 To run tests from source:

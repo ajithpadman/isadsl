@@ -195,6 +195,10 @@ RTLForLoop:
 ;
 
 RTLExpression:
+    RTLTernaryExpression
+;
+
+RTLTernaryExpression:
     RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLFunctionCall | RTLExpressionAtom
 ;
 
@@ -207,7 +211,7 @@ OperandReference:
 ;
 
 RTLTernary:
-    condition=RTLExpressionAtom '?' then_expr=RTLExpression ':' else_expr=RTLExpression
+    condition=RTLExpressionAtom '?' then_expr=RTLTernaryExpression ':' else_expr=RTLTernaryExpression
 ;
 
 RTLBinaryOp:

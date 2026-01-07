@@ -4,7 +4,7 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of **111+ tests** organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
+The test suite consists of **170+ test cases** (200+ test functions including parametrized tests) organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
 
 ### Test Organization
 
@@ -51,6 +51,18 @@ Tests are organized into the following directories:
   - `test_arm_integration_end_to_end.py` - End-to-end workflow tests for ARM ISA subset
   - `test_arm_integration_labels_loops.py` - Labels and loops tests with QEMU
   - Helper files: `test_helpers.py`, `test_helpers_basic.py`, `test_helpers_compilation.py`, `test_helpers_qemu.py`, `test_helpers_integration.py`
+
+- **`tests/rtl_builtins/`** - RTL built-in functions and bitfield access tests
+  - `test_builtin_functions.py` - Tests for `sign_extend`, `zero_extend`, `extract_bits` functions and bitfield access syntax
+
+- **`tests/shift_ternary/`** - Shift operations and ternary expression tests
+  - `test_shift_ternary.py` - Tests for shift operators (`<<`, `>>`) and ternary conditional expressions
+
+- **`tests/register_fields/`** - Register field access tests
+  - `test_register_fields.py` - Tests for register fields (C union-like access) and field updates
+
+- **`tests/tricore/`** - TriCore architecture tests
+  - `test_tricore_end_to_end.py` - End-to-end tests for TriCore ABS instruction (assembler, simulator, disassembler)
 
 
 ## Running Tests
@@ -374,7 +386,7 @@ If parser tests fail:
 
 ## Performance
 
-The full test suite (111 tests) runs in approximately 17-18 seconds on modern hardware. Individual test files typically complete in under 1 second.
+The full test suite (170+ test cases) runs in approximately 20-25 seconds on modern hardware. Individual test files typically complete in under 1 second.
 
 ## Code Quality Standards
 

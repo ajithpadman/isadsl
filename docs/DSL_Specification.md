@@ -2,7 +2,7 @@
 
 This document provides a complete specification of the ISA Domain Specific Language (DSL) for describing Instruction Set Architectures.
 
-**Status**: ✅ Production Ready (Beta) - All features are implemented and tested. The test suite includes 111 tests, all passing.
+**Status**: ✅ Production Ready (Beta) - All features are implemented and tested. The test suite includes comprehensive tests covering all features, all passing.
 
 ## Table of Contents
 
@@ -14,6 +14,11 @@ This document provides a complete specification of the ISA Domain Specific Langu
 6. [Instruction Formats](#instruction-formats)
 7. [Instructions](#instructions)
 8. [RTL Behavior](#rtl-behavior)
+   - [Expressions](#expressions)
+   - [Shift Operators](#shift-operators)
+   - [Ternary Conditional Expressions](#ternary-conditional-expressions)
+   - [Bitfield Access](#bitfield-access)
+   - [Built-in Functions](#built-in-functions)
 9. [Variable-Length Instructions](#variable-length-instructions)
 10. [Instruction Bundling](#instruction-bundling)
 11. [SIMD Vector Support](#simd-vector-support)
@@ -461,9 +466,98 @@ behavior: {
 Supported operators:
 
 - **Arithmetic**: `+`, `-`, `*`, `/`, `%`
-- **Bitwise**: `&`, `|`, `^`, `~`, `<<`, `>>`
+- **Bitwise**: `&`, `|`, `^`, `~`
+- **Shift**: `<<` (left shift), `>>` (right shift, arithmetic)
 - **Comparison**: `==`, `!=`, `<`, `>`, `<=`, `>=`
 - **Ternary**: `condition ? then_value : else_value`
+
+#### Shift Operators
+
+The ISA DSL supports bitwise shift operations:
+
+**Left Shift (`<<`)**:
+```isa
+behavior: {
+    R[rd] = R[rs1] << R[rs2];    // Shift left by register value
+    R[rd] = R[rs1] << 2;         // Shift left by immediate
+    PC = PC + (offset << 2);     // Shift for address calculation
+}
+```
+
+**Right Shift (`>>`)**:
+```isa
+behavior: {
+    R[rd] = R[rs1] >> R[rs2];    // Arithmetic right shift by register value
+    R[rd] = R[rs1] >> 3;         // Arithmetic right shift by immediate
+}
+```
+
+**Notes**:
+- Left shift (`<<`) performs logical left shift, filling with zeros
+- Right shift (`>>`) performs arithmetic right shift (sign-extending for signed values)
+- Shift amounts can be register values or immediate constants
+- Results are masked to 32 bits
+
+**Example**:
+```isa
+instruction SHL {
+    format: R_TYPE
+    encoding: { opcode=0x10 }
+    operands: rd, rs1, rs2
+    behavior: {
+        R[rd] = R[rs1] << R[rs2];  // R[rd] = R[rs1] * (2^R[rs2])
+    }
+}
+
+instruction SHR {
+    format: R_TYPE
+    encoding: { opcode=0x11 }
+    operands: rd, rs1, rs2
+    behavior: {
+        R[rd] = R[rs1] >> R[rs2];  // Arithmetic right shift
+    }
+}
+```
+
+#### Ternary Conditional Expressions
+
+Ternary expressions allow conditional value selection:
+
+**Syntax**: `condition ? then_value : else_value`
+
+```isa
+behavior: {
+    R[rd] = (R[rs1] != 0) ? R[rs1] : R[rs2];  // Select R[rs1] if non-zero, else R[rs2]
+    FLAGS.Z = (R[rd] == 0) ? 1 : 0;           // Set zero flag
+    R[rd] = (R[rs1] > 0) ? 1 : ((R[rs1] < 0) ? -1 : 0);  // Nested ternary (sign function)
+}
+```
+
+**Notes**:
+- The condition must be a simple expression (use parentheses for complex conditions)
+- Nested ternaries are supported
+- Ternary expressions can be used anywhere an expression is expected
+
+**Example**:
+```isa
+instruction TERNARY {
+    format: R_TYPE
+    encoding: { opcode=0x12 }
+    operands: rd, rs1, rs2
+    behavior: {
+        R[rd] = (R[rs1] != 0) ? R[rs1] : R[rs2];
+    }
+}
+
+instruction TERNARY_SHIFT {
+    format: R_TYPE
+    encoding: { opcode=0x13 }
+    operands: rd, rs1, rs2
+    behavior: {
+        R[rd] = (R[rs1] != 0) ? (R[rs1] << 2) : (R[rs2] >> 2);
+    }
+}
+```
 
 ### Operand References
 
@@ -504,6 +598,188 @@ Constants can also be specified in hexadecimal or binary:
 behavior: {
     R[rd] = 0xFF;        // Hexadecimal
     R[rd] = 0b1010;      // Binary
+}
+```
+
+### Bitfield Access
+
+You can access specific bit ranges from registers or values using bitfield syntax:
+
+**Syntax**: `value[msb:lsb]`
+
+```isa
+behavior: {
+    R[rd] = R[rs1][15:8];           // Extract bits 15-8 from R[rs1]
+    R[rd] = R[rs1][msb:lsb];        // Extract bits using variables
+    temp = R[rs1][7:0];             // Extract lower 8 bits
+    R[rd] = sign_extend(R[rs1][15:0], 16);  // Extract and sign extend
+}
+```
+
+**Notes**:
+- Bit ranges use `[msb:lsb]` format, where `msb` is the most significant bit and `lsb` is the least significant bit
+- Both `msb` and `lsb` can be constants or expressions
+- Bitfield access extracts the specified bit range and zero-extends to the target width
+- Bitfield access can be used with built-in functions for sign/zero extension
+
+**Example**:
+```isa
+instruction EXTRACT {
+    format: R_TYPE
+    encoding: { opcode=1 }
+    operands: rd, rs1
+    behavior: {
+        // Extract bits [15:8] from R[rs1]
+        R[rd] = R[rs1][15:8];
+    }
+}
+
+instruction BITFIELD {
+    format: R_TYPE
+    encoding: { opcode=3 }
+    operands: rd, rs1, rs2
+    behavior: {
+        // Extract bits [msb:lsb] where msb and lsb come from rs2
+        msb = R[rs2][7:4];
+        lsb = R[rs2][3:0];
+        R[rd] = R[rs1][msb:lsb];
+    }
+}
+```
+
+### Built-in Functions
+
+The ISA DSL provides built-in functions for common operations:
+
+#### Sign Extension
+
+**Functions**: `sign_extend(value, from_bits)` or `sign_extend(value, from_bits, to_bits)`
+
+**Aliases**: `sext(value, from_bits)` or `sext(value, from_bits, to_bits)`, `sx(value, from_bits)` or `sx(value, from_bits, to_bits)`
+
+Sign-extends a value from `from_bits` to `to_bits` (default 32 bits if `to_bits` is omitted).
+
+```isa
+behavior: {
+    R[rd] = sign_extend(R[rs1][7:0], 8);        // Sign extend 8-bit value to 32 bits
+    R[rd] = sign_extend(R[rs1][15:0], 16, 32); // Sign extend 16-bit value to 32 bits
+    R[rd] = sext(R[rs1][7:0], 8);              // Using alias
+    R[rd] = sx(R[rs1][7:0], 8);                // Using alias
+}
+```
+
+**Example**:
+```isa
+instruction SIGN_EXT {
+    format: R_TYPE
+    encoding: { opcode=2 }
+    operands: rd, rs1
+    behavior: {
+        // Sign extend lower 16 bits of R[rs1] to 32 bits
+        R[rd] = sign_extend(R[rs1][15:0], 16);
+    }
+}
+```
+
+#### Zero Extension
+
+**Functions**: `zero_extend(value, from_bits)` or `zero_extend(value, from_bits, to_bits)`
+
+**Aliases**: `zext(value, from_bits)` or `zext(value, from_bits, to_bits)`, `zx(value, from_bits)` or `zx(value, from_bits, to_bits)`
+
+Zero-extends a value from `from_bits` to `to_bits` (default 32 bits if `to_bits` is omitted).
+
+```isa
+behavior: {
+    R[rd] = zero_extend(R[rs1][7:0], 8);        // Zero extend 8-bit value to 32 bits
+    R[rd] = zero_extend(R[rs1][15:0], 16, 32); // Zero extend 16-bit value to 32 bits
+    R[rd] = zext(R[rs1][7:0], 8);              // Using alias
+    R[rd] = zx(R[rs1][7:0], 8);                // Using alias
+}
+```
+
+**Example**:
+```isa
+instruction ZERO_EXT {
+    format: R_TYPE
+    encoding: { opcode=4 }
+    operands: rd, rs1
+    behavior: {
+        // Zero extend lower 8 bits of R[rs1] to 32 bits
+        R[rd] = zero_extend(R[rs1][7:0], 8);
+    }
+}
+```
+
+#### Bit Extraction
+
+**Function**: `extract_bits(value, msb, lsb)`
+
+Extracts bits `[msb:lsb]` from a value.
+
+```isa
+behavior: {
+    R[rd] = extract_bits(R[rs1], 15, 8);        // Extract bits [15:8]
+    R[rd] = extract_bits(R[rs1], 23, 16);       // Extract bits [23:16]
+    temp = extract_bits(R[rs1], 7, 0);          // Extract lower 8 bits
+    R[rd] = sign_extend(extract_bits(R[rs1], 15, 8), 8);  // Extract and sign extend
+}
+```
+
+**Example**:
+```isa
+instruction EXTRACT_BITS {
+    format: R_TYPE
+    encoding: { opcode=6 }
+    operands: rd, rs1
+    behavior: {
+        // Extract bits [23:16] using function call
+        R[rd] = extract_bits(R[rs1], 23, 16);
+    }
+}
+```
+
+**Note**: `extract_bits(value, msb, lsb)` is equivalent to `value[msb:lsb]`, but the function form can be more readable in complex expressions.
+
+#### Combining Built-in Functions
+
+Built-in functions can be combined with bitfield access and other operations:
+
+```isa
+behavior: {
+    // Extract bits and sign extend
+    temp = extract_bits(R[rs1], 15, 8);
+    R[rd] = sign_extend(temp, 8);
+    
+    // Extract bits and zero extend
+    R[rd] = zero_extend(R[rs1][15:8], 8);
+    
+    // Extract, extend, and shift
+    R[rd] = (sign_extend(R[rs1][7:0], 8) << 2);
+}
+```
+
+**Complete Example**:
+```isa
+instruction EXTRACT {
+    format: R_TYPE
+    encoding: { opcode=1 }
+    operands: rd, rs1
+    behavior: {
+        // Extract bits [15:8] from R[rs1] and zero-extend to 32 bits
+        R[rd] = zero_extend(R[rs1][15:8], 8);
+    }
+}
+
+instruction BITFIELD_SIGN_EXT {
+    format: R_TYPE
+    encoding: { opcode=7 }
+    operands: rd, rs1
+    behavior: {
+        // Extract bits [15:8] and sign extend
+        temp = extract_bits(R[rs1], 15, 8);
+        R[rd] = sign_extend(temp, 8);
+    }
 }
 ```
 

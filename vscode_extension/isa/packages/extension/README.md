@@ -1,6 +1,6 @@
 # ISA DSL Language Server
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
+[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A comprehensive VS Code extension providing language support for the **ISA DSL (Instruction Set Architecture Domain Specific Language)**. This extension offers syntax highlighting, code completion, validation, and seamless integration with the ISA-DSL Python toolchain.
@@ -24,10 +24,15 @@ A comprehensive VS Code extension providing language support for the **ISA DSL (
 - Specify registers (GPRs, SFRs, vector registers)
 - Define virtual registers (concatenated registers)
 - Create register aliases
+- Define register fields with bit ranges (C union-like access)
 - Define instruction encodings (hex and decimal values)
 - Specify instruction behavior using RTL (Register Transfer Level) notation
 - Support for temporary variables in RTL behavior
 - Support for hexadecimal values in behavior expressions
+- Bitwise shift operations (`<<`, `>>`)
+- Ternary conditional expressions (`condition ? then : else`)
+- Bitfield access syntax (`value[msb:lsb]`)
+- Built-in functions (`sign_extend`, `zero_extend`, `extract_bits` and aliases)
 - External behavior functions for complex instructions
 - Bundle instruction formats for VLIW architectures
 - Instruction aliases for alternative mnemonics
@@ -100,7 +105,7 @@ architecture SimpleRISC {
             encoding: {
                 opcode=0x01
             }
-            operands: rd,rs1,rs2
+            operands: rd, rs1, rs2
             behavior: {
                 R[rd] = R[rs1] + R[rs2];
             }
@@ -197,9 +202,9 @@ instruction ABS {
         op1=0x0B,
         op2=28
     }
-    operands: s2,d
+    operands: s2, d
     behavior: {
-        D[d] = D[s2]>=0?D[s2]:(0-D[s2]);
+        D[d] = (D[s2] >= 0) ? D[s2] : (0 - D[s2]);
     }
 }
 ```
@@ -212,7 +217,7 @@ instruction COMPLEX_OP {
     encoding: {
         opcode=0x10
     }
-    operands: rd,rs1,rs2
+    operands: rd, rs1, rs2
     external_behavior: True
 }
 ```
