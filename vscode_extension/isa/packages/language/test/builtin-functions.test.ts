@@ -6,12 +6,8 @@ import { CompletionParams, Position } from 'vscode-languageserver';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { fileURLToPath } from 'url';
 import { AstUtils } from 'langium';
-import { isRTLFunctionCall, isInstruction } from '../src/generated/ast.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { isRTLFunctionCall } from '../src/generated/ast.js';
 
 describe('Built-in Functions Support', () => {
     let services: ReturnType<typeof createIsaServices>;
