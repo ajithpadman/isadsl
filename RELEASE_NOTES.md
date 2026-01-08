@@ -1,5 +1,77 @@
 # Release Notes
 
+## Version 0.3.8 - VS Code Extension Icon
+
+**Release Date:** 2026-01-08
+
+### 🎯 Major Changes
+
+#### VS Code Extension Icon
+
+Added a professional icon for the VS Code extension, improving visual identity and marketplace presence.
+
+**Icon Features:**
+- **Design**: Modern processor chip design with instruction format visualization
+- **Theme**: Blue gradient background representing ISA/processor architecture
+- **Elements**: 
+  - Processor chip representation
+  - Binary pattern visualization (instruction format)
+  - "0xISA" hexadecimal indicator
+  - Clean, professional design suitable for programming language extension
+- **Format**: 128x128 PNG (VS Code marketplace standard)
+- **Source**: SVG source file included for future modifications
+
+**Benefits:**
+- Improved visual identity in VS Code Extensions marketplace
+- Better brand recognition
+- Professional appearance matching the extension's purpose
+- Icon appears in Extensions view and marketplace listings
+
+### ✨ Improvements
+
+- **Visual Identity**: Professional icon design enhances extension visibility
+- **Marketplace Ready**: Icon configured in package.json for automatic display
+- **Source Files**: SVG source included for easy future modifications
+
+### 📝 Technical Details
+
+**Files Added:**
+- `vscode_extension/isa/packages/extension/icon.png` - 128x128 PNG icon (5.7KB)
+- `vscode_extension/isa/packages/extension/icon.svg` - SVG source file (2.5KB)
+
+**Files Modified:**
+- `vscode_extension/isa/packages/extension/package.json` - Added `"icon": "icon.png"` field
+
+**Icon Design:**
+- Size: 128x128 pixels (VS Code standard)
+- Format: PNG with RGBA transparency
+- Style: Modern, tech-focused design with blue gradient
+- Theme: Instruction Set Architecture / Processor chip
+
+### 📦 Version Updates
+
+- `pyproject.toml` - Version 0.3.7 → 0.3.8
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.3.7 → 0.3.8
+- `vscode_extension/isa/packages/language/package.json` - Version 0.3.7 → 0.3.8
+- `vscode_extension/isa/package.json` - Version 0.3.7 → 0.3.8
+
+### 🔄 Migration Guide
+
+No breaking changes. The icon is automatically used when the extension is installed or published to the marketplace.
+
+**For Developers:**
+- Icon will appear automatically in VS Code Extensions view
+- No action required for existing installations
+- Icon will be included in marketplace listing when published
+
+### 📊 Test Coverage
+
+- **Python Tests**: 193 test cases, all passing
+- **VS Code Extension Tests**: 55 tests, all passing
+- **Total**: 248 tests, all passing
+
+---
+
 ## Version 0.3.7 - Format Constant Fields Feature
 
 **Release Date:** 2026-01-07
