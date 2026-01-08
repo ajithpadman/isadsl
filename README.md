@@ -1,3 +1,5 @@
+![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 # ISA DSL - Instruction Set Architecture Domain Specific Language
 
 A powerful Domain Specific Language (DSL) for describing Instruction Set Architectures (ISA) using textX. This DSL enables you to specify instruction formats, registers, instruction encodings, and behavior in RTL (Register Transfer Level) notation, with automatic code generation for simulators, assemblers, disassemblers, and documentation.
