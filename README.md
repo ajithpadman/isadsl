@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.6-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 # ISA DSL - Instruction Set Architecture Domain Specific Language
 
@@ -247,11 +247,11 @@ Displays summary information about the ISA specification.
 
 ## Testing
 
-The project includes a comprehensive test suite with **170+ test cases** covering all features. All tests pass successfully.
+The project includes a comprehensive test suite with **181 test cases** covering all features. All tests pass successfully.
 
 **Test Status**: 
-- ✅ All Python tests passing (170+ test cases, 200+ test functions including parametrized tests)
-- ✅ All VS Code extension tests passing
+- ✅ All Python tests passing (181 test cases, 200+ test functions including parametrized tests)
+- ✅ All VS Code extension tests passing (55 tests)
 - ✅ Continuous Integration (CI) runs all tests automatically
 
 To run tests from source:
