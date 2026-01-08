@@ -221,8 +221,19 @@ Real-time syntax validation:
 - **Syntax errors**: Missing braces, invalid syntax
 - **Semantic errors**: Duplicate definitions, undefined references
 - **Validation errors**: Format reference errors, register conflicts
+- **Built-in function validation**: Parameter validation for `sign_extend`, `zero_extend`, `to_signed`, `to_unsigned` (checks for positive values, reasonable bit widths)
 
 **Usage**: Errors appear as red squiggles and in the Problems panel
+
+**Built-in Function Validation**:
+The language server validates built-in function calls and reports errors for:
+- Invalid parameter counts (e.g., `sign_extend` requires 2-3 arguments)
+- Invalid bit counts (must be positive and <= 64)
+- Unknown built-in functions (warnings for unrecognized function names)
+
+Example validation errors:
+- `sign_extend(R[rs1], 0)` → Error: "from_bits must be positive, got 0"
+- `sign_extend(R[rs1], 65)` → Error: "from_bits must be <= 64, got 65"
 
 ### Definition Lookup
 
@@ -367,7 +378,7 @@ The test suite includes:
 - **Validation tests**: Verify error detection and reporting
 - **Completion tests**: Verify code completion functionality (15 tests)
 
-**Test Status**: ✅ All 18 tests passing (1 parsing, 1 linking, 1 validation, 15 completion)
+**Test Status**: ✅ All 55 tests passing (1 parsing, 1 linking, 1 validation, 15 completion, 22 built-in functions, 15 behavior features)
 
 ## Support
 
