@@ -289,25 +289,42 @@
     
     def _sign_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
         """Sign extend a value from from_bits to to_bits. Returns a signed integer value."""
+        # Validate parameters to prevent negative shift counts
+        if from_bits <= 0 or to_bits <= 0:
+            raise ValueError(f"sign_extend: from_bits and to_bits must be positive, got from_bits={from_bits}, to_bits={to_bits}")
+        if from_bits > 64 or to_bits > 64:
+            raise ValueError(f"sign_extend: from_bits and to_bits must be <= 64, got from_bits={from_bits}, to_bits={to_bits}")
+        
         if from_bits >= to_bits:
-            result = value & ((1 << to_bits) - 1)
+            # Truncate to to_bits
+            if to_bits > 0:
+                result = value & ((1 << to_bits) - 1)
+            else:
+                result = 0
         else:
-            # Extract the sign bit
+            # Extract the sign bit (from_bits - 1 must be >= 0 since from_bits > 0)
             sign_bit = (value >> (from_bits - 1)) & 1
             if sign_bit:
                 # Negative: extend with 1s
-                mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
-                result = value | mask
+                extend_bits = to_bits - from_bits
+                if extend_bits > 0:
+                    mask = ((1 << extend_bits) - 1) << from_bits
+                    result = value | mask
+                else:
+                    result = value
             else:
                 # Positive: extend with 0s (already done)
-                result = value & ((1 << to_bits) - 1)
+                if to_bits > 0:
+                    result = value & ((1 << to_bits) - 1)
+                else:
+                    result = 0
         
         # Convert to signed integer for Python comparisons
         # If the result has the sign bit set (>= 0x80000000 for 32-bit), convert to negative
         if to_bits == 32:
             if result >= 0x80000000:
                 result = result - 0x100000000
-        elif to_bits < 32:
+        elif to_bits < 32 and to_bits > 0:
             sign_mask = 1 << (to_bits - 1)
             if result & sign_mask:
                 result = result - (1 << to_bits)

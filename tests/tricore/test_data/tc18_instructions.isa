@@ -37,10 +37,10 @@ instructions {
        operands:s2,d 
        assembly_syntax: "ABS.B {d}, {s2}"
        behavior:{
-        D_31_24 = sign_extend(D[s2], 31,24);
-        D_23_16 = sign_extend(D[s2], 23,16);
-        D_15_8 = sign_extend(D[s2], 15,8);
-        D_7_0 = sign_extend(D[s2], 7,0);
+        D_31_24 = sign_extend(extract_bits(D[s2], 31, 24), 8);
+        D_23_16 = sign_extend(extract_bits(D[s2], 23, 16), 8);
+        D_15_8 = sign_extend(extract_bits(D[s2], 15, 8), 8);
+        D_7_0 = sign_extend(extract_bits(D[s2], 7, 0), 8);
         result3 = (D_31_24 >= 0) ? D_31_24 : (0 - D_31_24);
         result_byte3 = extract_bits(result3, 7,0);
         result2 = (D_23_16 >= 0) ? D_23_16 : (0 - D_23_16);

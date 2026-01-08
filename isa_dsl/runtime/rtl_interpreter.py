@@ -144,17 +144,34 @@ class RTLInterpreter:
             else:
                 raise ValueError(f"sign_extend requires 2 or 3 arguments, got {len(args)}")
             
+            # Validate parameters to prevent negative shift counts
+            if from_bits <= 0 or to_bits <= 0:
+                raise ValueError(f"sign_extend: from_bits and to_bits must be positive, got from_bits={from_bits}, to_bits={to_bits}")
+            if from_bits > 64 or to_bits > 64:
+                raise ValueError(f"sign_extend: from_bits and to_bits must be <= 64, got from_bits={from_bits}, to_bits={to_bits}")
+            
             if from_bits >= to_bits:
-                return value & ((1 << to_bits) - 1)
-            # Extract the sign bit
+                # Truncate to to_bits
+                if to_bits > 0:
+                    return value & ((1 << to_bits) - 1)
+                else:
+                    return 0
+            # Extract the sign bit (from_bits - 1 must be >= 0 since from_bits > 0)
             sign_bit = (value >> (from_bits - 1)) & 1
             if sign_bit:
                 # Negative: extend with 1s
-                mask = ((1 << (to_bits - from_bits)) - 1) << from_bits
-                return value | mask
+                extend_bits = to_bits - from_bits
+                if extend_bits > 0:
+                    mask = ((1 << extend_bits) - 1) << from_bits
+                    return value | mask
+                else:
+                    return value
             else:
                 # Positive: extend with 0s
-                return value & ((1 << to_bits) - 1)
+                if to_bits > 0:
+                    return value & ((1 << to_bits) - 1)
+                else:
+                    return 0
         
         elif func_name_lower == "zero_extend" or func_name_lower == "zext" or func_name_lower == "zx":
             if len(args) == 2:

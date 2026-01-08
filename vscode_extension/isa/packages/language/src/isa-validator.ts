@@ -16,7 +16,8 @@ import {
     type ISASpecPartial,
     type VirtualRegister,
     type VirtualRegisterComponent,
-    type RTLFunctionCall
+    type RTLFunctionCall,
+    type RTLConstant
 } from './generated/ast.js';
 
 /**
@@ -569,7 +570,7 @@ export class IsaValidator {
         }
 
         const funcName = funcCall.function_name.toLowerCase();
-        const validBuiltins = ['sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx'];
+        const validBuiltins = ['sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx', 'to_signed', 'to_unsigned'];
         
         if (!validBuiltins.includes(funcName)) {
             accept('warning', `Unknown built-in function '${funcCall.function_name}'. Valid functions: ${validBuiltins.join(', ')}`, 
@@ -584,17 +585,136 @@ export class IsaValidator {
             if (argCount < 2 || argCount > 3) {
                 accept('error', `sign_extend requires 2 or 3 arguments (value, from_bits[, to_bits]), got ${argCount}`, 
                     { node: funcCall, property: 'args' });
+                return;
+            }
+            // Validate from_bits and to_bits if they are constants
+            if (argCount >= 2) {
+                const fromBits = this.extractConstantValue(funcCall.args[1]);
+                if (fromBits !== null) {
+                    if (fromBits <= 0) {
+                        accept('error', `sign_extend: from_bits must be positive, got ${fromBits}`, 
+                            { node: funcCall.args[1], property: 'value' });
+                    } else if (fromBits > 64) {
+                        accept('error', `sign_extend: from_bits must be <= 64, got ${fromBits}`, 
+                            { node: funcCall.args[1], property: 'value' });
+                    }
+                }
+            }
+            if (argCount >= 3) {
+                const toBits = this.extractConstantValue(funcCall.args[2]);
+                if (toBits !== null) {
+                    if (toBits <= 0) {
+                        accept('error', `sign_extend: to_bits must be positive, got ${toBits}`, 
+                            { node: funcCall.args[2], property: 'value' });
+                    } else if (toBits > 64) {
+                        accept('error', `sign_extend: to_bits must be <= 64, got ${toBits}`, 
+                            { node: funcCall.args[2], property: 'value' });
+                    }
+                }
             }
         } else if (funcName === 'zero_extend' || funcName === 'zext' || funcName === 'zx') {
             if (argCount < 2 || argCount > 3) {
                 accept('error', `zero_extend requires 2 or 3 arguments (value, from_bits[, to_bits]), got ${argCount}`, 
                     { node: funcCall, property: 'args' });
+                return;
+            }
+            // Validate from_bits and to_bits if they are constants
+            if (argCount >= 2) {
+                const fromBits = this.extractConstantValue(funcCall.args[1]);
+                if (fromBits !== null) {
+                    if (fromBits <= 0) {
+                        accept('error', `zero_extend: from_bits must be positive, got ${fromBits}`, 
+                            { node: funcCall.args[1], property: 'value' });
+                    } else if (fromBits > 64) {
+                        accept('error', `zero_extend: from_bits must be <= 64, got ${fromBits}`, 
+                            { node: funcCall.args[1], property: 'value' });
+                    }
+                }
+            }
+            if (argCount >= 3) {
+                const toBits = this.extractConstantValue(funcCall.args[2]);
+                if (toBits !== null) {
+                    if (toBits <= 0) {
+                        accept('error', `zero_extend: to_bits must be positive, got ${toBits}`, 
+                            { node: funcCall.args[2], property: 'value' });
+                    } else if (toBits > 64) {
+                        accept('error', `zero_extend: to_bits must be <= 64, got ${toBits}`, 
+                            { node: funcCall.args[2], property: 'value' });
+                    }
+                }
             }
         } else if (funcName === 'extract_bits') {
             if (argCount !== 3) {
                 accept('error', `extract_bits requires 3 arguments (value, msb, lsb), got ${argCount}`, 
                     { node: funcCall, property: 'args' });
             }
+        } else if (funcName === 'to_signed' || funcName === 'to_unsigned') {
+            if (argCount !== 2) {
+                accept('error', `${funcName} requires 2 arguments (value, width), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
+                return;
+            }
+            // Validate width if it is a constant
+            const width = this.extractConstantValue(funcCall.args[1]);
+            if (width !== null) {
+                if (width <= 0) {
+                    accept('error', `${funcName}: width must be positive, got ${width}`, 
+                        { node: funcCall.args[1], property: 'value' });
+                } else if (width > 64) {
+                    accept('error', `${funcName}: width must be <= 64, got ${width}`, 
+                        { node: funcCall.args[1], property: 'value' });
+                }
+            }
         }
+    }
+
+    /**
+     * Extract constant value from an RTL expression if it's a constant.
+     * Returns the numeric value if it's a constant, null otherwise.
+     * 
+     * RTLExpression -> RTLTernaryExpression -> RTLAtom -> RTLConstant
+     * We need to traverse the AST to find the constant.
+     */
+    private extractConstantValue(expr: any): number | null {
+        if (!expr || typeof expr !== 'object') {
+            return null;
+        }
+        
+        // Use AstUtils to find RTLConstant in the expression tree
+        for (const node of AstUtils.streamAllContents(expr)) {
+            if (node.$type === 'RTLConstant') {
+                const constant = node as RTLConstant;
+                if (constant.hex_value !== undefined && constant.hex_value !== null) {
+                    const value = parseInt(constant.hex_value, 16);
+                    return isNaN(value) ? null : value;
+                } else if (constant.binary_value !== undefined && constant.binary_value !== null) {
+                    const value = parseInt(constant.binary_value, 2);
+                    return isNaN(value) ? null : value;
+                } else if (constant.value !== undefined && constant.value !== null) {
+                    return constant.value;
+                }
+            }
+        }
+        
+        // Fallback: Check if it's directly an RTLConstant (for simple cases)
+        if (expr.$type === 'RTLConstant') {
+            const constant = expr as RTLConstant;
+            if (constant.hex_value !== undefined && constant.hex_value !== null) {
+                const value = parseInt(constant.hex_value, 16);
+                return isNaN(value) ? null : value;
+            } else if (constant.binary_value !== undefined && constant.binary_value !== null) {
+                const value = parseInt(constant.binary_value, 2);
+                return isNaN(value) ? null : value;
+            } else if (constant.value !== undefined && constant.value !== null) {
+                return constant.value;
+            }
+        }
+        
+        // Check if it's a direct number (for backward compatibility)
+        if (typeof expr === 'number') {
+            return expr;
+        }
+        
+        return null;
     }
 }

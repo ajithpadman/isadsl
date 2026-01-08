@@ -194,3 +194,49 @@ def test_tricore_abs_with_max_negative(tricore_isa_file, tricore_code_file):
             if str(tmpdir_path) in sys.path:
                 sys.path.remove(str(tmpdir_path))
 
+
+def test_tricore_abs_b_with_run(tricore_isa_file, tricore_code_file):
+    """Test ABS.B instruction using sim.run() to catch negative shift count issue."""
+    isa = parse_isa_file(str(tricore_isa_file))
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        sim_file, asm_file, _ = TriCoreTestHelpers.generate_all_tools(isa, tmpdir_path)
+        
+        sys.path.insert(0, str(tmpdir_path))
+        try:
+            Assembler, Simulator, _ = TriCoreTestHelpers.import_all_tools(
+                sim_file, asm_file, None, tmpdir_path
+            )
+            
+            assembler = Assembler()
+            sim = Simulator()
+            
+            # Assemble code that includes ABS.B
+            assembly_code = tricore_code_file.read_text()
+            machine_code = assembler.assemble(assembly_code)
+            
+            binary_file = tmpdir_path / "test.bin"
+            TriCoreTestHelpers.write_machine_code_to_file(machine_code, binary_file)
+            
+            sim.load_binary_file(str(binary_file), start_address=0)
+            # Set D2 to a value with negative bytes to test ABS.B
+            # 0xFFF1F1F1 has negative bytes: 0xFF (-1), 0xF1 (-15), 0xF1 (-15), 0xF1 (-15)
+            sim.D[2] = 0xFFF1F1F1
+            sim.D[4] = 0
+            
+            # Use run() instead of step() to catch the negative shift count issue
+            sim.run(max_steps=10)
+            
+            # After ABS.B, D4 should contain absolute values of each byte
+            # 0xFF -> 0x01, 0xF1 -> 0x0F, 0xF1 -> 0x0F, 0xF1 -> 0x0F
+            # Result: 0x010F0F0F
+            expected_value = 0x010F0F0F
+            assert sim.D[4] == expected_value, \
+                f"D4 should contain 0x{expected_value:08x}, got 0x{sim.D[4]:08x}"
+            
+        finally:
+            if str(tmpdir_path) in sys.path:
+                sys.path.remove(str(tmpdir_path))
+

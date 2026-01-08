@@ -1,5 +1,116 @@
 # Release Notes
 
+## Version 0.3.6 - Negative Shift Count Fix and VS Code Validation Enhancements
+
+**Release Date:** 2026-01-07
+
+### 🎯 Major Changes
+
+#### Fixed Negative Shift Count Issue in Simulator Template
+
+Fixed a critical bug where `sign_extend` and related functions could cause "ValueError: negative shift count" when called with invalid parameters (zero or negative bit counts).
+
+**Problem Fixed:**
+- `sign_extend(value, from_bits, to_bits)` would crash with negative shift count when `from_bits` was 0 or negative
+- This was particularly problematic for instructions like TriCore `ABS.B` that use byte-wise operations
+- The issue only appeared when using `sim.run()` instead of `sim.step()`, making it easy to miss in tests
+
+**Solution:**
+- Added parameter validation to `_sign_extend` in simulator template to check:
+  - `from_bits` and `to_bits` must be positive (> 0)
+  - `from_bits` and `to_bits` must be <= 64
+- Added the same validation to RTL interpreter for consistency
+- Fixed TriCore `ABS.B` instruction to use correct `extract_bits` + `sign_extend` pattern instead of incorrect bit position parameters
+
+**Example Fix:**
+```isa
+// Before (incorrect - causes negative shift count):
+D_7_0 = sign_extend(D[s2], 0, 7);  // Wrong: uses bit positions
+
+// After (correct):
+D_7_0 = sign_extend(extract_bits(D[s2], 7, 0), 8);  // Correct: extract then extend
+```
+
+#### Enhanced VS Code Extension Validation
+
+Added validation checks in the VS Code language server to catch invalid built-in function parameters at edit time.
+
+**New Validations:**
+- Validates `from_bits` and `to_bits` are positive for `sign_extend`/`zero_extend`
+- Validates `from_bits` and `to_bits` are <= 64
+- Validates `width` parameter for `to_signed`/`to_unsigned`
+- Added `to_signed` and `to_unsigned` to valid built-in functions list
+
+**Benefits:**
+- Developers get immediate feedback when using invalid parameters
+- Prevents runtime errors from being discovered only during simulation
+- Improves developer experience with real-time validation
+
+### ✨ Improvements
+
+- **Robust Error Handling**: Simulator and interpreter now validate parameters before use
+- **Better Developer Experience**: VS Code extension provides immediate validation feedback
+- **Fixed TriCore ABS.B**: Corrected instruction definition to use proper bit extraction pattern
+- **Test Coverage**: Added test case using `sim.run()` to catch issues that `sim.step()` might miss
+
+### 📝 Technical Details
+
+**Files Modified:**
+- `isa_dsl/generators/templates/simulator.j2` - Added parameter validation to `_sign_extend`
+- `isa_dsl/runtime/rtl_interpreter.py` - Added parameter validation to `sign_extend`
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Added constant value extraction and validation
+- `tests/tricore/test_data/tc18_instructions.isa` - Fixed `ABS.B` instruction to use correct pattern
+- `tests/tricore/test_tricore_end_to_end.py` - Added `test_tricore_abs_b_with_run` test case
+
+**How Validation Works:**
+1. VS Code extension extracts constant values from RTL expressions using AST traversal
+2. Validates constant parameters (positive, <= 64) and reports errors immediately
+3. Runtime validation in simulator/interpreter provides fallback for non-constant expressions
+4. Both validations use the same rules for consistency
+
+### 📦 Files Changed
+
+**Core Implementation:**
+- `isa_dsl/generators/templates/simulator.j2` - Parameter validation in `_sign_extend`
+- `isa_dsl/runtime/rtl_interpreter.py` - Parameter validation in `_apply_builtin_function`
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Enhanced `checkRTLFunctionCall` with constant validation
+
+**Tests:**
+- `tests/tricore/test_tricore_end_to_end.py` - Added `test_tricore_abs_b_with_run` test
+- `vscode_extension/isa/packages/language/test/builtin-functions.test.ts` - Added validation test cases
+
+**Instruction Definitions:**
+- `tests/tricore/test_data/tc18_instructions.isa` - Fixed `ABS.B` instruction
+
+**Version Updates:**
+- `pyproject.toml` - Version 0.3.5 → 0.3.6
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.3.5 → 0.3.6
+- `vscode_extension/isa/packages/language/package.json` - Version 0.3.5 → 0.3.6
+- `vscode_extension/isa/package.json` - Version 0.3.5 → 0.3.6
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing code continues to work, but invalid parameter usage will now be caught earlier.
+
+**If You Have Invalid `sign_extend` Usage:**
+- Change `sign_extend(value, bit_pos1, bit_pos2)` to `sign_extend(extract_bits(value, bit_pos1, bit_pos2), width)`
+- Ensure all bit count parameters are positive and <= 64
+
+**Benefits:**
+- More robust error handling prevents runtime crashes
+- Better developer experience with immediate validation feedback
+- Consistent validation between VS Code extension and runtime
+
+### 📊 Statistics
+
+- **4 core files modified**
+- **2 test files updated**
+- **1 instruction definition fixed**
+- **All 181 Python tests passing**
+- **All 55 VS Code extension tests passing**
+
+---
+
 ## Version 0.3.5 - Signed Integer Support for `to_signed` Built-in Function
 
 **Release Date:** 2026-01-07
