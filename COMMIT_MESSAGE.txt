@@ -1,0 +1,50 @@
+Release v0.3.7: Format Constant Fields Feature
+
+This release introduces format constant fields, allowing constant values to be
+defined directly in instruction format field definitions. This eliminates
+repetition when multiple instructions share the same constant field value.
+
+Major Changes:
+- Added format constant fields syntax: `field_name: [lsb:msb] = constant_value`
+- Constants are automatically encoded in all instructions using the format
+- Constants cannot be overridden in instruction encodings (validation enforced)
+- Constants do not appear as operands in disassembly output
+
+Features:
+- Grammar support in both textX and Langium
+- Comprehensive validation (Python and TypeScript)
+- Full code generation support (assembler, simulator, disassembler)
+- VS Code extension validation and syntax highlighting
+- Backward compatible with existing ISA specifications
+
+Implementation:
+- Extended grammar rules in isa.tx and isa.langium
+- Added constant_value field to FormatField model class
+- Updated all code generation templates
+- Added validation in Python validator and TypeScript validator
+- Created comprehensive test suite (12 new tests)
+- Added example file demonstrating usage
+
+Documentation:
+- Updated DSL_Specification.md with "Constant Fields in Formats" section
+- Updated test counts in all documentation (193 Python tests, 55 VS Code tests)
+- Updated RELEASE_NOTES.md with detailed feature documentation
+
+Test Results:
+- 193 Python tests passing (12 new tests for format constants)
+- 55 VS Code extension tests passing
+- All tests passing, 0 skipped, 0 failed
+
+Version Updates:
+- pyproject.toml: 0.3.6 → 0.3.7
+- vscode_extension/isa/package.json: 0.3.6 → 0.3.7
+- vscode_extension/isa/packages/extension/package.json: 0.3.6 → 0.3.7
+- vscode_extension/isa/packages/language/package.json: 0.3.6 → 0.3.7
+
+Files Changed:
+- Core: grammar, model, validator, code generation templates
+- VS Code: grammar, validator
+- Tests: new test_format_constants.py (12 tests)
+- Examples: new format_constants_example.isa
+- Documentation: DSL_Specification.md, RELEASE_NOTES.md, test counts
+

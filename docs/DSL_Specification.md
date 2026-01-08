@@ -274,13 +274,58 @@ formats {
 }
 ```
 
-**Syntax**: `format <name> <width> { <field_name>: [<lsb>:<msb>] }`
+**Syntax**: `format <name> <width> { <field_name>: [<lsb>:<msb>] [= <constant_value>] }`
 
 **Important**: 
 - Field bit ranges must not overlap
 - Total field width should not exceed the format width
 - Field names are used to reference fields in instructions
 - Bit ranges use `[lsb:msb]` format
+
+### Constant Fields in Formats
+
+Format fields can have constant values that apply to all instructions using that format. This eliminates the need to specify the same constant value in each instruction's encoding block.
+
+**Syntax**: `field_name: [lsb:msb] = constant_value`
+
+**Example**:
+```isa
+formats {
+    format R_TYPE 32 {
+        opcode: [0:5] = 0x01    // All R_TYPE instructions have opcode=1
+        rd: [6:10]
+        rs1: [11:15]
+        rs2: [16:20]
+    }
+}
+
+instructions {
+    instruction ADD {
+        format: R_TYPE
+        encoding: { }  // No need to specify opcode=0x01 - it's constant in format
+        operands: rd, rs1, rs2
+    }
+    
+    instruction SUB {
+        format: R_TYPE
+        encoding: { }  // opcode=0x01 is automatically encoded
+        operands: rd, rs1, rs2
+    }
+}
+```
+
+**Rules**:
+- Constants can be specified in hex (`0x01`) or decimal (`1`)
+- Constant values must fit within the field width (e.g., a 6-bit field can have values 0-63)
+- Constant values must be non-negative
+- **Constants cannot be overridden** in instruction encodings (validation error if attempted)
+- Constants are automatically encoded in all instructions using the format
+- Constants do not appear as operands in disassembly output
+
+**Benefits**:
+- Reduces repetition when multiple instructions share the same constant field value
+- Makes format definitions more self-documenting
+- Ensures consistency across all instructions using the format
 
 ### Variable-Length Formats
 

@@ -118,7 +118,7 @@ BundleSlot:
 ;
 
 FormatField:
-    name=ID ':' '[' lsb=INT ':' msb=INT ']'
+    name=ID ':' '[' lsb=INT ':' msb=INT ']' ('=' constant_value=EncodingValue)?
 ;
 
 InstructionBlock:

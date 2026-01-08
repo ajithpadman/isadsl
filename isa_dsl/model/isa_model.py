@@ -131,6 +131,11 @@ class FormatField(TextXObject):
     name: str
     msb: int
     lsb: int
+    constant_value: Optional[int] = None
+
+    def has_constant(self) -> bool:
+        """Check if this field has a constant value."""
+        return self.constant_value is not None
 
     def width(self) -> int:
         """Return the width of the field in bits."""
@@ -154,6 +159,12 @@ class FormatField(TextXObject):
         """Encode a value into the instruction word at this field position."""
         mask = self.mask()
         return (instruction & ~mask) | ((value << self.lsb) & mask)
+    
+    def encode_constant(self, instruction: int) -> int:
+        """Encode the constant value into the instruction word at this field position."""
+        if self.constant_value is not None:
+            return self.encode(self.constant_value, instruction)
+        return instruction
 
 
 @dataclass

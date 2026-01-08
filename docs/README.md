@@ -7,7 +7,7 @@ Welcome to the ISA DSL documentation. This directory contains all documentation 
 - **[INDEX.md](INDEX.md)**: Documentation index and navigation guide
 - **[DSL_Specification.md](DSL_Specification.md)**: Complete DSL specification covering all features
 - **[EXAMPLES.md](EXAMPLES.md)**: Detailed documentation of example ISA specifications
-- **[TESTING.md](TESTING.md)**: Complete testing documentation and test suite overview (181+ tests, all passing)
+- **[TESTING.md](TESTING.md)**: Complete testing documentation and test suite overview (193+ tests, all passing)
 
 ## Generated Tools Documentation
 
@@ -28,7 +28,7 @@ Welcome to the ISA DSL documentation. This directory contains all documentation 
 **Current Status**: ✅ Ready for Deployment (Beta)
 
 - **Test Suite**: 
-  - 181 Python tests, all passing, 0 skipped, 0 failed
+  - 193 Python tests, all passing, 0 skipped, 0 failed
   - 55 VS Code extension tests, all passing
 - **Code Quality**: Modular, well-organized, follows best practices
 - **Documentation**: Complete and up-to-date

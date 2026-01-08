@@ -422,6 +422,14 @@
         {%- if instr.is_bundle() %}
         # Bundle instruction - check encoding using format (not bundle_format)
         {%- if instr.format and instr.encoding %}
+        # Check format constant fields first
+        {%- for field in instr.format.fields %}
+        {%- if field.has_constant() %}
+        # Check format constant field {{ field.name }} == {{ field.constant_value }}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ field.constant_value }}:
+            return False
+        {%- endif %}
+        {%- endfor %}
         {%- set id_fields = instr.format.get_identification_fields() %}
         {%- if id_fields %}
         # Use identification fields: {{ id_fields | map(attribute='name') | join(', ') }}
@@ -455,6 +463,14 @@
         return False
         {%- endif %}
         {%- elif instr.format and instr.encoding %}
+        # Check format constant fields first
+        {%- for field in instr.format.fields %}
+        {%- if field.has_constant() %}
+        # Check format constant field {{ field.name }} == {{ field.constant_value }}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ field.constant_value }}:
+            return False
+        {%- endif %}
+        {%- endfor %}
         # Always check ALL encoding fields to ensure exact match
         # (Identification fields are for quick filtering, but we need exact match)
         {%- for assignment in instr.encoding.assignments %}
@@ -462,6 +478,16 @@
         {%- if field %}
         # Check {{ assignment.field }} == {{ assignment.value }}
         if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ assignment.value }}:
+            return False
+        {%- endif %}
+        {%- endfor %}
+        return True
+        {%- elif instr.format %}
+        # Instruction with format but no encoding - check format constants only
+        {%- for field in instr.format.fields %}
+        {%- if field.has_constant() %}
+        # Check format constant field {{ field.name }} == {{ field.constant_value }}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ field.constant_value }}:
             return False
         {%- endif %}
         {%- endfor %}

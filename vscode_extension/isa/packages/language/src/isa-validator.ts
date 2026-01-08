@@ -90,6 +90,38 @@ export class IsaValidator {
             }
 
             fieldRanges.push({ field, lsb, msb });
+            
+            // Validate constant value if present
+            if (field.constant_value !== undefined && field.constant_value !== null) {
+                const fieldWidth = msb - lsb + 1;
+                const maxValue = (1 << fieldWidth) - 1;
+                
+                // Extract constant value (can be hex or int from EncodingValue)
+                let constantValue: number;
+                const constVal = field.constant_value as EncodingValue | number | undefined;
+                
+                if (typeof constVal === 'object' && constVal !== null) {
+                    if ('hex_value' in constVal && constVal.hex_value !== undefined && constVal.hex_value !== null) {
+                        constantValue = parseInt(constVal.hex_value, 16);
+                    } else if ('int_value' in constVal && constVal.int_value !== undefined && constVal.int_value !== null) {
+                        constantValue = constVal.int_value;
+                    } else {
+                        continue; // Unknown format, skip validation
+                    }
+                } else if (typeof constVal === 'number') {
+                    constantValue = constVal;
+                } else {
+                    continue; // Unknown format, skip validation
+                }
+                
+                if (isNaN(constantValue)) {
+                    accept('error', `Format '${format.name}' field '${field.name}' constant value is not a valid number`, { node: field, property: 'constant_value' });
+                } else if (constantValue < 0) {
+                    accept('error', `Format '${format.name}' field '${field.name}' constant value ${constantValue} must be non-negative`, { node: field, property: 'constant_value' });
+                } else if (constantValue > maxValue) {
+                    accept('error', `Format '${format.name}' field '${field.name}' constant value ${constantValue} exceeds field width (max: ${maxValue})`, { node: field, property: 'constant_value' });
+                }
+            }
         }
 
         // Check identification fields exist
@@ -109,6 +141,41 @@ export class IsaValidator {
     checkFormatField(field: FormatField, accept: ValidationAcceptor): void {
         if (field.lsb > field.msb) {
             accept('error', `Field '${field.name}': LSB (${field.lsb}) must be <= MSB (${field.msb})`, { node: field });
+        }
+        
+        // Validate constant value if present
+        if (field.constant_value !== undefined && field.constant_value !== null) {
+            const fieldWidth = field.msb - field.lsb + 1;
+            const maxValue = (1 << fieldWidth) - 1;
+            
+            // Extract constant value (can be hex or int from EncodingValue)
+            let constantValue: number;
+            const constVal = field.constant_value as EncodingValue | number | undefined;
+            
+            if (typeof constVal === 'object' && constVal !== null) {
+                if ('hex_value' in constVal && constVal.hex_value !== undefined && constVal.hex_value !== null) {
+                    constantValue = parseInt(constVal.hex_value, 16);
+                } else if ('int_value' in constVal && constVal.int_value !== undefined && constVal.int_value !== null) {
+                    constantValue = constVal.int_value;
+                } else {
+                    return; // Unknown format, skip validation
+                }
+            } else if (typeof constVal === 'number') {
+                constantValue = constVal;
+            } else {
+                return; // Unknown format, skip validation
+            }
+            
+            if (isNaN(constantValue)) {
+                accept('error', `Constant value for field '${field.name}' is not a valid number`, { node: field, property: 'constant_value' });
+                return;
+            }
+            
+            if (constantValue < 0) {
+                accept('error', `Constant value ${constantValue} for field '${field.name}' must be non-negative`, { node: field, property: 'constant_value' });
+            } else if (constantValue > maxValue) {
+                accept('error', `Constant value ${constantValue} exceeds field '${field.name}' width (max: ${maxValue})`, { node: field, property: 'constant_value' });
+            }
         }
     }
 
@@ -132,8 +199,14 @@ export class IsaValidator {
                     if (!formatFieldNames.has(assignment.field)) {
                         accept('error', `Encoding field '${assignment.field}' not found in format '${format.name}'`, { node: assignment, property: 'field' });
                     } else {
-                        // Check encoding value fits in field width
+                        // Check if field has a constant value (cannot be overridden)
                         const field = format.fields.find(f => f.name === assignment.field);
+                        if (field && field.constant_value !== undefined && field.constant_value !== null) {
+                            accept('error', `Instruction '${instruction.mnemonic}' cannot override constant field '${assignment.field}' from format '${format.name}'`, { node: assignment, property: 'field' });
+                            continue;
+                        }
+                        
+                        // Check encoding value fits in field width
                         if (field) {
                             // Extract numeric value from EncodingValue (can be hex or int)
                             const encValue = assignment.value as EncodingValue | undefined;

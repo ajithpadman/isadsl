@@ -597,6 +597,15 @@
         {%- if instr.format %}
         instruction = 0
         
+        {%- if instr.format %}
+        # Set format constant fields first
+        {%- for field in instr.format.fields %}
+        {%- if field.has_constant() %}
+        instruction |= ({{ field.constant_value }} << {{ field.lsb }}) & {{ field.mask() }}
+        {%- endif %}
+        {%- endfor %}
+        {%- endif %}
+        
         {%- if instr.encoding %}
         # Set encoding fields
         {%- for assignment in instr.encoding.assignments %}

@@ -1,0 +1,70 @@
+// Example demonstrating format constant fields
+// This shows how constant values in format fields eliminate repetition
+
+architecture FormatConstantsExample {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R[32] 32
+    }
+    
+    formats {
+        // Format with constant opcode - all R-type instructions have opcode=1
+        format R_TYPE 32 {
+            opcode: [0:5] = 0x01    // Constant: all R_TYPE instructions have opcode=1
+            rd: [6:10]
+            rs1: [11:15]
+            rs2: [16:20]
+            funct: [21:25]
+        }
+        
+        // Format with constant opcode and funct - all I-type instructions share these
+        format I_TYPE 32 {
+            opcode: [0:5] = 0x02    // Constant opcode for I-type
+            rd: [6:10]
+            rs1: [11:15]
+            imm: [16:31]
+            funct: [26:31] = 0x00   // Constant funct for immediate operations
+        }
+    }
+    
+    instructions {
+        // ADD instruction - no need to specify opcode=0x01 in encoding
+        instruction ADD {
+            format: R_TYPE
+            encoding: { funct=0 }  // Only specify funct, opcode is constant
+            operands: rd, rs1, rs2
+            assembly_syntax: "ADD R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+                PC = PC + 4;
+            }
+        }
+        
+        // SUB instruction - also uses constant opcode
+        instruction SUB {
+            format: R_TYPE
+            encoding: { funct=1 }  // Different funct, same constant opcode
+            operands: rd, rs1, rs2
+            assembly_syntax: "SUB R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] - R[rs2];
+                PC = PC + 4;
+            }
+        }
+        
+        // ADDI instruction - uses I_TYPE format with two constants
+        instruction ADDI {
+            format: I_TYPE
+            encoding: { }  // Both opcode and funct are constants in format
+            operands: rd, rs1, imm
+            assembly_syntax: "ADDI R{rd}, R{rs1}, #{imm}"
+            behavior: {
+                R[rd] = R[rs1] + imm;
+                PC = PC + 4;
+            }
+        }
+    }
+}
+

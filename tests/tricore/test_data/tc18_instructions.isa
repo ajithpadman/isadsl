@@ -53,5 +53,25 @@ instructions {
 
        }
     }
+    instruction ABS_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x7C
+       }
+       operands:s2,d 
+       assembly_syntax: "ABS.H {d}, {s2}"
+       behavior:{
+        D_31_16 = sign_extend(extract_bits(D[s2], 31, 16), 16);
+        D_15_0 = sign_extend(extract_bits(D[s2], 15, 0), 16);
+        
+        result1 = (D_31_16 >= 0) ? D_31_16 : (0 - D_31_16);
+        result0 = (D_15_0 >= 0) ? D_15_0 : (0 - D_15_0);
+        result_halfword1 = extract_bits(result1, 31,16);
+        result_halfword0 = extract_bits(result0, 15,0);
+        D[d] = (result_halfword1<<16)| (result_halfword0);
+
+       }
+    }
 
 }

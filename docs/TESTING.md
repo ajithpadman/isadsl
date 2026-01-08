@@ -4,7 +4,7 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of **181 test cases** (200+ test functions including parametrized tests) organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
+The test suite consists of **193 test cases** (200+ test functions including parametrized tests) organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
 
 ### Test Organization
 
@@ -386,7 +386,7 @@ If parser tests fail:
 
 ## Performance
 
-The full test suite (181 test cases) runs in approximately 20-25 seconds on modern hardware. Individual test files typically complete in under 1 second.
+The full test suite (193 test cases) runs in approximately 20-25 seconds on modern hardware. Individual test files typically complete in under 1 second.
 
 ## Code Quality Standards
 

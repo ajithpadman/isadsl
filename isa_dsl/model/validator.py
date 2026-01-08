@@ -56,6 +56,28 @@ class ISAValidator:
                         f"format {fmt.name}"
                     )
                 )
+            
+            # Validate constant values fit within field width
+            for field in fmt.fields:
+                if field.has_constant():
+                    field_width = field.width()
+                    max_value = (1 << field_width) - 1
+                    if field.constant_value < 0:
+                        self.errors.append(
+                            ValidationError(
+                                f"Format '{fmt.name}' field '{field.name}' constant value "
+                                f"{field.constant_value} must be non-negative",
+                                f"format {fmt.name}"
+                            )
+                        )
+                    elif field.constant_value > max_value:
+                        self.errors.append(
+                            ValidationError(
+                                f"Format '{fmt.name}' field '{field.name}' constant value "
+                                f"{field.constant_value} exceeds field width (max: {max_value})",
+                                f"format {fmt.name}"
+                            )
+                        )
 
     def _validate_instructions(self):
         """Validate instruction definitions."""
@@ -95,6 +117,17 @@ class ISAValidator:
                                 f"instruction {instr.mnemonic}"
                             )
                         )
+                    else:
+                        # Check if field has a constant value (cannot be overridden)
+                        field = instr.format.get_field(assignment.field)
+                        if field and field.has_constant():
+                            self.errors.append(
+                                ValidationError(
+                                    f"Instruction '{instr.mnemonic}' cannot override constant field "
+                                    f"'{assignment.field}' from format '{instr.format.name}'",
+                                    f"instruction {instr.mnemonic}"
+                                )
+                            )
 
     def _validate_encodings(self):
         """Check for encoding conflicts between instructions."""

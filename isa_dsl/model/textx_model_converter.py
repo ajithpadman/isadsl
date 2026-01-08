@@ -168,11 +168,32 @@ class TextXModelConverter:
                         if hasattr(id_list, 'rest') and id_list.rest:
                             identification_fields.extend([str(name) for name in id_list.rest])
                     
+                    # Extract format fields with constant values
+                    format_fields = []
+                    if hasattr(f, 'fields'):
+                        for field in f.fields:
+                            constant_value = None
+                            # Check if field has constant_value attribute from grammar
+                            if hasattr(field, 'constant_value') and field.constant_value is not None:
+                                enc_value = field.constant_value
+                                # Handle hex or int values (same as EncodingValue)
+                                if hasattr(enc_value, 'hex_value') and enc_value.hex_value:
+                                    constant_value = int(enc_value.hex_value, 16)
+                                elif hasattr(enc_value, 'int_value') and enc_value.int_value is not None:
+                                    constant_value = enc_value.int_value
+                                elif isinstance(enc_value, int):
+                                    constant_value = enc_value
+                            format_fields.append(FormatField(
+                                name=field.name, 
+                                msb=field.msb, 
+                                lsb=field.lsb,
+                                constant_value=constant_value
+                            ))
+                    
                     fmt = InstructionFormat(
                         name=f.name,
                         width=f.width,
-                        fields=[FormatField(name=field.name, msb=field.msb, lsb=field.lsb) 
-                                for field in f.fields] if hasattr(f, 'fields') else [],
+                        fields=format_fields,
                         identification_fields=identification_fields
                     )
                     model.formats.append(fmt)

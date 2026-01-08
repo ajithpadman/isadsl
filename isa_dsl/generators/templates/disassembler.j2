@@ -314,6 +314,14 @@
         instruction_word = instruction_word & ((1 << {{ instr.format.width }}) - 1)
         {%- endif %}
         
+        # Check format constant fields first
+        {%- for field in instr.format.fields %}
+        {%- if field.has_constant() %}
+        # Check format constant field {{ field.name }} == {{ field.constant_value }}
+        if (instruction_word >> {{ field.lsb }}) & {{ field.width() | mask }} != {{ field.constant_value }}:
+            return None
+        {%- endif %}
+        {%- endfor %}
         # Check if instruction matches encoding using identification fields
         {%- set id_fields = instr.format.get_identification_fields() %}
         {%- if id_fields %}

@@ -1,5 +1,174 @@
 # Release Notes
 
+## Version 0.3.7 - Format Constant Fields Feature
+
+**Release Date:** 2026-01-07
+
+### 🎯 Major Changes
+
+#### Format Constant Fields
+
+Added support for defining constant values directly in instruction format field definitions. This feature eliminates repetition when multiple instructions share the same constant field value (e.g., opcode).
+
+**New Syntax:**
+```isa
+formats {
+    format R_TYPE 32 {
+        opcode: [0:5] = 0x01    // All R_TYPE instructions have opcode=1
+        rd: [6:10]
+        rs1: [11:15]
+        rs2: [16:20]
+    }
+}
+```
+
+**Key Features:**
+- Constants can be specified in hex (`0x01`) or decimal (`1`)
+- Constant values must fit within the field width
+- Constant values must be non-negative
+- **Constants cannot be overridden** in instruction encodings (validation error if attempted)
+- Constants are automatically encoded in all instructions using the format
+- Constants do not appear as operands in disassembly output
+
+**Benefits:**
+- Reduces repetition when multiple instructions share the same constant field value
+- Makes format definitions more self-documenting
+- Ensures consistency across all instructions using the format
+- Simplifies instruction definitions by removing redundant encoding assignments
+
+**Example:**
+```isa
+formats {
+    format R_TYPE 32 {
+        opcode: [0:5] = 0x01    // Format constant
+        rd: [6:10]
+        rs1: [11:15]
+        rs2: [16:20]
+        funct: [21:25]         // Instruction encoding can set this
+    }
+}
+
+instructions {
+    instruction ADD {
+        format: R_TYPE
+        encoding: { funct=0x0A }  // Only need to specify funct, opcode is constant
+        operands: rd, rs1, rs2
+    }
+}
+```
+
+### ✨ Improvements
+
+- **Grammar Support**: Extended both textX and Langium grammars to support constant field syntax
+- **Model Integration**: Added `constant_value` field to `FormatField` class with helper methods
+- **Validation**: Comprehensive validation in both Python and TypeScript:
+  - Validates constant values fit within field width
+  - Validates constants are non-negative
+  - Prevents instruction-level overrides of format constants
+- **Code Generation**: Updated assembler, simulator, and disassembler templates:
+  - Assembler: Applies format constants before instruction-specific encodings
+  - Simulator: Checks format constants during instruction matching
+  - Disassembler: Excludes constant fields from operand display
+- **VS Code Extension**: Full language server support with validation and syntax highlighting
+- **Backward Compatibility**: Existing formats without constants continue to work unchanged
+
+### 📝 Technical Details
+
+**Files Modified:**
+- `isa_dsl/grammar/isa.tx` - Added optional constant value to `FormatField` rule
+- `vscode_extension/isa/packages/language/src/isa.langium` - Added constant value support to Langium grammar
+- `isa_dsl/model/isa_model.py` - Added `constant_value` field and helper methods to `FormatField`
+- `isa_dsl/model/textx_model_converter.py` - Extract constant values from parsed model
+- `isa_dsl/model/validator.py` - Added validation for format constants
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Added TypeScript validation
+- `isa_dsl/generators/templates/assembler.j2` - Apply format constants during encoding
+- `isa_dsl/generators/templates/simulator.j2` - Check format constants during matching
+- `isa_dsl/generators/templates/disassembler.j2` - Exclude constants from operand display
+
+**Tests:**
+- `tests/core/test_format_constants.py` - Comprehensive test suite (12 tests) covering:
+  - Parsing hex and decimal constants
+  - Validation (field width, non-negative, override prevention)
+  - Assembler encoding with format constants
+  - Simulator matching with format constants
+  - Disassembler exclusion of constants
+  - Combined format constants and instruction encodings
+
+**Examples:**
+- `examples/format_constants_example.isa` - Example demonstrating format constant usage
+
+### 📦 Files Changed
+
+**Core Implementation:**
+- `isa_dsl/grammar/isa.tx` - Grammar extension for constant fields
+- `isa_dsl/model/isa_model.py` - Model support for constants
+- `isa_dsl/model/textx_model_converter.py` - Constant extraction
+- `isa_dsl/model/validator.py` - Validation logic
+- `isa_dsl/generators/templates/assembler.j2` - Constant encoding
+- `isa_dsl/generators/templates/simulator.j2` - Constant matching
+- `isa_dsl/generators/templates/disassembler.j2` - Constant exclusion
+
+**VS Code Extension:**
+- `vscode_extension/isa/packages/language/src/isa.langium` - Grammar extension
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Validation
+
+**Tests:**
+- `tests/core/test_format_constants.py` - New comprehensive test suite
+
+**Examples:**
+- `examples/format_constants_example.isa` - New example file
+
+**Documentation:**
+- `docs/DSL_Specification.md` - Added "Constant Fields in Formats" section
+
+**Version Updates:**
+- `pyproject.toml` - Version 0.3.6 → 0.3.7
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.3.6 → 0.3.7
+- `vscode_extension/isa/packages/language/package.json` - Version 0.3.6 → 0.3.7
+- `vscode_extension/isa/package.json` - Version 0.3.6 → 0.3.7
+
+### 🔄 Migration Guide
+
+No breaking changes. Existing ISA specifications continue to work without modification.
+
+**To Use Format Constants:**
+1. Add constant values to format field definitions: `field_name: [lsb:msb] = constant_value`
+2. Remove redundant encoding assignments from instructions that use the format
+3. Ensure constant values fit within field width (validation will catch errors)
+
+**Example Migration:**
+```isa
+// Before:
+format R_TYPE 32 {
+    opcode: [0:5]
+    ...
+}
+instruction ADD {
+    format: R_TYPE
+    encoding: { opcode=0x01, funct=0x0A }
+    ...
+}
+
+// After:
+format R_TYPE 32 {
+    opcode: [0:5] = 0x01  // Constant in format
+    ...
+}
+instruction ADD {
+    format: R_TYPE
+    encoding: { funct=0x0A }  // Only non-constant fields
+    ...
+}
+```
+
+### 📊 Test Coverage
+
+- **Python Tests**: 193 test cases, all passing (12 new tests for format constants)
+- **VS Code Extension Tests**: 55 tests, all passing
+- **Total**: 248 tests, all passing
+
+---
+
 ## Version 0.3.6 - Negative Shift Count Fix and VS Code Validation Enhancements
 
 **Release Date:** 2026-01-07
