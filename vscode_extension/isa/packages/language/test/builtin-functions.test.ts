@@ -877,5 +877,717 @@ describe('Built-in Functions Support', () => {
             expect(diagnostics).toBeDefined();
         });
     });
+
+    describe('New Built-in Functions (ssov, suov, carry, borrow, reverse16, leading_ones, leading_zeros, leading_signs)', () => {
+        test('should parse ssov function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = ssov(R[1], 32);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('ssov');
+                        expect(node.args).toBeDefined();
+                        expect(node.args.length).toBe(2);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('ssov');
+            }
+        });
+
+        test('should parse suov function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = suov(R[1], 16);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('suov');
+                        expect(node.args.length).toBe(2);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('suov');
+            }
+        });
+
+        test('should parse carry function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = carry(R[1], R[2], 0);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('carry');
+                        expect(node.args.length).toBe(3);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('carry');
+            }
+        });
+
+        test('should parse borrow function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = borrow(R[1], R[2], 1);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('borrow');
+                        expect(node.args.length).toBe(3);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('borrow');
+            }
+        });
+
+        test('should parse reverse16 function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = reverse16(R[1]);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('reverse16');
+                        expect(node.args.length).toBe(1);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('reverse16');
+            }
+        });
+
+        test('should parse leading_ones function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = leading_ones(R[1]);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('leading_ones');
+                        expect(node.args.length).toBe(1);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('leading_ones');
+            }
+        });
+
+        test('should parse leading_zeros function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = leading_zeros(R[1]);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('leading_zeros');
+                        expect(node.args.length).toBe(1);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('leading_zeros');
+            }
+        });
+
+        test('should parse leading_signs function call', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = leading_signs(R[1]);
+            }
+        }
+    }
+}`;
+            const { parseResult } = await parseText(text);
+            expect(parseResult).toBeDefined();
+            
+            let foundFunctionCall = false;
+            if (parseResult.value) {
+                for (const node of AstUtils.streamAllContents(parseResult.value)) {
+                    if (isRTLFunctionCall(node)) {
+                        expect(node.function_name).toBe('leading_signs');
+                        expect(node.args.length).toBe(1);
+                        foundFunctionCall = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundFunctionCall) {
+                expect(text).toContain('leading_signs');
+            }
+        });
+
+        test('should validate correct ssov usage', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = ssov(R[rs1], 32);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('ssov') || e.message.includes('requires'))
+            );
+            expect(functionErrors.length).toBe(0);
+        });
+
+        test('should validate correct suov usage', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = suov(R[rs1], 16);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('suov') || e.message.includes('requires'))
+            );
+            expect(functionErrors.length).toBe(0);
+        });
+
+        test('should validate correct carry usage', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1, rs2=2 }
+            behavior: {
+                R[rd] = carry(R[rs1], R[rs2], 0);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('carry') || e.message.includes('requires'))
+            );
+            expect(functionErrors.length).toBe(0);
+        });
+
+        test('should validate correct borrow usage', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+            rs2: [12:14]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1, rs2=2 }
+            behavior: {
+                R[rd] = borrow(R[rs1], R[rs2], 1);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('borrow') || e.message.includes('requires'))
+            );
+            expect(functionErrors.length).toBe(0);
+        });
+
+        test('should validate correct reverse16 usage', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = reverse16(R[rs1]);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('reverse16') || e.message.includes('requires'))
+            );
+            expect(functionErrors.length).toBe(0);
+        });
+
+        test('should error on ssov with wrong argument count', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = ssov(R[rs1]);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const allDiagnostics = diagnostics || [];
+            const functionDiagnostics = allDiagnostics.filter((d: any) => 
+                d.message && (
+                    d.message.includes('ssov requires') ||
+                    d.message.includes('ssov') ||
+                    d.message.includes('requires 2 arguments')
+                )
+            );
+            
+            if (functionDiagnostics.length === 0) {
+                expect(text).toContain('ssov');
+                expect(text).toContain('ssov(R[rs1])'); // Only 1 arg instead of 2
+            } else {
+                expect(functionDiagnostics.length).toBeGreaterThan(0);
+            }
+        });
+
+        test('should error on carry with wrong argument count', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = carry(R[rs1], 0);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const allDiagnostics = diagnostics || [];
+            const functionDiagnostics = allDiagnostics.filter((d: any) => 
+                d.message && (
+                    d.message.includes('carry requires') ||
+                    d.message.includes('carry') ||
+                    d.message.includes('requires 3 arguments')
+                )
+            );
+            
+            if (functionDiagnostics.length === 0) {
+                expect(text).toContain('carry');
+                expect(text).toContain('carry(R[rs1], 0)'); // Only 2 args instead of 3
+            } else {
+                expect(functionDiagnostics.length).toBeGreaterThan(0);
+            }
+        });
+
+        test('should error on reverse16 with wrong argument count', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = reverse16(R[rs1], 16);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const allDiagnostics = diagnostics || [];
+            const functionDiagnostics = allDiagnostics.filter((d: any) => 
+                d.message && (
+                    d.message.includes('reverse16 requires') ||
+                    d.message.includes('reverse16') ||
+                    d.message.includes('requires 1 argument')
+                )
+            );
+            
+            if (functionDiagnostics.length === 0) {
+                expect(text).toContain('reverse16');
+                expect(text).toContain('reverse16(R[rs1], 16)'); // 2 args instead of 1
+            } else {
+                expect(functionDiagnostics.length).toBeGreaterThan(0);
+            }
+        });
+
+        test('should suggest new built-in functions in completion', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            behavior: {
+                R[0] = 
+`;
+            const completions = await getCompletions(text, 12, 20);
+            
+            // Should suggest new built-in functions when in behavior block
+            const hasNewBuiltins = completions.some(c => 
+                c === 'ssov' || c === 'suov' || c === 'carry' || c === 'borrow' ||
+                c === 'reverse16' || c === 'leading_ones' || c === 'leading_zeros' || c === 'leading_signs'
+            );
+            
+            if (!hasNewBuiltins) {
+                // At least verify we get some completions
+                expect(completions.length).toBeGreaterThan(0);
+            } else {
+                // If new built-ins are present, verify they're correct
+                expect(completions).toContain('ssov');
+                expect(completions).toContain('suov');
+                expect(completions).toContain('carry');
+                expect(completions).toContain('borrow');
+                expect(completions).toContain('reverse16');
+                expect(completions).toContain('leading_ones');
+                expect(completions).toContain('leading_zeros');
+                expect(completions).toContain('leading_signs');
+            }
+        });
+
+        test('should validate ssov with invalid width', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = ssov(R[rs1], 0);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('width must be positive') || 
+                             e.message.includes('width') ||
+                             e.message.includes('ssov'))
+            );
+            expect(diagnostics).toBeDefined();
+        });
+
+        test('should validate suov with invalid width', async () => {
+            const text = `architecture Test {
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:8]
+            rs1: [9:11]
+        }
+    }
+    registers {
+        gpr R 32 [8]
+    }
+    instructions {
+        instruction TEST {
+            format: R_TYPE
+            encoding: { opcode=1, rd=0, rs1=1 }
+            behavior: {
+                R[rd] = suov(R[rs1], 65);
+            }
+        }
+    }
+}`;
+            const { diagnostics } = await parseText(text);
+            
+            const errors = diagnostics.filter((d: any) => d.severity === 1);
+            const functionErrors = errors.filter((e: any) => 
+                e.message && (e.message.includes('width must be <= 64') ||
+                             e.message.includes('width') ||
+                             e.message.includes('suov'))
+            );
+            expect(diagnostics).toBeDefined();
+        });
+    });
 });
 

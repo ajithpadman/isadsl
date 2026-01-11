@@ -1,46 +1,94 @@
-Release v0.3.8: VS Code Extension Icon
+Release v0.3.9: New Built-in Functions for TC18 Support
 
-This release adds a professional icon for the VS Code extension, improving
-visual identity and marketplace presence.
+This release adds 8 new built-in functions to support TriCore TC18 instruction
+behavior descriptions, along with comprehensive testing and documentation.
 
 Major Changes:
-- Added 128x128 PNG icon for VS Code extension
-- Icon design features processor chip with instruction format visualization
-- Blue gradient theme representing ISA/processor architecture
-- Includes SVG source file for future modifications
+- Added 8 new built-in functions: ssov, suov, carry, borrow, reverse16,
+  leading_ones, leading_zeros, leading_signs
+- Full support in RTL interpreter, simulator generator, and VS Code extension
+- Comprehensive test coverage (20 Python tests + 18 VS Code extension tests)
+- Complete documentation updates
 
-Features:
-- Professional icon design suitable for programming language extension
-- Icon configured in package.json for automatic marketplace display
-- Modern, tech-focused visual identity
-- "0xISA" hexadecimal indicator for brand recognition
+New Built-in Functions:
+
+Saturation Functions:
+- ssov(value, width) - Signed Saturation on Overflow
+  * Saturates to 0x7FFFFFFF (max) or 0x80000000 (min) for 32-bit
+  * Needed for: ADDS, ADDS.H, ABSDIFS, ABSDIFS.H, ABSS, ABSS.H, RSUBS, MULS
+- suov(value, width) - Unsigned Saturation on Overflow
+  * Saturates to 0xFFFFFFFF (max) or 0x00000000 (min) for 32-bit
+  * Needed for: ADDS.U, ADDS.HU, RSUBS.U
+
+Carry/Borrow Functions:
+- carry(operand1, operand2, carry_in) - Calculate Carry Out
+  * Returns 1 if carry occurs, 0 otherwise
+  * Needed for: ADDC, ADDX, SUBC, SUBX
+- borrow(operand1, operand2, borrow_in) - Calculate Borrow Out
+  * Returns 1 if borrow occurs, 0 otherwise
+  * Needed for: SUBC, SUBX
+
+Bit Manipulation Functions:
+- reverse16(value) - Reverse 16-bit value (bit order reversal)
+  * Needed for: Bit-reverse addressing mode instructions
+- leading_ones(value) - Count Leading Ones
+  * Needed for: CLO, CLO.H instructions
+- leading_zeros(value) - Count Leading Zeros
+  * Needed for: CLZ, CLZ.H instructions
+- leading_signs(value) - Count Leading Sign Bits
+  * Needed for: CLS, CLS.H instructions
 
 Implementation:
-- Created icon.svg (source file, 2.5KB)
-- Generated icon.png (128x128 PNG, 5.7KB)
-- Updated package.json with icon field
-- Icon appears in VS Code Extensions view and marketplace
+
+Python Package:
+- isa_dsl/runtime/rtl_interpreter.py: Added 8 new function implementations
+- isa_dsl/generators/simulator.py: Updated to generate calls to helper methods
+- isa_dsl/generators/templates/simulator.j2: Added 8 new helper methods
+- isa_dsl/model/validator.py: Updated to recognize new built-ins
+
+VS Code Extension:
+- isa-validator.ts: Added validation for all new functions with argument count checks
+- isa-completion-provider.ts: Added autocomplete suggestions with documentation
+- builtin-functions.test.ts: Added 18 new test cases
 
 Documentation:
-- Updated RELEASE_NOTES.md with version 0.3.8 details
-- Updated version badges in README.md and extension README.md
+- docs/DSL_Specification.md: Added comprehensive documentation for all new functions
+- docs/LANGUAGE_SERVER.md: Updated built-in function validation documentation
+- docs/TESTING.md: Updated test documentation
+
+Testing:
+- tests/rtl_builtins/test_new_builtins.py: New test file with 20 test cases
+  * 8 direct RTL interpreter tests
+  * 12 simulator integration tests
+- tests/rtl_builtins/test_data/builtins.isa: Added 12 new test instructions
+- All edge cases covered (overflow, underflow, boundary values)
 
 Test Results:
-- 193 Python tests passing
-- 55 VS Code extension tests passing
-- All tests passing, 0 skipped, 0 failed
+- Python: 213 tests passing (20 new tests added)
+- VS Code Extension: 74 tests passing (18 new tests added)
+- Total: 287 tests, all passing, 0 skipped, 0 failed
 
 Version Updates:
-- pyproject.toml: 0.3.7 → 0.3.8
-- vscode_extension/isa/package.json: 0.3.7 → 0.3.8
-- vscode_extension/isa/packages/extension/package.json: 0.3.7 → 0.3.8
-- vscode_extension/isa/packages/language/package.json: 0.3.7 → 0.3.8
+- pyproject.toml: 0.3.8 → 0.3.9
+- vscode_extension/isa/package.json: 0.3.8 → 0.3.9
+- vscode_extension/isa/packages/extension/package.json: 0.3.8 → 0.3.9
+- vscode_extension/isa/packages/language/package.json: 0.3.8 → 0.3.9
 
 Files Changed:
-- New: vscode_extension/isa/packages/extension/icon.png
-- New: vscode_extension/isa/packages/extension/icon.svg
-- Modified: vscode_extension/isa/packages/extension/package.json (added icon field)
-- Modified: RELEASE_NOTES.md (added v0.3.8 entry)
-- Modified: README.md (version badge)
-- Modified: vscode_extension/isa/packages/extension/README.md (version badge)
-- Modified: All package.json files (version bump)
+- New: tests/rtl_builtins/test_new_builtins.py (20 test cases)
+- Modified: isa_dsl/runtime/rtl_interpreter.py (8 new functions)
+- Modified: isa_dsl/generators/simulator.py (function mapping)
+- Modified: isa_dsl/generators/templates/simulator.j2 (8 helper methods)
+- Modified: isa_dsl/model/validator.py (built-in list)
+- Modified: vscode_extension/isa/packages/language/src/isa-validator.ts (validation)
+- Modified: vscode_extension/isa/packages/language/src/isa-completion-provider.ts (completions)
+- Modified: vscode_extension/isa/packages/language/test/builtin-functions.test.ts (18 tests)
+- Modified: tests/rtl_builtins/test_data/builtins.isa (12 test instructions)
+- Modified: docs/DSL_Specification.md (new functions documentation)
+- Modified: docs/LANGUAGE_SERVER.md (validation documentation)
+- Modified: docs/TESTING.md (test documentation)
+- Modified: RELEASE_NOTES.md (v0.3.9 entry)
+- Modified: All version files (0.3.8 → 0.3.9)
+
+Breaking Changes: None
+Migration: No changes required, all new functions are additive

@@ -337,6 +337,155 @@
             return value & ((1 << to_bits) - 1)
         # Just mask to the target width (zero extension)
         return value & ((1 << to_bits) - 1)
+    
+    def _ssov(self, value: int, width: int) -> int:
+        """Signed Saturation on Overflow. Saturates a signed value to the maximum/minimum representable value in the specified width."""
+        if width <= 0 or width > 64:
+            raise ValueError(f"ssov: width must be positive and <= 64, got {width}")
+        
+        # Get the maximum and minimum representable signed values for the width
+        max_val = (1 << (width - 1)) - 1  # e.g., 0x7FFFFFFF for 32-bit
+        min_val_unsigned = (1 << (width - 1))  # e.g., 0x80000000 for 32-bit
+        min_val_signed = -(1 << (width - 1))   # e.g., -2147483648 for 32-bit
+        
+        # Extract lower width bits
+        masked_value = value & ((1 << width) - 1)
+        
+        # Interpret as signed
+        sign_bit = (masked_value >> (width - 1)) & 1
+        if sign_bit:
+            signed_value = masked_value - (1 << width)
+        else:
+            signed_value = masked_value
+        
+        # For signed saturation:
+        # - If masked_value == min_val_unsigned (exactly 0x8000...0), it's the minimum which often represents overflow -> saturate to max
+        # - If signed_value exceeds max_val, saturate to max
+        # - If signed_value is below min_val_signed, saturate to min
+        # - Otherwise, keep the value (including valid negative values like 0xFFFFFFFF = -1)
+        if masked_value == min_val_unsigned:
+            # Exactly the minimum value (0x8000...0) often represents overflow, saturate to maximum positive
+            result = max_val
+        elif signed_value > max_val:
+            # Value exceeds maximum, saturate to maximum
+            result = max_val
+        elif signed_value < min_val_signed:
+            # Value is below minimum, saturate to minimum
+            result = min_val_signed
+        else:
+            result = signed_value
+        
+        # Convert back to unsigned representation for return
+        if result < 0:
+            return result & 0xFFFFFFFF  # Convert negative to unsigned 32-bit
+        return result & 0xFFFFFFFF
+    
+    def _suov(self, value: int, width: int) -> int:
+        """Unsigned Saturation on Overflow. Saturates an unsigned value to the maximum representable value in the specified width."""
+        if width <= 0 or width > 64:
+            raise ValueError(f"suov: width must be positive and <= 64, got {width}")
+        
+        # Get the maximum representable unsigned value for the width
+        max_val = (1 << width) - 1  # e.g., 0xFFFFFFFF for 32-bit
+        
+        # Mask to width bits first, then check if it exceeds max
+        masked_value = value & ((1 << width) - 1)
+        
+        # For unsigned saturation, if the original value exceeds max_val, saturate
+        # Otherwise, if value < 0, saturate to 0
+        if value > max_val:
+            result = max_val
+        elif value < 0:
+            result = 0
+        else:
+            result = masked_value
+        
+        return result & 0xFFFFFFFF
+    
+    def _carry(self, operand1: int, operand2: int, carry_in: int) -> int:
+        """Calculate Carry Out from addition of three operands. Returns 1 if carry occurs, 0 otherwise."""
+        # Convert to unsigned 64-bit for calculation to detect overflow
+        op1_64 = operand1 & 0xFFFFFFFF
+        op2_64 = operand2 & 0xFFFFFFFF
+        carry_64 = carry_in & 0x1  # Only bit 0 matters
+        
+        # Calculate sum in 64-bit to detect overflow
+        sum_64 = op1_64 + op2_64 + carry_64
+        
+        # Check if there's a carry out (sum exceeds 32 bits)
+        if sum_64 > 0xFFFFFFFF:
+            return 1
+        return 0
+    
+    def _borrow(self, operand1: int, operand2: int, borrow_in: int) -> int:
+        """Calculate Borrow Out from subtraction. Returns 1 if borrow occurs, 0 otherwise."""
+        # Convert to unsigned 32-bit
+        op1 = operand1 & 0xFFFFFFFF
+        op2 = operand2 & 0xFFFFFFFF
+        borrow = borrow_in & 0x1  # Only bit 0 matters
+        
+        # Check if borrow occurs: operand1 < (operand2 + borrow)
+        if op1 < (op2 + borrow):
+            return 1
+        return 0
+    
+    def _reverse16(self, value: int) -> int:
+        """Reverse 16-bit value. Reverses the bit order of a 16-bit value."""
+        # Extract lower 16 bits
+        value = value & 0xFFFF
+        
+        # Reverse bits
+        result = 0
+        for i in range(16):
+            if (value >> i) & 1:
+                result |= (1 << (15 - i))
+        
+        return result & 0xFFFFFFFF
+    
+    def _leading_ones(self, value: int) -> int:
+        """Count Leading Ones. Counts consecutive ones starting from MSB."""
+        value = value & 0xFFFFFFFF  # Work with 32-bit
+        
+        # Count consecutive ones starting from MSB (bit 31)
+        count = 0
+        for i in range(31, -1, -1):
+            if (value >> i) & 1:
+                count += 1
+            else:
+                break
+        
+        return count
+    
+    def _leading_zeros(self, value: int) -> int:
+        """Count Leading Zeros. Counts consecutive zeros starting from MSB."""
+        value = value & 0xFFFFFFFF  # Work with 32-bit
+        
+        # Count consecutive zeros starting from MSB (bit 31)
+        count = 0
+        for i in range(31, -1, -1):
+            if not ((value >> i) & 1):
+                count += 1
+            else:
+                break
+        
+        return count
+    
+    def _leading_signs(self, value: int) -> int:
+        """Count Leading Sign Bits. Counts consecutive bits with same value as sign bit, starting from bit 30."""
+        value = value & 0xFFFFFFFF  # Work with 32-bit
+        
+        # Get sign bit (bit 31)
+        sign_bit = (value >> 31) & 1
+        
+        # Count consecutive bits with same value as sign bit, starting from bit 30
+        count = 0
+        for i in range(30, -1, -1):
+            if ((value >> i) & 1) == sign_bit:
+                count += 1
+            else:
+                break
+        
+        return count
 
     def _execute_non_bundle_instruction(self, instruction_word: int) -> bool:
         """Execute a single instruction word, skipping bundle checks (used for bundle slots)."""

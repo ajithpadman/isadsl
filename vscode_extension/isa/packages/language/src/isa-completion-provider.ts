@@ -221,6 +221,94 @@ export class IsaCompletionProvider extends DefaultCompletionProvider {
                     kind: 'markdown',
                     value: 'Alias for `zero_extend`. Zero extend a value from `from_bits` to `to_bits` (default 32).'
                 }
+            },
+            {
+                label: 'ssov',
+                kind: 3, // Function
+                detail: 'ssov(value, width) - Signed Saturation on Overflow',
+                insertText: 'ssov(${1:value}, ${2:width})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Saturates a signed value to the maximum/minimum representable value in the specified width.\n\n**Example:** `ssov(result, 32)` saturates to 0x7FFFFFFF (max) or 0x80000000 (min) for 32-bit'
+                }
+            },
+            {
+                label: 'suov',
+                kind: 3, // Function
+                detail: 'suov(value, width) - Unsigned Saturation on Overflow',
+                insertText: 'suov(${1:value}, ${2:width})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Saturates an unsigned value to the maximum representable value in the specified width.\n\n**Example:** `suov(result, 32)` saturates to 0xFFFFFFFF (max) or 0x00000000 (min) for 32-bit'
+                }
+            },
+            {
+                label: 'carry',
+                kind: 3, // Function
+                detail: 'carry(operand1, operand2, carry_in) - Calculate Carry Out',
+                insertText: 'carry(${1:operand1}, ${2:operand2}, ${3:carry_in})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Calculates the carry out from addition of three operands. Returns 1 if carry occurs, 0 otherwise.\n\n**Example:** `carry(R[rs1], R[rs2], PSW.C)`'
+                }
+            },
+            {
+                label: 'borrow',
+                kind: 3, // Function
+                detail: 'borrow(operand1, operand2, borrow_in) - Calculate Borrow Out',
+                insertText: 'borrow(${1:operand1}, ${2:operand2}, ${3:borrow_in})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Calculates the borrow out from subtraction. Returns 1 if borrow occurs, 0 otherwise.\n\n**Example:** `borrow(R[rs1], R[rs2], PSW.C)`'
+                }
+            },
+            {
+                label: 'reverse16',
+                kind: 3, // Function
+                detail: 'reverse16(value) - Reverse 16-bit value',
+                insertText: 'reverse16(${1:value})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Reverses the bit order of a 16-bit value.\n\n**Example:** `reverse16(R[rs1][15:0])`'
+                }
+            },
+            {
+                label: 'leading_ones',
+                kind: 3, // Function
+                detail: 'leading_ones(value) - Count Leading Ones',
+                insertText: 'leading_ones(${1:value})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Counts consecutive ones starting from MSB.\n\n**Example:** `leading_ones(R[rs1])`'
+                }
+            },
+            {
+                label: 'leading_zeros',
+                kind: 3, // Function
+                detail: 'leading_zeros(value) - Count Leading Zeros',
+                insertText: 'leading_zeros(${1:value})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Counts consecutive zeros starting from MSB.\n\n**Example:** `leading_zeros(R[rs1])`'
+                }
+            },
+            {
+                label: 'leading_signs',
+                kind: 3, // Function
+                detail: 'leading_signs(value) - Count Leading Sign Bits',
+                insertText: 'leading_signs(${1:value})',
+                insertTextFormat: 2,
+                documentation: {
+                    kind: 'markdown',
+                    value: 'Counts consecutive bits with same value as sign bit, starting from bit 30.\n\n**Example:** `leading_signs(R[rs1])`'
+                }
             }
         ];
 

@@ -16,16 +16,9 @@ instructions {
         av = msb^lsb;
         PSW.AV = (av > 0) ? 1 : 0;
         PSW.SV = (av > 0) ? 1 : PSW.SV;
+        PSW.V =  (result > 0x7FFFFFFF) ? 1 : 0;
+        PSW.SV = (result > 0x7FFFFFFF) ? 1 : PSW.SV;
         D[d] = result;
-        if(result > 0x7FFFFFFF){
-            PSW.V = 1;
-            PSW.SV = 1;
-
-        }
-        else{
-            PSW.V = 0;
-        }
-
        }
     }
     instruction ABS_B {
@@ -50,6 +43,8 @@ instructions {
         result0 = (D_7_0 >= 0) ? D_7_0 : (0 - D_7_0);
         result_byte0 = extract_bits(result0, 7,0);
         D[d] = (result_byte3<<24)| (result_byte2<<16)| (result_byte1<<8)|(result_byte0);
+        PSW.V = ((result_byte3 > 0x7F) | (result_byte2 > 0x7F) |(result_byte1 > 0x7F) |(result_byte0 > 0x7F)) ? 1 : 0;
+        PSW.SV = ((result_byte3 > 0x7F) | (result_byte2 > 0x7F) |(result_byte1 > 0x7F) |(result_byte0 > 0x7F)) ? 1 : PSW.SV;
 
        }
     }

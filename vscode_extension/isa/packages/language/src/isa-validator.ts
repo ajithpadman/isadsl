@@ -643,7 +643,8 @@ export class IsaValidator {
         }
 
         const funcName = funcCall.function_name.toLowerCase();
-        const validBuiltins = ['sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx', 'to_signed', 'to_unsigned'];
+        const validBuiltins = ['sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx', 'to_signed', 'to_unsigned', 
+            'ssov', 'suov', 'carry', 'borrow', 'reverse16', 'leading_ones', 'leading_zeros', 'leading_signs'];
         
         if (!validBuiltins.includes(funcName)) {
             accept('warning', `Unknown built-in function '${funcCall.function_name}'. Valid functions: ${validBuiltins.join(', ')}`, 
@@ -737,6 +738,33 @@ export class IsaValidator {
                     accept('error', `${funcName}: width must be <= 64, got ${width}`, 
                         { node: funcCall.args[1], property: 'value' });
                 }
+            }
+        } else if (funcName === 'ssov' || funcName === 'suov') {
+            if (argCount !== 2) {
+                accept('error', `${funcName} requires 2 arguments (value, width), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
+                return;
+            }
+            // Validate width if it is a constant
+            const width = this.extractConstantValue(funcCall.args[1]);
+            if (width !== null) {
+                if (width <= 0) {
+                    accept('error', `${funcName}: width must be positive, got ${width}`, 
+                        { node: funcCall.args[1], property: 'value' });
+                } else if (width > 64) {
+                    accept('error', `${funcName}: width must be <= 64, got ${width}`, 
+                        { node: funcCall.args[1], property: 'value' });
+                }
+            }
+        } else if (funcName === 'carry' || funcName === 'borrow') {
+            if (argCount !== 3) {
+                accept('error', `${funcName} requires 3 arguments (operand1, operand2, carry_in/borrow_in), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
+            }
+        } else if (funcName === 'reverse16' || funcName === 'leading_ones' || funcName === 'leading_zeros' || funcName === 'leading_signs') {
+            if (argCount !== 1) {
+                accept('error', `${funcName} requires 1 argument (value), got ${argCount}`, 
+                    { node: funcCall, property: 'args' });
             }
         }
     }

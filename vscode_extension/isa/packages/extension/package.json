@@ -2,7 +2,7 @@
     "name": "isa-dsl-language-server",
     "displayName": "ISA DSL Language Server",
     "description": "Language server and syntax highlighting for ISA DSL files (Langium-based)",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "publisher": "ajithpadman",
     "icon": "icon.png",
     "license": "MIT",

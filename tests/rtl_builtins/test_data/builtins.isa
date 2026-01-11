@@ -215,5 +215,139 @@ architecture BuiltinsTest {
             }
         }
         
+        // Test ssov - Signed Saturation on Overflow (32-bit)
+        instruction SSOV_32 {
+            format: R_TYPE
+            encoding: { opcode=0, func=2 }
+            operands: rd, rs1
+            assembly_syntax: "SSOV_32 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = ssov(R[rs1], 32);
+            }
+        }
+        
+        // Test ssov - Signed Saturation on Overflow (16-bit)
+        instruction SSOV_16 {
+            format: R_TYPE
+            encoding: { opcode=0, func=3 }
+            operands: rd, rs1
+            assembly_syntax: "SSOV_16 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = ssov(R[rs1], 16);
+            }
+        }
+        
+        // Test suov - Unsigned Saturation on Overflow (32-bit)
+        instruction SUOV_32 {
+            format: R_TYPE
+            encoding: { opcode=0, func=4 }
+            operands: rd, rs1
+            assembly_syntax: "SUOV_32 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = suov(R[rs1], 32);
+            }
+        }
+        
+        // Test suov - Unsigned Saturation on Overflow (16-bit)
+        instruction SUOV_16 {
+            format: R_TYPE
+            encoding: { opcode=0, func=5 }
+            operands: rd, rs1
+            assembly_syntax: "SUOV_16 R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = suov(R[rs1], 16);
+            }
+        }
+        
+        // Test carry - Calculate Carry Out
+        instruction CARRY {
+            format: R_TYPE
+            encoding: { opcode=0, func=6 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "CARRY R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                temp = R[rs1] + R[rs2];
+                R[rd] = carry(R[rs1], R[rs2], 0);
+            }
+        }
+        
+        // Test carry with carry_in
+        instruction CARRY_WITH_CIN {
+            format: R_TYPE
+            encoding: { opcode=0, func=7 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "CARRY_WITH_CIN R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = carry(R[rs1], R[rs2], 1);
+            }
+        }
+        
+        // Test borrow - Calculate Borrow Out
+        instruction BORROW {
+            format: R_TYPE
+            encoding: { opcode=0, func=8 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "BORROW R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = borrow(R[rs1], R[rs2], 0);
+            }
+        }
+        
+        // Test borrow with borrow_in
+        instruction BORROW_WITH_BIN {
+            format: R_TYPE
+            encoding: { opcode=0, func=9 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "BORROW_WITH_BIN R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = borrow(R[rs1], R[rs2], 1);
+            }
+        }
+        
+        // Test reverse16 - Reverse 16-bit value
+        instruction REVERSE16 {
+            format: R_TYPE
+            encoding: { opcode=0, func=10 }
+            operands: rd, rs1
+            assembly_syntax: "REVERSE16 R{rd}, R{rs1}"
+            behavior: {
+                temp = extract_bits(R[rs1], 15, 0);
+                R[rd] = reverse16(temp);
+            }
+        }
+        
+        // Test leading_ones - Count Leading Ones
+        instruction LEADING_ONES {
+            format: R_TYPE
+            encoding: { opcode=0, func=11 }
+            operands: rd, rs1
+            assembly_syntax: "LEADING_ONES R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = leading_ones(R[rs1]);
+            }
+        }
+        
+        // Test leading_zeros - Count Leading Zeros
+        instruction LEADING_ZEROS {
+            format: R_TYPE
+            encoding: { opcode=0, func=12 }
+            operands: rd, rs1
+            assembly_syntax: "LEADING_ZEROS R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = leading_zeros(R[rs1]);
+            }
+        }
+        
+        // Test leading_signs - Count Leading Sign Bits
+        instruction LEADING_SIGNS {
+            format: R_TYPE
+            encoding: { opcode=0, func=13 }
+            operands: rd, rs1
+            assembly_syntax: "LEADING_SIGNS R{rd}, R{rs1}"
+            behavior: {
+                R[rd] = leading_signs(R[rs1]);
+            }
+        }
+        
     }
 }

@@ -1,5 +1,165 @@
 # Release Notes
 
+## Version 0.3.9 - New Built-in Functions for TC18 Support
+
+**Release Date:** 2026-01-09
+
+### 🎯 Major Changes
+
+#### New Built-in Functions
+
+Added 8 new built-in functions to support TriCore TC18 instruction behavior descriptions:
+
+**Saturation Functions:**
+- `ssov(value, width)` - Signed Saturation on Overflow
+- `suov(value, width)` - Unsigned Saturation on Overflow
+
+**Carry/Borrow Functions:**
+- `carry(operand1, operand2, carry_in)` - Calculate Carry Out
+- `borrow(operand1, operand2, borrow_in)` - Calculate Borrow Out
+
+**Bit Manipulation Functions:**
+- `reverse16(value)` - Reverse 16-bit value (bit order reversal)
+- `leading_ones(value)` - Count Leading Ones
+- `leading_zeros(value)` - Count Leading Zeros
+- `leading_signs(value)` - Count Leading Sign Bits
+
+### ✨ Features
+
+#### Saturation Functions
+
+**Signed Saturation (`ssov`):**
+- Saturates signed values to maximum/minimum representable value in specified width
+- Example: `ssov(result, 32)` saturates to `0x7FFFFFFF` (max) or `0x80000000` (min) for 32-bit
+- Example: `ssov(result, 16)` saturates to `0x7FFF` (max) or `0x8000` (min) for 16-bit
+- Needed for: ADDS, ADDS.H, ABSDIFS, ABSDIFS.H, ABSS, ABSS.H, RSUBS, MULS, and other saturation instructions
+
+**Unsigned Saturation (`suov`):**
+- Saturates unsigned values to maximum representable value in specified width
+- Example: `suov(result, 32)` saturates to `0xFFFFFFFF` (max) or `0x00000000` (min) for 32-bit
+- Example: `suov(result, 16)` saturates to `0xFFFF` (max) or `0x0000` (min) for 16-bit
+- Needed for: ADDS.U, ADDS.HU, RSUBS.U, and other unsigned saturation instructions
+
+#### Carry/Borrow Functions
+
+**Carry Calculation (`carry`):**
+- Calculates carry out from addition of three operands
+- Returns: `1` if carry occurs, `0` otherwise
+- Needed for: ADDC, ADDX, SUBC, SUBX, and other carry/borrow instructions
+- Example: `PSW.C = carry(R[rs1], R[rs2], PSW.C)`
+
+**Borrow Calculation (`borrow`):**
+- Calculates borrow out from subtraction
+- Returns: `1` if borrow occurs, `0` otherwise
+- Needed for: SUBC, SUBX, and other borrow instructions
+- Example: `PSW.C = borrow(R[rs1], R[rs2], PSW.C)`
+
+#### Bit Manipulation Functions
+
+**Bit Reversal (`reverse16`):**
+- Reverses the bit order of a 16-bit value
+- Needed for: Bit-reverse addressing mode instructions (LD.Q, ST.B, ST.H, ST.W with P[b] addressing)
+- Example: `address = reverse16(R[rs1][15:0])`
+
+**Leading Bit Counting:**
+- `leading_ones(value)` - Counts consecutive ones starting from MSB
+- `leading_zeros(value)` - Counts consecutive zeros starting from MSB
+- `leading_signs(value)` - Counts consecutive bits with same value as sign bit, starting from bit 30
+- Needed for: CLO, CLO.H, CLZ, CLZ.H, CLS, CLS.H instructions
+
+### 🔧 Implementation Details
+
+**Python Package:**
+- Added implementations in `isa_dsl/runtime/rtl_interpreter.py`
+- Added helper methods in `isa_dsl/generators/templates/simulator.j2`
+- Updated simulator generator to handle new functions
+- Updated validator to recognize new built-ins
+
+**VS Code Extension:**
+- Added validation for all new functions in `isa-validator.ts`
+- Added autocomplete suggestions in `isa-completion-provider.ts`
+- Updated function lists to include all 8 new functions
+- Argument count validation for each function type
+
+**Documentation:**
+- Updated `docs/DSL_Specification.md` with complete documentation for all new functions
+- Updated `docs/LANGUAGE_SERVER.md` with validation information
+- Added examples and usage patterns
+
+### 🧪 Testing
+
+**Python Tests:**
+- Added 20 new test cases in `tests/rtl_builtins/test_new_builtins.py`
+- 8 direct RTL interpreter tests
+- 12 simulator integration tests
+- All edge cases covered (overflow, underflow, boundary values)
+- **Total Python Tests**: 213 tests, all passing ✅
+
+**VS Code Extension Tests:**
+- Added 18 new test cases in `builtin-functions.test.ts`
+- Parsing tests for all 8 new functions
+- Validation tests for correct usage
+- Error detection tests for invalid usage
+- Completion provider tests
+- **Total Extension Tests**: 74 tests, all passing ✅
+
+### 📝 Documentation Updates
+
+- **DSL Specification**: Added comprehensive documentation for all 8 new built-in functions with examples
+- **Language Server**: Updated built-in function validation documentation
+- **Examples**: All functions documented with practical usage examples
+
+### 📦 Files Changed
+
+**Python Package:**
+- `isa_dsl/runtime/rtl_interpreter.py` - Added 8 new function implementations
+- `isa_dsl/generators/simulator.py` - Updated to generate calls to new helper methods
+- `isa_dsl/generators/templates/simulator.j2` - Added 8 new helper methods
+- `isa_dsl/model/validator.py` - Updated to recognize new built-ins
+
+**VS Code Extension:**
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Added validation for new functions
+- `vscode_extension/isa/packages/language/src/isa-completion-provider.ts` - Added autocomplete for new functions
+- `vscode_extension/isa/packages/language/test/builtin-functions.test.ts` - Added 18 new test cases
+
+**Documentation:**
+- `docs/DSL_Specification.md` - Added documentation for all new functions
+- `docs/LANGUAGE_SERVER.md` - Updated validation documentation
+
+**Tests:**
+- `tests/rtl_builtins/test_new_builtins.py` - New test file with 20 test cases
+- `tests/rtl_builtins/test_data/builtins.isa` - Added 12 new test instructions
+
+### 📦 Version Updates
+
+- `pyproject.toml` - Version 0.3.8 → 0.3.9
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.3.8 → 0.3.9
+- `vscode_extension/isa/packages/language/package.json` - Version 0.3.8 → 0.3.9
+- `vscode_extension/isa/package.json` - Version 0.3.8 → 0.3.9
+
+### 🔄 Migration Guide
+
+No breaking changes. All new functions are additive and backward compatible.
+
+**For Users:**
+- New built-in functions are immediately available in RTL behavior blocks
+- All functions are validated by the language server
+- Autocomplete suggestions include all new functions
+- No changes required to existing ISA specifications
+
+**For Developers:**
+- New functions follow the same patterns as existing built-ins
+- All functions are tested in both RTL interpreter and generated simulators
+- Functions are available in both Python and generated simulator code
+
+### 📊 Test Coverage
+
+- **Python Tests**: 213 test cases, all passing ✅
+- **VS Code Extension Tests**: 74 tests, all passing ✅
+- **Total**: 287 tests, all passing ✅
+
+---
+
 ## Version 0.3.8 - VS Code Extension Icon
 
 **Release Date:** 2026-01-08

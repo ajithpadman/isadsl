@@ -221,19 +221,29 @@ Real-time syntax validation:
 - **Syntax errors**: Missing braces, invalid syntax
 - **Semantic errors**: Duplicate definitions, undefined references
 - **Validation errors**: Format reference errors, register conflicts
-- **Built-in function validation**: Parameter validation for `sign_extend`, `zero_extend`, `to_signed`, `to_unsigned` (checks for positive values, reasonable bit widths)
+- **Built-in function validation**: Parameter validation for all built-in functions including `sign_extend`, `zero_extend`, `to_signed`, `to_unsigned`, `ssov`, `suov`, `carry`, `borrow`, `reverse16`, `leading_ones`, `leading_zeros`, `leading_signs` (checks for positive values, reasonable bit widths, correct argument counts)
 
 **Usage**: Errors appear as red squiggles and in the Problems panel
 
 **Built-in Function Validation**:
 The language server validates built-in function calls and reports errors for:
-- Invalid parameter counts (e.g., `sign_extend` requires 2-3 arguments)
+- Invalid parameter counts (e.g., `sign_extend` requires 2-3 arguments, `carry` requires 3 arguments, `reverse16` requires 1 argument)
 - Invalid bit counts (must be positive and <= 64)
 - Unknown built-in functions (warnings for unrecognized function names)
+
+**Supported Built-in Functions**:
+- Extension: `sign_extend`, `zero_extend`, `sext`, `sx`, `zext`, `zx`
+- Type Casting: `to_signed`, `to_unsigned`
+- Bit Operations: `extract_bits`, `reverse16`
+- Saturation: `ssov`, `suov`
+- Arithmetic: `carry`, `borrow`
+- Bit Counting: `leading_ones`, `leading_zeros`, `leading_signs`
 
 Example validation errors:
 - `sign_extend(R[rs1], 0)` → Error: "from_bits must be positive, got 0"
 - `sign_extend(R[rs1], 65)` → Error: "from_bits must be <= 64, got 65"
+- `carry(R[rs1], R[rs2])` → Error: "carry requires 3 arguments (operand1, operand2, carry_in), got 2"
+- `reverse16(R[rs1], 16)` → Error: "reverse16 requires 1 argument (value), got 2"
 
 ### Definition Lookup
 

@@ -856,6 +856,122 @@ instruction CAST_UNSIGNED {
 
 **Note**: `to_signed(value, width)` is semantically equivalent to `sign_extend(value, width)`, and `to_unsigned(value, width)` is equivalent to `zero_extend(value, width)`. However, the `to_signed`/`to_unsigned` functions provide clearer intent when the purpose is type casting rather than extension.
 
+#### Saturation Functions
+
+**Functions**: `ssov(value, width)` - Signed Saturation on Overflow, `suov(value, width)` - Unsigned Saturation on Overflow
+
+Saturates a value to the maximum/minimum representable value in the specified width when overflow occurs.
+
+```isa
+behavior: {
+    // Signed saturation: saturates to 0x7FFFFFFF (max) or 0x80000000 (min) for 32-bit
+    R[rd] = ssov(result, 32);
+    
+    // Unsigned saturation: saturates to 0xFFFFFFFF (max) or 0x00000000 (min) for 32-bit
+    R[rd] = suov(result, 32);
+    
+    // 16-bit signed saturation: saturates to 0x7FFF (max) or 0x8000 (min)
+    R[rd] = ssov(result, 16);
+    
+    // 16-bit unsigned saturation: saturates to 0xFFFF (max) or 0x0000 (min)
+    R[rd] = suov(result, 16);
+}
+```
+
+**Example**:
+```isa
+instruction ADDS {
+    format: R_TYPE
+    encoding: { opcode=10 }
+    operands: rd, rs1, rs2
+    behavior: {
+        result = R[rs1] + R[rs2];
+        R[rd] = ssov(result, 32);  // Saturate on overflow
+    }
+}
+```
+
+#### Carry/Borrow Functions
+
+**Functions**: `carry(operand1, operand2, carry_in)` - Calculate Carry Out, `borrow(operand1, operand2, borrow_in)` - Calculate Borrow Out
+
+Calculates carry or borrow out from addition/subtraction operations.
+
+```isa
+behavior: {
+    // Calculate carry out from addition
+    PSW.C = carry(R[rs1], R[rs2], 0);
+    
+    // Calculate carry with carry_in
+    PSW.C = carry(R[rs1], R[rs2], PSW.C);
+    
+    // Calculate borrow out from subtraction
+    PSW.C = borrow(R[rs1], R[rs2], 0);
+    
+    // Calculate borrow with borrow_in
+    PSW.C = borrow(R[rs1], R[rs2], PSW.C);
+}
+```
+
+**Example**:
+```isa
+instruction ADDC {
+    format: R_TYPE
+    encoding: { opcode=11 }
+    operands: rd, rs1, rs2
+    behavior: {
+        R[rd] = R[rs1] + R[rs2] + PSW.C;
+        PSW.C = carry(R[rs1], R[rs2], PSW.C);
+    }
+}
+```
+
+#### Bit Manipulation Functions
+
+**Functions**: 
+- `reverse16(value)` - Reverse 16-bit value (reverses bit order)
+- `leading_ones(value)` - Count Leading Ones
+- `leading_zeros(value)` - Count Leading Zeros
+- `leading_signs(value)` - Count Leading Sign Bits
+
+```isa
+behavior: {
+    // Reverse 16-bit value (for bit-reverse addressing)
+    address = reverse16(R[rs1][15:0]);
+    
+    // Count leading ones
+    R[rd] = leading_ones(R[rs1]);
+    
+    // Count leading zeros
+    R[rd] = leading_zeros(R[rs1]);
+    
+    // Count leading sign bits (starting from bit 30)
+    R[rd] = leading_signs(R[rs1]);
+}
+```
+
+**Example**:
+```isa
+instruction CLO {
+    format: R_TYPE
+    encoding: { opcode=12 }
+    operands: rd, rs1
+    behavior: {
+        R[rd] = leading_ones(R[rs1]);
+    }
+}
+
+instruction REVERSE {
+    format: R_TYPE
+    encoding: { opcode=13 }
+    operands: rd, rs1
+    behavior: {
+        temp = extract_bits(R[rs1], 15, 0);
+        R[rd] = reverse16(temp);
+    }
+}
+```
+
 **Practical Example - Byte-wise Absolute Value**:
 ```isa
 instruction ABS_B {

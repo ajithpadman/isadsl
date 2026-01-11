@@ -233,7 +233,9 @@ class ISAValidator:
             for arg in expr.args:
                 self._validate_rtl_expression(arg, context)
             # Validate function name (check if it's a known built-in)
-            valid_builtins = {'sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx'}
+            valid_builtins = {'sign_extend', 'zero_extend', 'extract_bits', 'sext', 'sx', 'zext', 'zx', 
+                            'to_signed', 'to_unsigned', 'ssov', 'suov', 'carry', 'borrow', 
+                            'reverse16', 'leading_ones', 'leading_zeros', 'leading_signs'}
             if expr.function_name.lower() not in valid_builtins:
                 # Warning: unknown function, but don't fail validation
                 pass

@@ -54,6 +54,7 @@ Tests are organized into the following directories:
 
 - **`tests/rtl_builtins/`** - RTL built-in functions and bitfield access tests
   - `test_builtin_functions.py` - Tests for `sign_extend`, `zero_extend`, `extract_bits`, `to_signed`, `to_unsigned` functions and bitfield access syntax
+  - `test_new_builtins.py` - Tests for new built-in functions: `ssov`, `suov`, `carry`, `borrow`, `reverse16`, `leading_ones`, `leading_zeros`, `leading_signs`
 
 - **`tests/shift_ternary/`** - Shift operations and ternary expression tests
   - `test_shift_ternary.py` - Tests for shift operators (`<<`, `>>`) and ternary conditional expressions

@@ -247,6 +247,54 @@ class SimulatorGenerator:
                     return f"self._zero_extend({args_str})"
                 else:
                     raise ValueError(f"to_unsigned requires 2 arguments (value, width), got {len(expr.args)}")
+            elif func_name == "ssov":
+                # ssov(value, width) - signed saturation on overflow
+                if len(expr.args) == 2:
+                    return f"self._ssov({args_str})"
+                else:
+                    raise ValueError(f"ssov requires 2 arguments (value, width), got {len(expr.args)}")
+            elif func_name == "suov":
+                # suov(value, width) - unsigned saturation on overflow
+                if len(expr.args) == 2:
+                    return f"self._suov({args_str})"
+                else:
+                    raise ValueError(f"suov requires 2 arguments (value, width), got {len(expr.args)}")
+            elif func_name == "carry":
+                # carry(operand1, operand2, carry_in) - calculate carry out
+                if len(expr.args) == 3:
+                    return f"self._carry({args_str})"
+                else:
+                    raise ValueError(f"carry requires 3 arguments (operand1, operand2, carry_in), got {len(expr.args)}")
+            elif func_name == "borrow":
+                # borrow(operand1, operand2, borrow_in) - calculate borrow out
+                if len(expr.args) == 3:
+                    return f"self._borrow({args_str})"
+                else:
+                    raise ValueError(f"borrow requires 3 arguments (operand1, operand2, borrow_in), got {len(expr.args)}")
+            elif func_name == "reverse16":
+                # reverse16(value) - reverse 16-bit value
+                if len(expr.args) == 1:
+                    return f"self._reverse16({args_str})"
+                else:
+                    raise ValueError(f"reverse16 requires 1 argument (value), got {len(expr.args)}")
+            elif func_name == "leading_ones":
+                # leading_ones(value) - count leading ones
+                if len(expr.args) == 1:
+                    return f"self._leading_ones({args_str})"
+                else:
+                    raise ValueError(f"leading_ones requires 1 argument (value), got {len(expr.args)}")
+            elif func_name == "leading_zeros":
+                # leading_zeros(value) - count leading zeros
+                if len(expr.args) == 1:
+                    return f"self._leading_zeros({args_str})"
+                else:
+                    raise ValueError(f"leading_zeros requires 1 argument (value), got {len(expr.args)}")
+            elif func_name == "leading_signs":
+                # leading_signs(value) - count leading sign bits
+                if len(expr.args) == 1:
+                    return f"self._leading_signs({args_str})"
+                else:
+                    raise ValueError(f"leading_signs requires 1 argument (value), got {len(expr.args)}")
             # Default: call as method (for user-defined functions if we add that later)
             return f"self.{expr.function_name}({args_str})"
         elif isinstance(expr, str):

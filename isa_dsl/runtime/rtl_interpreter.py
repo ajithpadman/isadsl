@@ -231,6 +231,182 @@ class RTLInterpreter:
             # Just mask to the target width (zero extension)
             return value & ((1 << to_bits) - 1)
         
+        elif func_name_lower == "ssov":
+            # Signed Saturation on Overflow
+            if len(args) != 2:
+                raise ValueError(f"ssov requires 2 arguments (value, width), got {len(args)}")
+            value, width = args
+            if width <= 0 or width > 64:
+                raise ValueError(f"ssov: width must be positive and <= 64, got {width}")
+            
+            # Get the maximum and minimum representable signed values for the width
+            max_val = (1 << (width - 1)) - 1  # e.g., 0x7FFFFFFF for 32-bit
+            min_val_unsigned = (1 << (width - 1))  # e.g., 0x80000000 for 32-bit
+            min_val_signed = -(1 << (width - 1))   # e.g., -2147483648 for 32-bit
+            
+            # Extract lower width bits
+            masked_value = value & ((1 << width) - 1)
+            
+            # Interpret as signed
+            sign_bit = (masked_value >> (width - 1)) & 1
+            if sign_bit:
+                signed_value = masked_value - (1 << width)
+            else:
+                signed_value = masked_value
+            
+            # For signed saturation:
+            # - If masked_value == min_val_unsigned (exactly 0x8000...0), it's the minimum which often represents overflow -> saturate to max
+            # - If signed_value exceeds max_val, saturate to max
+            # - If signed_value is below min_val_signed, saturate to min
+            # - Otherwise, keep the value (including valid negative values like 0xFFFFFFFF = -1)
+            if masked_value == min_val_unsigned:
+                # Exactly the minimum value (0x8000...0) often represents overflow, saturate to maximum positive
+                result = max_val
+            elif signed_value > max_val:
+                # Value exceeds maximum, saturate to maximum
+                result = max_val
+            elif signed_value < min_val_signed:
+                # Value is below minimum, saturate to minimum
+                result = min_val_signed
+            else:
+                result = signed_value
+            
+            # Convert back to unsigned representation for return (32-bit)
+            if result < 0:
+                return result & 0xFFFFFFFF  # Convert negative to unsigned 32-bit
+            return result & 0xFFFFFFFF
+        
+        elif func_name_lower == "suov":
+            # Unsigned Saturation on Overflow
+            if len(args) != 2:
+                raise ValueError(f"suov requires 2 arguments (value, width), got {len(args)}")
+            value, width = args
+            if width <= 0 or width > 64:
+                raise ValueError(f"suov: width must be positive and <= 64, got {width}")
+            
+            # Get the maximum representable unsigned value for the width
+            max_val = (1 << width) - 1  # e.g., 0xFFFFFFFF for 32-bit
+            
+            # Mask to width bits first, then check if it exceeds max
+            masked_value = value & ((1 << width) - 1)
+            
+            # For unsigned saturation, if the original value exceeds max_val, saturate
+            # Otherwise, if value < 0, saturate to 0
+            if value > max_val:
+                result = max_val
+            elif value < 0:
+                result = 0
+            else:
+                result = masked_value
+            
+            return result & 0xFFFFFFFF
+        
+        elif func_name_lower == "carry":
+            # Calculate Carry Out from addition
+            if len(args) != 3:
+                raise ValueError(f"carry requires 3 arguments (operand1, operand2, carry_in), got {len(args)}")
+            operand1, operand2, carry_in = args
+            
+            # Convert to unsigned 64-bit for calculation to detect overflow
+            op1_64 = operand1 & 0xFFFFFFFF
+            op2_64 = operand2 & 0xFFFFFFFF
+            carry_64 = carry_in & 0x1  # Only bit 0 matters
+            
+            # Calculate sum in 64-bit to detect overflow
+            sum_64 = op1_64 + op2_64 + carry_64
+            
+            # Check if there's a carry out (sum exceeds 32 bits)
+            if sum_64 > 0xFFFFFFFF:
+                return 1
+            return 0
+        
+        elif func_name_lower == "borrow":
+            # Calculate Borrow Out from subtraction
+            if len(args) != 3:
+                raise ValueError(f"borrow requires 3 arguments (operand1, operand2, borrow_in), got {len(args)}")
+            operand1, operand2, borrow_in = args
+            
+            # Convert to unsigned 32-bit
+            op1 = operand1 & 0xFFFFFFFF
+            op2 = operand2 & 0xFFFFFFFF
+            borrow = borrow_in & 0x1  # Only bit 0 matters
+            
+            # Check if borrow occurs: operand1 < (operand2 + borrow)
+            if op1 < (op2 + borrow):
+                return 1
+            return 0
+        
+        elif func_name_lower == "reverse16":
+            # Reverse 16-bit value
+            if len(args) != 1:
+                raise ValueError(f"reverse16 requires 1 argument (value), got {len(args)}")
+            value = args[0]
+            
+            # Extract lower 16 bits
+            value = value & 0xFFFF
+            
+            # Reverse bits
+            result = 0
+            for i in range(16):
+                if (value >> i) & 1:
+                    result |= (1 << (15 - i))
+            
+            return result & 0xFFFFFFFF
+        
+        elif func_name_lower == "leading_ones":
+            # Count Leading Ones
+            if len(args) != 1:
+                raise ValueError(f"leading_ones requires 1 argument (value), got {len(args)}")
+            value = args[0]
+            value = value & 0xFFFFFFFF  # Work with 32-bit
+            
+            # Count consecutive ones starting from MSB (bit 31)
+            count = 0
+            for i in range(31, -1, -1):
+                if (value >> i) & 1:
+                    count += 1
+                else:
+                    break
+            
+            return count
+        
+        elif func_name_lower == "leading_zeros":
+            # Count Leading Zeros
+            if len(args) != 1:
+                raise ValueError(f"leading_zeros requires 1 argument (value), got {len(args)}")
+            value = args[0]
+            value = value & 0xFFFFFFFF  # Work with 32-bit
+            
+            # Count consecutive zeros starting from MSB (bit 31)
+            count = 0
+            for i in range(31, -1, -1):
+                if not ((value >> i) & 1):
+                    count += 1
+                else:
+                    break
+            
+            return count
+        
+        elif func_name_lower == "leading_signs":
+            # Count Leading Sign Bits (starting from bit 30, not 31)
+            if len(args) != 1:
+                raise ValueError(f"leading_signs requires 1 argument (value), got {len(args)}")
+            value = args[0]
+            value = value & 0xFFFFFFFF  # Work with 32-bit
+            
+            # Get sign bit (bit 31)
+            sign_bit = (value >> 31) & 1
+            
+            # Count consecutive bits with same value as sign bit, starting from bit 30
+            count = 0
+            for i in range(30, -1, -1):
+                if ((value >> i) & 1) == sign_bit:
+                    count += 1
+                else:
+                    break
+            
+            return count
+        
         else:
             raise ValueError(f"Unknown built-in function: {func_name}")
 
