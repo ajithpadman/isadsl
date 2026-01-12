@@ -216,27 +216,13 @@ class ISAParser:
                     f"(resolved from '{include_path_str}' in {file_path})"
                 )
             
-            # FIRST: Parse to textX model and add to cache BEFORE parsing ISASpecification
-            # This ensures the scope provider can resolve references when parsing other included files
-            inc_content = self.comment_processor.strip_comments(include_path.read_text())
-            inc_content = self.include_processor.remove_include_lines(inc_content)
+            # FIRST: Parse to textX model and cache it BEFORE parsing ISASpecification
+            # This ensures the scope provider can resolve format references when parsing instructions
+            if str(include_path) not in self._included_textx_models_cache:
+                # Parse recursively to cache all nested includes' textX models first
+                self._cache_textx_models_recursive(include_path, visited.copy(), mm)
             
-            # Parse to textX model and cache it immediately
-            try:
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.isa', delete=False) as tmp_file:
-                    tmp_file.write(inc_content)
-                    tmp_file_path = tmp_file.name
-                try:
-                    # Use model_from_file (not _original_model_from_file) to ensure scope provider is used
-                    inc_textx_model = mm.model_from_file(tmp_file_path)
-                    self._included_textx_models_cache[str(include_path)] = inc_textx_model
-                finally:
-                    Path(tmp_file_path).unlink()
-            except Exception:
-                # If parsing fails, skip - scope provider will handle it
-                pass
-            
-            # THEN: Parse recursively to ISASpecification (this may reference formats from cache)
+            # THEN: Parse recursively to ISASpecification (formats are now in cache)
             inc_model, inc_has_arch = self._parse_with_includes(include_path, visited.copy(), mm)
             included_models.append((inc_model, inc_has_arch, include_path))
             included_has_arch.append(inc_has_arch)
@@ -275,29 +261,29 @@ class ISAParser:
                     temp_model_tx = mm.model_from_file(tmp_file_path)
                 finally:
                     Path(tmp_file_path).unlink()
-            except Exception:
-                # If parsing fails, return empty model
-                partial_model = ISASpecification(
-                    name='',
-                    properties=[],
-                    registers=[],
-                    formats=[],
-                    instructions=[]
-                )
-                # Merge included partial definitions
-                for inc_model, inc_has_arch, inc_path in included_models:
-                    if inc_has_arch:
-                        raise ArchitectureExtensionRequiredError(str(inc_path))
-                    partial_model = self.model_merger.merge(
-                        partial_model, inc_model, 
-                        check_duplicates=False,
-                        base_file=str(file_path),
-                        additional_file=str(inc_path)
-                    )
-                return partial_model, False
+            except Exception as e:
+                # If parsing fails, raise the error instead of silently returning empty model
+                # This ensures syntax errors are reported, not silently ignored
+                raise ValueError(
+                    f"Failed to parse ISA file '{file_path}': {str(e)}\n"
+                    f"This may be due to syntax errors in the file. Please check the file for errors."
+                ) from e
             
             # Convert to ISASpecification
             partial_model = self.model_converter.convert(temp_model_tx)
+            
+            # Merge included partial definitions
+            for inc_model, inc_has_arch, inc_path in included_models:
+                if inc_has_arch:
+                    raise ArchitectureExtensionRequiredError(str(inc_path))
+                partial_model = self.model_merger.merge(
+                    partial_model, inc_model, 
+                    check_duplicates=False,
+                    base_file=str(file_path),
+                    additional_file=str(inc_path)
+                )
+            
+            return partial_model, False
             
             # Post-process: resolve format references from included files
             # (formats are in different files that will be merged later)
@@ -357,6 +343,9 @@ class ISAParser:
         # Convert to ISASpecification
         model = self.model_converter.convert(current_model_tx)
         
+        # Store textX model for later format resolution
+        model._textx_model = current_model_tx
+        
         # Now merge/extend with included files using ISASpecification objects
         if arch_count == 1:
             # Inheritance mode
@@ -413,7 +402,103 @@ class ISAParser:
                     additional_file=str(inc_path)
                 )
         
+        # Post-process: resolve format references that weren't resolved by textX scope provider
+        # This is needed because format references in included files may not be resolved during parsing
+        # Collect all textX models from included files and current file
+        all_textx_models = [current_model_tx] if current_model_tx else []
+        for _, _, inc_path in included_models:
+            if str(inc_path) in self._included_textx_models_cache:
+                all_textx_models.append(self._included_textx_models_cache[str(inc_path)])
+        if all_textx_models:
+            self._resolve_format_references(final_model, all_textx_models)
+        
         return final_model, has_arch
+    
+    def _resolve_format_references(self, model: ISASpecification, textx_models: List[Any]):
+        """Resolve format references in instructions that weren't resolved by textX scope provider."""
+        # Get all format names from the model
+        format_names = {fmt.name for fmt in model.formats}
+        
+        # Build a mapping of instruction mnemonics to their textX models
+        instr_tx_map = {}
+        for textx_model in textx_models:
+            if hasattr(textx_model, 'instructions') and textx_model.instructions:
+                if hasattr(textx_model.instructions, 'instructions'):
+                    for instr_tx in textx_model.instructions.instructions:
+                        if hasattr(instr_tx, 'mnemonic'):
+                            mnemonic = str(instr_tx.mnemonic)
+                            if mnemonic not in instr_tx_map:
+                                instr_tx_map[mnemonic] = instr_tx
+        
+        # Resolve format references for all instructions
+        for instr in model.instructions:
+            if instr.format is None and instr.mnemonic in instr_tx_map:
+                instr_tx = instr_tx_map[instr.mnemonic]
+                if hasattr(instr_tx, 'format'):
+                    # Try to get format name from textX model
+                    fmt_name = None
+                    if instr_tx.format is not None:
+                        if hasattr(instr_tx.format, 'name'):
+                            fmt_name = str(instr_tx.format.name)
+                        elif isinstance(instr_tx.format, str):
+                            fmt_name = instr_tx.format
+                    elif hasattr(instr_tx, 'format') and isinstance(instr_tx.format, str):
+                        fmt_name = instr_tx.format
+                    
+                    # Resolve format if we have a name
+                    if fmt_name and fmt_name in format_names:
+                        fmt_ref = model.get_format(fmt_name)
+                        if fmt_ref:
+                            instr.format = fmt_ref
+    
+    def _cache_textx_models_recursive(self, file_path: Path, visited: Set[Path], mm):
+        """Recursively cache textX models for all included files.
+        
+        This ensures formats are available in the scope provider cache before
+        parsing instructions that reference them.
+        """
+        file_path = file_path.resolve()
+        
+        # Check for circular dependency
+        if file_path in visited:
+            return  # Already processing this file
+        
+        visited.add(file_path)
+        
+        try:
+            content = file_path.read_text()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Included file not found: {file_path}")
+        
+        # Extract includes
+        includes = self.include_processor.extract_includes(content)
+        
+        # First, recursively cache nested includes
+        for include_path_str in includes:
+            include_path = self.include_processor.resolve_include_path(include_path_str, file_path)
+            if include_path.exists() and str(include_path) not in self._included_textx_models_cache:
+                self._cache_textx_models_recursive(include_path, visited.copy(), mm)
+        
+        # Then cache this file's textX model
+        if str(file_path) not in self._included_textx_models_cache:
+            inc_content = self.comment_processor.strip_comments(content)
+            inc_content = self.include_processor.remove_include_lines(inc_content)
+            
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.isa', delete=False) as tmp_file:
+                    tmp_file.write(inc_content)
+                    tmp_file_path = tmp_file.name
+                try:
+                    # Use model_from_file to ensure scope provider is used
+                    inc_textx_model = mm.model_from_file(tmp_file_path)
+                    self._included_textx_models_cache[str(file_path)] = inc_textx_model
+                finally:
+                    Path(tmp_file_path).unlink()
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to parse included file '{file_path}': {str(e)}\n"
+                    f"This may be due to syntax errors in the included file. Please check the file for errors."
+                ) from e
 
 
 # Global parser instance for backward compatibility

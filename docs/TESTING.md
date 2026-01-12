@@ -4,7 +4,7 @@ This document describes the test suite for the ISA DSL project, including how to
 
 ## Test Suite Overview
 
-The test suite consists of **193 test cases** (200+ test functions including parametrized tests) organized into logical groups within the `tests/` directory. All tests are passing with 0 failed. Some tests may be skipped if optional dependencies (like Node.js for extension tests) are not available.
+The test suite consists of **216 test cases** (200+ test functions including parametrized tests) organized into logical groups within the `tests/` directory. All tests are passing with 0 failed, 0 skipped.
 
 ### Test Organization
 

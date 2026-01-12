@@ -226,7 +226,13 @@ class SimulatorGenerator:
                     return f"self._zero_extend({args_str})"
             elif func_name == "extract_bits":
                 # extract_bits(value, msb, lsb) - same as bitfield access
-                return f"(({args_code[0]} >> {args_code[2]}) & ((1 << ({args_code[1]} - {args_code[2]} + 1)) - 1))"
+                if len(args_code) == 3:
+                    return f"(({args_code[0]} >> {args_code[2]}) & ((1 << ({args_code[1]} - {args_code[2]} + 1)) - 1))"
+                elif len(args_code) == 2:
+                    # extract_bits(value, bit) - extract single bit
+                    return f"(({args_code[0]} >> {args_code[1]}) & 1)"
+                else:
+                    raise ValueError(f"extract_bits requires 2 or 3 arguments, got {len(args_code)}")
             elif func_name == "sext" or func_name == "sx":
                 # Short alias for sign_extend
                 if len(expr.args) == 2:

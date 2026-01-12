@@ -92,6 +92,7 @@ formats {
     off18_13_10:[22:25]
     op2:[26:27]
     off18_9_6:[30:31]
+    identification_fields:op1,op2
   }
   format ABSB 32 {
     op1:[0:7]
@@ -109,6 +110,22 @@ formats {
     op1:[0:7]
     disp24_23_16:[8:15]
     disp24_15_0:[16:31]
+    identification_fields:op1
+  }
+  format BRR 32 {
+    op1:[0:7]
+    a:[8:11]
+    b:[12:15]
+    disp15:[16:30]
+    u:[31:31]
+    identification_fields:op1
+  }
+  format BRC 32 {
+    op1:[0:7]
+    a:[8:11]
+    const4:[12:15]
+    disp15:[16:30]
+    u:[31:31]
     identification_fields:op1
   }
 
@@ -139,6 +156,88 @@ formats {
     reserved:[18:19]
     op2:[20:27]
     d:[28:31]
+    identification_fields:op1,op2
+  }
+  format RC 32 {
+    op1:[0:7]
+    a:[8:11]
+    const9:[12:20]
+    op2:[21:27]
+    d:[28:31]
+    identification_fields:op1,op2
+  }
+  format BOL 32 {
+    op1:[0:7]
+    a:[8:11]
+    b:[12:15]
+    off16_5_0:[16:21]
+    off16_15_10:[22:27]
+    off16_9_6:[28:31]
+    identification_fields:op1
+  }
+  format RR2 32 {
+    op1:[0:7]
+    a:[8:11]
+    b:[12:15]
+    reserved:[16:19]
+    op2:[20:27]
+    c:[28:31]
+    identification_fields:op1,op2
+  }
+  format RCR 32 {
+    op1:[0:7]
+    a:[8:11]
+    const9:[12:20]
+    op2:[21:23]
+    d:[24:27]
+    c:[28:31]
+    identification_fields:op1,op2
+  }
+  format RLC 32 {
+    op1:[0:7]
+    a:[8:11]
+    const16:[12:27]
+    c:[28:31]
+    identification_fields:op1
+  }
+  format RRR 32 {
+    op1:[0:7]
+    a:[8:11]
+    b:[12:15]
+    reserved:[16:19]
+    op2:[20:23]
+    d:[24:27]
+    c:[28:31]
+    identification_fields:op1,op2
+  }
+  format RRRR 32 {
+    op1:[0:7]
+    a:[8:11]
+    reserved:[12:15]
+    reserved2:[16:20]
+    op2:[21:23]
+    d:[24:27]
+    c:[28:31]
+    identification_fields:op1,op2
+  }
+  format RRRW 32 {
+    op1:[0:7]
+    a:[8:11]
+    width:[12:15]
+    reserved:[16:19]
+    op2:[20:23]
+    d:[24:27]
+    c:[28:31]
+    identification_fields:op1,op2
+  }
+  format RRPW 32 {
+    op1:[0:7]
+    a:[8:11]
+    reserved:[12:15]
+    width:[16:20]
+    op2:[21:23]
+    pos:[24:27]
+    c:[28:31]
     identification_fields:op1,op2
   }
 

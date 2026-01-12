@@ -162,6 +162,10 @@ class Register:
     def __str__(self) -> str:
         return f"0x{self._value:x}"
     
+    def __format__(self, format_spec: str) -> str:
+        """Support formatting like f'{register:08x}'."""
+        return format(self._value, format_spec)
+    
     def __bool__(self) -> bool:
         """Boolean evaluation - use full register value."""
         return self._value != 0

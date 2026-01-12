@@ -1,0 +1,53 @@
+architecture MissingBehavior {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:9]
+            rs1: [10:13]
+            rs2: [14:17]
+        }
+    }
+    
+    instructions {
+        // This instruction has no behavior - should trigger validation error
+        instruction NO_BEHAVIOR {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "NO_BEHAVIOR R{rd}, R{rs1}, R{rs2}"
+        }
+        
+        // This instruction has empty behavior - should trigger validation error
+        // Note: Empty behavior blocks are not valid syntax, so we'll test this differently
+        // by checking if behavior.statements is empty after parsing
+        
+        // This instruction has external behavior - should be OK
+        instruction EXTERNAL_BEHAVIOR {
+            format: R_TYPE
+            encoding: { opcode=3 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "EXTERNAL_BEHAVIOR R{rd}, R{rs1}, R{rs2}"
+            external_behavior: true
+        }
+        
+        // This instruction has valid behavior - should be OK
+        instruction VALID_BEHAVIOR {
+            format: R_TYPE
+            encoding: { opcode=4 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "VALID_BEHAVIOR R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+    }
+}
+

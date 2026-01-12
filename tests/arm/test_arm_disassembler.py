@@ -48,17 +48,18 @@ def test_arm_cortex_a9_disassembler_toolchain_verification(arm_cortex_a9_isa_fil
             
             disassembled_obj_file = tmpdir_path / "disassembled_matrix.o"
             try:
-                subprocess.run([toolchain["gcc"], "-c", "-o", str(disassembled_obj_file), str(disassembled_asm_file)],
+                result = subprocess.run([toolchain["gcc"], "-c", "-o", str(disassembled_obj_file), str(disassembled_asm_file)],
                     check=True, capture_output=True, text=True, timeout=10)
             except subprocess.CalledProcessError as e:
-                pytest.skip(f"Failed to compile disassembled assembly file (may be expected): {e.stderr[:200]}")
+                pytest.fail(f"Failed to compile disassembled assembly file: {e.stderr[:500]}")
             except subprocess.TimeoutExpired:
-                pytest.skip("ARM compilation of disassembled file timed out")
+                pytest.fail("ARM compilation of disassembled file timed out")
             
-            assert disassembled_obj_file.exists() and disassembled_obj_file.stat().st_size > 0
+            assert disassembled_obj_file.exists() and disassembled_obj_file.stat().st_size > 0, \
+                "Disassembled object file should be created"
             disassembled_binary = tmpdir_path / "disassembled_matrix_text.bin"
-            if not ArmTestHelpers.extract_text_section_from_elf(disassembled_obj_file, disassembled_binary, toolchain["objcopy"]):
-                pytest.skip("Failed to extract .text section from disassembled ELF file")
+            assert ArmTestHelpers.extract_text_section_from_elf(disassembled_obj_file, disassembled_binary, toolchain["objcopy"]), \
+                "Failed to extract .text section from disassembled ELF file"
             assert disassembled_binary.exists() and disassembled_binary.stat().st_size > 0
         finally:
             sys.path.remove(str(tmpdir_path))

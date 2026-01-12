@@ -11,7 +11,7 @@ Welcome to the ISA DSL documentation. This index helps you navigate all availabl
 ## Feature Documentation
 
 - **[DSL Specification](DSL_Specification.md)**: Complete specification of all DSL features including SIMD, bundling, variable-length instructions, and more
-- **[Testing](TESTING.md)**: Complete testing documentation including test suite overview (193+ tests, all passing) and how to add new tests
+- **[Testing](TESTING.md)**: Complete testing documentation including test suite overview (216 tests, all passing) and how to add new tests
 
 **Note**: For detailed feature documentation, see [DSL Specification](DSL_Specification.md) which consolidates all DSL features.
 

@@ -12,7 +12,10 @@ formats {
         S: [20:20]              // Set condition codes
         Rn: [16:19]             // First operand register
         Rd: [12:15]             // Destination register
-        shifter_operand: [0:11] // Shifter operand (register/shift)
+        Rm: [0:3]               // Register number (for register operand)
+        shift_type: [4:4]       // Shift type bit
+        shift_amount: [5:11]    // Shift amount or register
+        shifter_operand: [0:11] // Shifter operand (full field, for behavior)
         identification_fields: cond, opcode, I
     }
     
@@ -130,7 +133,10 @@ formats {
         opcode: [21:24]         // Comparison opcode
         I: [25:25]              // Immediate bit
         Rn: [16:19]             // First operand register
-        shifter_operand: [0:11] // Second operand
+        Rm: [0:3]               // Register number (for register operand)
+        shift_type: [4:4]       // Shift type bit
+        shift_amount: [5:11]    // Shift amount or register
+        shifter_operand: [0:11] // Shifter operand (full field, for behavior)
         identification_fields: cond, opcode, I
     }
     

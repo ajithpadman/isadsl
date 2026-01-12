@@ -1,6 +1,6 @@
 # ISA DSL Language Server
 
-[![Version](https://img.shields.io/badge/version-0.3.8-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://marketplace.visualstudio.com/items?itemName=ajithpadman.isa-dsl-language-server)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A comprehensive VS Code extension providing language support for the **ISA DSL (Instruction Set Architecture Domain Specific Language)**. This extension offers syntax highlighting, code completion, validation, and seamless integration with the ISA-DSL Python toolchain.

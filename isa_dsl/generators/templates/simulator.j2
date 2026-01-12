@@ -127,7 +127,7 @@
             {%- endif %}
             {%- endfor %}
             {%- if min_bits_list %}
-            min_bits = min([{{ min_bits_list | join(', ') }}])
+            min_bits = max([{{ min_bits_list | join(', ') }}])
             peeked_bits = self._load_bits(self.pc, min_bits)
             
             # Try to match instructions with this format width
@@ -330,6 +330,13 @@
                 result = result - (1 << to_bits)
         
         return result
+    
+    def _to_signed_32(self, value: int) -> int:
+        """Convert a 32-bit unsigned integer to a signed integer for comparisons."""
+        value = value & 0xFFFFFFFF
+        if value >= 0x80000000:
+            return value - 0x100000000
+        return value
     
     def _zero_extend(self, value: int, from_bits: int, to_bits: int = 32) -> int:
         """Zero extend a value from from_bits to to_bits."""

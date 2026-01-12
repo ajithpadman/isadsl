@@ -30,16 +30,16 @@ instructions {
     instruction ADD_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=4, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "ADD R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "ADD R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] + R[shifter_operand];
+            R[Rd] = R[Rn] + R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
                 CPSR.C = (R[Rd] < R[Rn]) ? 1 : 0;
                 // Overflow: signs of operands same, but result sign different
-                CPSR.V = (((R[Rn] >> 31) == (R[shifter_operand] >> 31)) ? (((R[Rd] >> 31) != (R[Rn] >> 31)) ? 1 : 0) : 0);
+                CPSR.V = (((R[Rn] >> 31) == (R[Rm] >> 31)) ? (((R[Rd] >> 31) != (R[Rn] >> 31)) ? 1 : 0) : 0);
             }
             PC = PC + 4;
         }
@@ -67,16 +67,16 @@ instructions {
     instruction SUB_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=2, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "SUB R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "SUB R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] - R[shifter_operand];
+            R[Rd] = R[Rn] - R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
-                CPSR.C = (R[Rn] >= R[shifter_operand]) ? 1 : 0;
+                CPSR.C = (R[Rn] >= R[Rm]) ? 1 : 0;
                 // Overflow detection for subtraction
-                CPSR.V = (((R[Rn] >> 31) != (R[shifter_operand] >> 31)) ? (((R[Rd] >> 31) == (R[shifter_operand] >> 31)) ? 1 : 0) : 0);
+                CPSR.V = (((R[Rn] >> 31) != (R[Rm] >> 31)) ? (((R[Rd] >> 31) == (R[Rm] >> 31)) ? 1 : 0) : 0);
             }
             PC = PC + 4;
         }
@@ -102,14 +102,14 @@ instructions {
     instruction RSB_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=3, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "RSB R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "RSB R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[shifter_operand] - R[Rn];
+            R[Rd] = R[Rm] - R[Rn];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
-                CPSR.C = (R[shifter_operand] >= R[Rn]) ? 1 : 0;
+                CPSR.C = (R[Rm] >= R[Rn]) ? 1 : 0;
             }
             PC = PC + 4;
         }
@@ -134,10 +134,10 @@ instructions {
     instruction ADC_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=5, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "ADC R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "ADC R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] + R[shifter_operand] + CPSR.C;
+            R[Rd] = R[Rn] + R[Rm] + CPSR.C;
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -165,10 +165,10 @@ instructions {
     instruction SBC_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=6, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "SBC R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "SBC R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] - R[shifter_operand] - (1 - CPSR.C);
+            R[Rd] = R[Rn] - R[Rm] - (1 - CPSR.C);
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -196,10 +196,10 @@ instructions {
     instruction RSC_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=7, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "RSC R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "RSC R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[shifter_operand] - R[Rn] - (1 - CPSR.C);
+            R[Rd] = R[Rm] - R[Rn] - (1 - CPSR.C);
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -227,10 +227,10 @@ instructions {
     instruction AND_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=0, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "AND R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "AND R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] & R[shifter_operand];
+            R[Rd] = R[Rn] & R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -258,10 +258,10 @@ instructions {
     instruction EOR_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=1, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "EOR R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "EOR R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] ^ R[shifter_operand];
+            R[Rd] = R[Rn] ^ R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -289,10 +289,10 @@ instructions {
     instruction ORR_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=12, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "ORR R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "ORR R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] | R[shifter_operand];
+            R[Rd] = R[Rn] | R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -320,10 +320,10 @@ instructions {
     instruction BIC_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=14, I=0 }
-        operands: Rd, Rn, shifter_operand
-        assembly_syntax: "BIC R{Rd}, R{Rn}, R{shifter_operand}"
+        operands: Rd, Rn, Rm
+        assembly_syntax: "BIC R{Rd}, R{Rn}, R{Rm}"
         behavior: {
-            R[Rd] = R[Rn] & (~R[shifter_operand]);
+            R[Rd] = R[Rn] & (~R[Rm]);
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -351,10 +351,10 @@ instructions {
     instruction MOV_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=13, Rn=0, I=0 }
-        operands: Rd, shifter_operand
-        assembly_syntax: "MOV R{Rd}, R{shifter_operand}"
+        operands: Rd, Rm
+        assembly_syntax: "MOV R{Rd}, R{Rm}"
         behavior: {
-            R[Rd] = R[shifter_operand];
+            R[Rd] = R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -382,10 +382,10 @@ instructions {
     instruction MVN_REG {
         format: ARM_DP_REG
         encoding: { cond=14, opcode=15, Rn=0, I=0 }
-        operands: Rd, shifter_operand
-        assembly_syntax: "MVN R{Rd}, R{shifter_operand}"
+        operands: Rd, Rm
+        assembly_syntax: "MVN R{Rd}, R{Rm}"
         behavior: {
-            R[Rd] = ~R[shifter_operand];
+            R[Rd] = ~R[Rm];
             if (S == 1) {
                 CPSR.Z = (R[Rd] == 0) ? 1 : 0;
                 CPSR.N = ((R[Rd] >> 31) & 1);
@@ -570,15 +570,15 @@ instructions {
     instruction CMP_REG {
         format: ARM_CMP
         encoding: { cond=14, opcode=10, I=0 }
-        operands: Rn, shifter_operand
-        assembly_syntax: "CMP R{Rn}, R{shifter_operand}"
+        operands: Rn, Rm
+        assembly_syntax: "CMP R{Rn}, R{Rm}"
         behavior: {
-            R[15] = R[Rn] - R[shifter_operand];
+            R[15] = R[Rn] - R[Rm];
             CPSR.Z = (R[15] == 0) ? 1 : 0;
             CPSR.N = ((R[15] >> 31) & 1);
-            CPSR.C = (R[Rn] >= R[shifter_operand]) ? 1 : 0;
+            CPSR.C = (R[Rn] >= R[Rm]) ? 1 : 0;
             // Overflow detection for subtraction
-            CPSR.V = (((R[Rn] >> 31) != (R[shifter_operand] >> 31)) ? (((R[15] >> 31) == (R[shifter_operand] >> 31)) ? 1 : 0) : 0);
+            CPSR.V = (((R[Rn] >> 31) != (R[Rm] >> 31)) ? (((R[15] >> 31) == (R[Rm] >> 31)) ? 1 : 0) : 0);
             PC = PC + 4;
         }
     }
@@ -601,13 +601,13 @@ instructions {
     instruction CMN_REG {
         format: ARM_CMP
         encoding: { cond=14, opcode=11, I=0 }
-        operands: Rn, shifter_operand
-        assembly_syntax: "CMN R{Rn}, R{shifter_operand}"
+        operands: Rn, Rm
+        assembly_syntax: "CMN R{Rn}, R{Rm}"
         behavior: {
-            R[15] = R[Rn] + R[shifter_operand];
+            R[15] = R[Rn] + R[Rm];
             CPSR.Z = (R[15] == 0) ? 1 : 0;
             CPSR.N = ((R[15] >> 31) & 1);
-            CPSR.C = (R[Rn] < R[shifter_operand]) ? 1 : 0;
+            CPSR.C = (R[Rn] < R[Rm]) ? 1 : 0;
             PC = PC + 4;
         }
     }
@@ -629,10 +629,10 @@ instructions {
     instruction TST_REG {
         format: ARM_CMP
         encoding: { cond=14, opcode=8, I=0 }
-        operands: Rn, shifter_operand
-        assembly_syntax: "TST R{Rn}, R{shifter_operand}"
+        operands: Rn, Rm
+        assembly_syntax: "TST R{Rn}, R{Rm}"
         behavior: {
-            R[15] = R[Rn] & R[shifter_operand];
+            R[15] = R[Rn] & R[Rm];
             CPSR.Z = (R[15] == 0) ? 1 : 0;
             CPSR.N = ((R[15] >> 31) & 1);
             PC = PC + 4;
@@ -656,10 +656,10 @@ instructions {
     instruction TEQ_REG {
         format: ARM_CMP
         encoding: { cond=14, opcode=9, I=0 }
-        operands: Rn, shifter_operand
-        assembly_syntax: "TEQ R{Rn}, R{shifter_operand}"
+        operands: Rn, Rm
+        assembly_syntax: "TEQ R{Rn}, R{Rm}"
         behavior: {
-            R[15] = R[Rn] ^ R[shifter_operand];
+            R[15] = R[Rn] ^ R[Rm];
             CPSR.Z = (R[15] == 0) ? 1 : 0;
             CPSR.N = ((R[15] >> 31) & 1);
             PC = PC + 4;

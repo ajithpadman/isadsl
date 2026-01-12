@@ -205,6 +205,7 @@ def test_instruction_with_format_constant():
         instruction ADD {
             format: R_TYPE
             operands: rd, rs1, rs2
+            external_behavior: true
         }
     }
     """

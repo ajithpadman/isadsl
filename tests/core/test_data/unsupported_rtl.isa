@@ -1,0 +1,54 @@
+architecture UnsupportedRTL {
+    word_size: 32
+    endianness: little
+    
+    registers {
+        gpr R 32 [16]
+        sfr PC 32
+    }
+    
+    formats {
+        format R_TYPE 32 {
+            opcode: [0:5]
+            rd: [6:9]
+            rs1: [10:13]
+            rs2: [14:17]
+        }
+    }
+    
+    instructions {
+        // This instruction uses an unknown built-in function - should trigger validation error
+        instruction UNKNOWN_FUNCTION {
+            format: R_TYPE
+            encoding: { opcode=1 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "UNKNOWN_FUNCTION R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = unknown_function(R[rs1], R[rs2]);
+            }
+        }
+        
+        // This instruction uses an unknown register - should trigger validation error
+        instruction UNKNOWN_REGISTER {
+            format: R_TYPE
+            encoding: { opcode=2 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "UNKNOWN_REGISTER R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                UNKNOWN_REG[rd] = R[rs1] + R[rs2];
+            }
+        }
+        
+        // This instruction has valid behavior - should pass
+        instruction VALID_BEHAVIOR {
+            format: R_TYPE
+            encoding: { opcode=3 }
+            operands: rd, rs1, rs2
+            assembly_syntax: "VALID_BEHAVIOR R{rd}, R{rs1}, R{rs2}"
+            behavior: {
+                R[rd] = R[rs1] + R[rs2];
+            }
+        }
+    }
+}
+

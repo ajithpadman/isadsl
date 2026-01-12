@@ -199,12 +199,21 @@ RTLExpression:
 ;
 
 RTLTernaryExpression:
-    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLFunctionCall | RTLExpressionAtom
+    RTLTernary | RTLBinaryOp | RTLUnaryOp | RTLExpressionAtom
+;
+
+RTLBinaryOp:
+    left=RTLExpressionAtom op=BinaryOperator right=RTLTernaryExpression
 ;
 
 RTLExpressionAtom:
-    RTLLValue | RTLConstant | OperandReference | RTLBitfieldAccess | '(' RTLExpression ')'
+    RTLFunctionCall | RTLMemoryExpression | RTLBitfieldAccess | RTLLValue | RTLConstant | OperandReference | '(' RTLExpression ')'
 ;
+
+RTLMemoryExpression:
+    'MEM' '[' address=RTLTernaryExpression ']'
+;
+
 
 OperandReference:
     name=ID | index=INT
@@ -214,16 +223,12 @@ RTLTernary:
     condition=RTLExpressionAtom '?' then_expr=RTLTernaryExpression ':' else_expr=RTLTernaryExpression
 ;
 
-RTLBinaryOp:
-    left=RTLExpressionAtom op=BinaryOperator right=RTLExpression
-;
-
 BinaryOperator:
     '<<' | '>>' | '<=' | '>=' | '==' | '!=' | '<' | '>' | '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^'
 ;
 
 RTLUnaryOp:
-    op=UnaryOperator expr=RTLExpressionAtom
+    op=UnaryOperator expr=RTLExpressionAtom ('[' msb=RTLTernaryExpression ':' lsb=RTLTernaryExpression ']')?
 ;
 
 UnaryOperator:

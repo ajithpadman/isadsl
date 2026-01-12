@@ -407,6 +407,13 @@ class RTLInterpreter:
             
             return count
         
+        elif func_name_lower == "mem":
+            # MEM[address] - read from memory
+            if len(args) != 1:
+                raise ValueError(f"MEM requires 1 argument (address), got {len(args)}")
+            address = args[0] & 0xFFFFFFFF  # Ensure 32-bit address
+            return self.memory.get(address, 0)
+        
         else:
             raise ValueError(f"Unknown built-in function: {func_name}")
 

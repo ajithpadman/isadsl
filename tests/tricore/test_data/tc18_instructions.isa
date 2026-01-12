@@ -68,5 +68,2812 @@ instructions {
 
        }
     }
+    instruction ABSDIF {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x0E
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ABSDIF {d}, {s1}, {s2}"
+       behavior:{
+        diff = D[s1] - D[s2];
+        result = (diff >= 0) ? diff : (0 - diff);
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SV = (av > 0) ? 1 : PSW.SV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+        D[d] = result;
+       }
+    }
+    instruction ABSDIF_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x4E
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ABSDIF.B {d}, {s1}, {s2}"
+       behavior:{
+        D_a_31_24 = sign_extend(extract_bits(D[s1], 31, 24), 8);
+        D_a_23_16 = sign_extend(extract_bits(D[s1], 23, 16), 8);
+        D_a_15_8 = sign_extend(extract_bits(D[s1], 15, 8), 8);
+        D_a_7_0 = sign_extend(extract_bits(D[s1], 7, 0), 8);
+        D_b_31_24 = sign_extend(extract_bits(D[s2], 31, 24), 8);
+        D_b_23_16 = sign_extend(extract_bits(D[s2], 23, 16), 8);
+        D_b_15_8 = sign_extend(extract_bits(D[s2], 15, 8), 8);
+        D_b_7_0 = sign_extend(extract_bits(D[s2], 7, 0), 8);
+        diff3 = D_a_31_24 - D_b_31_24;
+        result3 = (diff3 >= 0) ? diff3 : (0 - diff3);
+        result_byte3 = extract_bits(result3, 7,0);
+        diff2 = D_a_23_16 - D_b_23_16;
+        result2 = (diff2 >= 0) ? diff2 : (0 - diff2);
+        result_byte2 = extract_bits(result2, 7,0);
+        diff1 = D_a_15_8 - D_b_15_8;
+        result1 = (diff1 >= 0) ? diff1 : (0 - diff1);
+        result_byte1 = extract_bits(result1, 7,0);
+        diff0 = D_a_7_0 - D_b_7_0;
+        result0 = (diff0 >= 0) ? diff0 : (0 - diff0);
+        result_byte0 = extract_bits(result0, 7,0);
+        D[d] = (result_byte3<<24)| (result_byte2<<16)| (result_byte1<<8)|(result_byte0);
+        PSW.V = ((result_byte3 > 0x7F) | (result_byte3 < 0xFFFFFF80) | (result_byte2 > 0x7F) | (result_byte2 < 0xFFFFFF80) |(result_byte1 > 0x7F) | (result_byte1 < 0xFFFFFF80) |(result_byte0 > 0x7F) | (result_byte0 < 0xFFFFFF80)) ? 1 : 0;
+        PSW.SV = ((result_byte3 > 0x7F) | (result_byte3 < 0xFFFFFF80) | (result_byte2 > 0x7F) | (result_byte2 < 0xFFFFFF80) |(result_byte1 > 0x7F) | (result_byte1 < 0xFFFFFF80) |(result_byte0 > 0x7F) | (result_byte0 < 0xFFFFFF80)) ? 1 : PSW.SV;
+        byte3_msb = extract_bits(result3,7,7);
+        byte3_lsb = extract_bits(result3,6,6);
+        av_byte3 = byte3_msb^byte3_lsb;
+        byte2_msb = extract_bits(result2,7,7);
+        byte2_lsb = extract_bits(result2,6,6);
+        av_byte2 = byte2_msb^byte2_lsb;
+        byte1_msb = extract_bits(result1,7,7);
+        byte1_lsb = extract_bits(result1,6,6);
+        av_byte1 = byte1_msb^byte1_lsb;
+        byte0_msb = extract_bits(result0,7,7);
+        byte0_lsb = extract_bits(result0,6,6);
+        av_byte0 = byte0_msb^byte0_lsb;
+        advanced_overflow = (av_byte3 > 0) | (av_byte2 > 0) | (av_byte1 > 0) | (av_byte0 > 0);
+        PSW.AV = (advanced_overflow > 0) ? 1 : 0;
+        PSW.SAV = (advanced_overflow > 0) ? 1 : PSW.SAV;
+
+       }
+    }
+    instruction ABSDIF_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x6E
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ABSDIF.H {d}, {s1}, {s2}"
+       behavior:{
+        D_a_31_16 = sign_extend(extract_bits(D[s1], 31, 16), 16);
+        D_a_15_0 = sign_extend(extract_bits(D[s1], 15, 0), 16);
+        D_b_31_16 = sign_extend(extract_bits(D[s2], 31, 16), 16);
+        D_b_15_0 = sign_extend(extract_bits(D[s2], 15, 0), 16);
+        diff1 = D_a_31_16 - D_b_31_16;
+        result1 = (diff1 >= 0) ? diff1 : (0 - diff1);
+        result_halfword1 = extract_bits(result1, 15,0);
+        diff0 = D_a_15_0 - D_b_15_0;
+        result0 = (diff0 >= 0) ? diff0 : (0 - diff0);
+        result_halfword0 = extract_bits(result0, 15,0);
+        D[d] = (result_halfword1<<16)| (result_halfword0);
+        PSW.V = ((result_halfword1 > 0x7FFF) | (result_halfword1 < 0xFFFF8000) | (result_halfword0 > 0x7FFF) | (result_halfword0 < 0xFFFF8000)) ? 1 : 0;
+        PSW.SV = ((result_halfword1 > 0x7FFF) | (result_halfword1 < 0xFFFF8000) | (result_halfword0 > 0x7FFF) | (result_halfword0 < 0xFFFF8000)) ? 1 : PSW.SV;
+        halfword1_msb = extract_bits(result1,15,15);
+        halfword1_lsb = extract_bits(result1,14,14);
+        av_halfword1 = halfword1_msb^halfword1_lsb;
+        halfword0_msb = extract_bits(result0,15,15);
+        halfword0_lsb = extract_bits(result0,14,14);
+        av_halfword0 = halfword0_msb^halfword0_lsb;
+        advanced_overflow = (av_halfword1 > 0) | (av_halfword0 > 0);
+        PSW.AV = (advanced_overflow > 0) ? 1 : 0;
+        PSW.SAV = (advanced_overflow > 0) ? 1 : PSW.SAV;
+
+       }
+    }
+    instruction ADD {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x00
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ADD {d}, {s1}, {s2}"
+       behavior:{
+        result = D[s1] + D[s2];
+        D[d] = result;
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction ADD_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x40
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ADD.B {d}, {s1}, {s2}"
+       behavior:{
+        byte3 = extract_bits(D[s1], 31, 24) + extract_bits(D[s2], 31, 24);
+        byte2 = extract_bits(D[s1], 23, 16) + extract_bits(D[s2], 23, 16);
+        byte1 = extract_bits(D[s1], 15, 8) + extract_bits(D[s2], 15, 8);
+        byte0 = extract_bits(D[s1], 7, 0) + extract_bits(D[s2], 7, 0);
+        result_byte3 = extract_bits(byte3, 7,0);
+        result_byte2 = extract_bits(byte2, 7,0);
+        result_byte1 = extract_bits(byte1, 7,0);
+        result_byte0 = extract_bits(byte0, 7,0);
+        D[d] = (result_byte3<<24)| (result_byte2<<16)| (result_byte1<<8)|(result_byte0);
+       }
+    }
+    instruction ADD_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x60
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ADD.H {d}, {s1}, {s2}"
+       behavior:{
+        halfword1 = extract_bits(D[s1], 31, 16) + extract_bits(D[s2], 31, 16);
+        halfword0 = extract_bits(D[s1], 15, 0) + extract_bits(D[s2], 15, 0);
+        result_halfword1 = extract_bits(halfword1, 15,0);
+        result_halfword0 = extract_bits(halfword0, 15,0);
+        D[d] = (result_halfword1<<16)| (result_halfword0);
+       }
+    }
+    instruction ADDC {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x05
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ADDC {d}, {s1}, {s2}"
+       behavior:{
+        result = D[s1] + D[s2] + PSW.C;
+        D[d] = result;
+        PSW.C = carry(D[s1], D[s2], PSW.C);
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction ADDX {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x04
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ADDX {d}, {s1}, {s2}"
+       behavior:{
+        result = D[s1] + D[s2];
+        D[d] = result;
+        PSW.C = carry(D[s1], D[s2], 0);
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction SUB {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x08
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "SUB {d}, {s1}, {s2}"
+       behavior:{
+        result = D[s1] - D[s2];
+        D[d] = result;
+        msb = extract_bits(result,31,31);
+        lsb = extract_bits(result,30,30);
+        av = msb^lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction ANDN {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x0E
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "ANDN {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = D[s1] & (~D[s2]);
+       }
+    }
+    instruction NAND {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x09
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "NAND {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = ~(D[s1] & D[s2]);
+       }
+    }
+    instruction NOR {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x0B
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "NOR {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = ~(D[s1] | D[s2]);
+       }
+    }
+    instruction XNOR {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x0D
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "XNOR {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = ~(D[s1] ^ D[s2]);
+       }
+    }
+    instruction EQ {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x56
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "EQ {d}, {s1}, {s2}"
+       behavior:{
+        result_byte3 = (extract_bits(D[s1], 31, 24) == extract_bits(D[s2], 31, 24)) ? 1 : 0;
+        result_byte2 = (extract_bits(D[s1], 23, 16) == extract_bits(D[s2], 23, 16)) ? 1 : 0;
+        result_byte1 = (extract_bits(D[s1], 15, 8) == extract_bits(D[s2], 15, 8)) ? 1 : 0;
+        result_byte0 = (extract_bits(D[s1], 7, 0) == extract_bits(D[s2], 7, 0)) ? 1 : 0;
+        result = result_byte3 | result_byte2 | result_byte1 | result_byte0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction LT {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x13
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "LT {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] < D[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction LT_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x52
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "LT.B {d}, {s1}, {s2}"
+       behavior:{
+        s1_byte3 = sign_extend(extract_bits(D[s1], 31, 24), 8);
+        s1_byte2 = sign_extend(extract_bits(D[s1], 23, 16), 8);
+        s1_byte1 = sign_extend(extract_bits(D[s1], 15, 8), 8);
+        s1_byte0 = sign_extend(extract_bits(D[s1], 7, 0), 8);
+        s2_byte3 = sign_extend(extract_bits(D[s2], 31, 24), 8);
+        s2_byte2 = sign_extend(extract_bits(D[s2], 23, 16), 8);
+        s2_byte1 = sign_extend(extract_bits(D[s2], 15, 8), 8);
+        s2_byte0 = sign_extend(extract_bits(D[s2], 7, 0), 8);
+        result_byte3 = (s1_byte3 < s2_byte3) ? 1 : 0;
+        result_byte2 = (s1_byte2 < s2_byte2) ? 1 : 0;
+        result_byte1 = (s1_byte1 < s2_byte1) ? 1 : 0;
+        result_byte0 = (s1_byte0 < s2_byte0) ? 1 : 0;
+        D[d] = (result_byte3<<24) | (result_byte2<<16) | (result_byte1<<8) | result_byte0;
+       }
+    }
+    instruction MAX {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x1A
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MAX {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] > D[s2]) ? D[s1] : D[s2];
+        D[d] = result;
+       }
+    }
+    instruction MAX_U {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x1B
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MAX.U {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] > D[s2]) ? D[s1] : D[s2];
+        D[d] = result;
+       }
+    }
+    instruction MIN {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x18
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MIN {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] < D[s2]) ? D[s1] : D[s2];
+        D[d] = result;
+       }
+    }
+    instruction MIN_U {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x19
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MIN.U {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] < D[s2]) ? D[s1] : D[s2];
+        D[d] = result;
+       }
+    }
+    instruction MOV {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x1F
+       }
+       operands:s2,d 
+       assembly_syntax: "MOV {d}, {s2}"
+       behavior:{
+        D[d] = D[s2];
+       }
+    }
+    instruction MOV_E {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x80
+       }
+       operands:s2,d 
+       assembly_syntax: "MOV E{d}, D{s2}"
+       behavior:{
+        E[d] = sign_extend(D[s2], 32, 64);
+       }
+    }
+    instruction MOV_E2 {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x81
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MOV E{d}, D{s1}, D{s2}"
+       behavior:{
+        E[d] = (D[s1] << 32) | D[s2];
+       }
+    }
+    instruction EQ_A {
+       format: RR
+       encoding:{
+        op1=0x01,
+        op2=0x40
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "EQ.A {d}, A{s1}, A{s2}"
+       behavior:{
+        result = (A[s1] == A[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction EQ_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x50
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "EQ.B {d}, {s1}, {s2}"
+       behavior:{
+        byte3 = (extract_bits(D[s1], 31, 24) == extract_bits(D[s2], 31, 24)) ? 0xFF : 0x00;
+        byte2 = (extract_bits(D[s1], 23, 16) == extract_bits(D[s2], 23, 16)) ? 0xFF : 0x00;
+        byte1 = (extract_bits(D[s1], 15, 8) == extract_bits(D[s2], 15, 8)) ? 0xFF : 0x00;
+        byte0 = (extract_bits(D[s1], 7, 0) == extract_bits(D[s2], 7, 0)) ? 0xFF : 0x00;
+        D[d] = (byte3 << 24) | (byte2 << 16) | (byte1 << 8) | byte0;
+       }
+    }
+    instruction EQ_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x70
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "EQ.H {d}, {s1}, {s2}"
+       behavior:{
+        halfword1 = (extract_bits(D[s1], 31, 16) == extract_bits(D[s2], 31, 16)) ? 0xFFFF : 0x0000;
+        halfword0 = (extract_bits(D[s1], 15, 0) == extract_bits(D[s2], 15, 0)) ? 0xFFFF : 0x0000;
+        D[d] = (halfword1 << 16) | halfword0;
+       }
+    }
+    instruction GE {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x11
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "GE {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] >= D[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction GE_U {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x15
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "GE.U {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] >= D[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction NE {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x53
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "NE {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] != D[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction NE_A {
+       format: RR
+       encoding:{
+        op1=0x01,
+        op2=0x41
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "NE.A {d}, A{s1}, A{s2}"
+       behavior:{
+        result = (A[s1] != A[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction LT_U {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x72
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "LT.U {d}, {s1}, {s2}"
+       behavior:{
+        result = (D[s1] < D[s2]) ? 1 : 0;
+        D[d] = zero_extend(result, 1, 32);
+       }
+    }
+    instruction LT_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x73
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "LT.H {d}, {s1}, {s2}"
+       behavior:{
+        s1_halfword1 = sign_extend(extract_bits(D[s1], 31, 16), 16);
+        s1_halfword0 = sign_extend(extract_bits(D[s1], 15, 0), 16);
+        s2_halfword1 = sign_extend(extract_bits(D[s2], 31, 16), 16);
+        s2_halfword0 = sign_extend(extract_bits(D[s2], 15, 0), 16);
+        result_halfword1 = (s1_halfword1 < s2_halfword1) ? 1 : 0;
+        result_halfword0 = (s1_halfword0 < s2_halfword0) ? 1 : 0;
+        D[d] = (result_halfword1 << 16) | result_halfword0;
+       }
+    }
+    instruction MAX_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x5A
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MAX.B {d}, {s1}, {s2}"
+       behavior:{
+        s1_byte3 = sign_extend(extract_bits(D[s1], 31, 24), 8);
+        s1_byte2 = sign_extend(extract_bits(D[s1], 23, 16), 8);
+        s1_byte1 = sign_extend(extract_bits(D[s1], 15, 8), 8);
+        s1_byte0 = sign_extend(extract_bits(D[s1], 7, 0), 8);
+        s2_byte3 = sign_extend(extract_bits(D[s2], 31, 24), 8);
+        s2_byte2 = sign_extend(extract_bits(D[s2], 23, 16), 8);
+        s2_byte1 = sign_extend(extract_bits(D[s2], 15, 8), 8);
+        s2_byte0 = sign_extend(extract_bits(D[s2], 7, 0), 8);
+        result_byte3 = (s1_byte3 > s2_byte3) ? s1_byte3 : s2_byte3;
+        result_byte2 = (s1_byte2 > s2_byte2) ? s1_byte2 : s2_byte2;
+        result_byte1 = (s1_byte1 > s2_byte1) ? s1_byte1 : s2_byte1;
+        result_byte0 = (s1_byte0 > s2_byte0) ? s1_byte0 : s2_byte0;
+        D[d] = (extract_bits(result_byte3, 7, 0) << 24) | (extract_bits(result_byte2, 7, 0) << 16) | (extract_bits(result_byte1, 7, 0) << 8) | extract_bits(result_byte0, 7, 0);
+       }
+    }
+    instruction MAX_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x7A
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MAX.H {d}, {s1}, {s2}"
+       behavior:{
+        s1_halfword1 = sign_extend(extract_bits(D[s1], 31, 16), 16);
+        s1_halfword0 = sign_extend(extract_bits(D[s1], 15, 0), 16);
+        s2_halfword1 = sign_extend(extract_bits(D[s2], 31, 16), 16);
+        s2_halfword0 = sign_extend(extract_bits(D[s2], 15, 0), 16);
+        result_halfword1 = (s1_halfword1 > s2_halfword1) ? s1_halfword1 : s2_halfword1;
+        result_halfword0 = (s1_halfword0 > s2_halfword0) ? s1_halfword0 : s2_halfword0;
+        D[d] = (extract_bits(result_halfword1, 15, 0) << 16) | extract_bits(result_halfword0, 15, 0);
+       }
+    }
+    instruction MIN_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x58
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MIN.B {d}, {s1}, {s2}"
+       behavior:{
+        s1_byte3 = sign_extend(extract_bits(D[s1], 31, 24), 8);
+        s1_byte2 = sign_extend(extract_bits(D[s1], 23, 16), 8);
+        s1_byte1 = sign_extend(extract_bits(D[s1], 15, 8), 8);
+        s1_byte0 = sign_extend(extract_bits(D[s1], 7, 0), 8);
+        s2_byte3 = sign_extend(extract_bits(D[s2], 31, 24), 8);
+        s2_byte2 = sign_extend(extract_bits(D[s2], 23, 16), 8);
+        s2_byte1 = sign_extend(extract_bits(D[s2], 15, 8), 8);
+        s2_byte0 = sign_extend(extract_bits(D[s2], 7, 0), 8);
+        result_byte3 = (s1_byte3 < s2_byte3) ? s1_byte3 : s2_byte3;
+        result_byte2 = (s1_byte2 < s2_byte2) ? s1_byte2 : s2_byte2;
+        result_byte1 = (s1_byte1 < s2_byte1) ? s1_byte1 : s2_byte1;
+        result_byte0 = (s1_byte0 < s2_byte0) ? s1_byte0 : s2_byte0;
+        D[d] = (extract_bits(result_byte3, 7, 0) << 24) | (extract_bits(result_byte2, 7, 0) << 16) | (extract_bits(result_byte1, 7, 0) << 8) | extract_bits(result_byte0, 7, 0);
+       }
+    }
+    instruction MIN_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x78
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "MIN.H {d}, {s1}, {s2}"
+       behavior:{
+        s1_halfword1 = sign_extend(extract_bits(D[s1], 31, 16), 16);
+        s1_halfword0 = sign_extend(extract_bits(D[s1], 15, 0), 16);
+        s2_halfword1 = sign_extend(extract_bits(D[s2], 31, 16), 16);
+        s2_halfword0 = sign_extend(extract_bits(D[s2], 15, 0), 16);
+        result_halfword1 = (s1_halfword1 < s2_halfword1) ? s1_halfword1 : s2_halfword1;
+        result_halfword0 = (s1_halfword0 < s2_halfword0) ? s1_halfword0 : s2_halfword0;
+        D[d] = (extract_bits(result_halfword1, 15, 0) << 16) | extract_bits(result_halfword0, 15, 0);
+       }
+    }
+    instruction XOR {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x0C
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "XOR {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = D[s1] ^ D[s2];
+       }
+    }
+    instruction OR {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x0A
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "OR {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = D[s1] | D[s2];
+       }
+    }
+    instruction AND {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x08
+       }
+       operands:s1,s2,d 
+       assembly_syntax: "AND {d}, {s1}, {s2}"
+       behavior:{
+        D[d] = D[s1] & D[s2];
+       }
+    }
+    instruction LD_A {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x26
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.A A{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        A[s1_d] = MEM[EA];
+       }
+    }
+    instruction LD_A_POST {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x06
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.A A{s1_d}, [A{s2}+], off10"
+       behavior:{
+        EA = A[s2];
+        A[s1_d] = MEM[EA];
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction LD_A_PRE {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x16
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.A A{s1_d}, [+A{s2}], off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        A[s1_d] = MEM[EA];
+        A[s2] = EA;
+       }
+    }
+    instruction LD_B {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x20
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.B D{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = sign_extend(MEM[EA], 8);
+       }
+    }
+    instruction LD_B_POST {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x00
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.B D{s1_d}, [A{s2}+], off10"
+       behavior:{
+        EA = A[s2];
+        D[s1_d] = sign_extend(MEM[EA], 8);
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction LD_B_PRE {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x10
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.B D{s1_d}, [+A{s2}], off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = sign_extend(MEM[EA], 8);
+        A[s2] = EA;
+       }
+    }
+    instruction LD_BU {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x21
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.BU D{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = zero_extend(MEM[EA], 8, 32);
+       }
+    }
+    instruction LD_H {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x22
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.H D{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = sign_extend(MEM[EA], 16);
+       }
+    }
+    instruction LD_H_POST {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x02
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.H D{s1_d}, [A{s2}+], off10"
+       behavior:{
+        EA = A[s2];
+        D[s1_d] = sign_extend(MEM[EA], 16);
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction LD_H_PRE {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x12
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.H D{s1_d}, [+A{s2}], off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = sign_extend(MEM[EA], 16);
+        A[s2] = EA;
+       }
+    }
+    instruction LD_HU {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x23
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.HU D{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = zero_extend(MEM[EA], 16, 32);
+       }
+    }
+    instruction LD_W {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x24
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.W D{s1_d}, A{s2}, off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = MEM[EA];
+       }
+    }
+    instruction LD_W_POST {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x04
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.W D{s1_d}, [A{s2}+], off10"
+       behavior:{
+        EA = A[s2];
+        D[s1_d] = MEM[EA];
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction LD_W_PRE {
+       format: BO
+       encoding:{
+        op1=0x09,
+        op2=0x14
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "LD.W D{s1_d}, [+A{s2}], off10"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        D[s1_d] = MEM[EA];
+        A[s2] = EA;
+       }
+    }
+    instruction ST_A {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x26
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.A A{s2}, off10, A{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = A[s1_d];
+       }
+    }
+    instruction ST_A_POST {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x06
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.A [A{s2}+], off10, A{s1_d}"
+       behavior:{
+        EA = A[s2];
+        MEM[EA] = A[s1_d];
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction ST_A_PRE {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x16
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.A [+A{s2}], off10, A{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = A[s1_d];
+        A[s2] = EA;
+       }
+    }
+    instruction ST_B {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x20
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.B A{s2}, off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = extract_bits(D[s1_d], 7, 0);
+       }
+    }
+    instruction ST_B_POST {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x00
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.B [A{s2}+], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2];
+        MEM[EA] = extract_bits(D[s1_d], 7, 0);
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction ST_B_PRE {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x10
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.B [+A{s2}], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = extract_bits(D[s1_d], 7, 0);
+        A[s2] = EA;
+       }
+    }
+    instruction ST_H {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x22
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.H A{s2}, off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = extract_bits(D[s1_d], 15, 0);
+       }
+    }
+    instruction ST_H_POST {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x02
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.H [A{s2}+], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2];
+        MEM[EA] = extract_bits(D[s1_d], 15, 0);
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction ST_H_PRE {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x12
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.H [+A{s2}], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = extract_bits(D[s1_d], 15, 0);
+        A[s2] = EA;
+       }
+    }
+    instruction ST_W {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x24
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.W A{s2}, off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = D[s1_d];
+       }
+    }
+    instruction ST_W_POST {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x04
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.W [A{s2}+], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2];
+        MEM[EA] = D[s1_d];
+        A[s2] = EA + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+       }
+    }
+    instruction ST_W_PRE {
+       format: BO
+       encoding:{
+        op1=0x89,
+        op2=0x14
+       }
+       operands:s1_d,s2,off10(off10_9_6,off10_5_0)
+       assembly_syntax: "ST.W [+A{s2}], off10, D{s1_d}"
+       behavior:{
+        EA = A[s2] + sign_extend((off10_9_6 << 6) | off10_5_0, 10);
+        MEM[EA] = D[s1_d];
+        A[s2] = EA;
+       }
+    }
+    instruction LD_A_BOL {
+       format: BOL
+       encoding:{
+        op1=0x99
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "LD.A A{a}, A{b}, off16"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        A[a] = MEM[EA];
+       }
+    }
+    instruction LD_B_BOL {
+       format: BOL
+       encoding:{
+        op1=0x79
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "LD.B D{a}, A{b}, off16"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        D[a] = sign_extend(MEM[EA], 8);
+       }
+    }
+    instruction LD_H_BOL {
+       format: BOL
+       encoding:{
+        op1=0xC9
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "LD.H D{a}, A{b}, off16"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        D[a] = sign_extend(MEM[EA], 16);
+       }
+    }
+    instruction LD_W_BOL {
+       format: BOL
+       encoding:{
+        op1=0x19
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "LD.W D{a}, A{b}, off16"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        D[a] = MEM[EA];
+       }
+    }
+    instruction ST_B_BOL {
+       format: BOL
+       encoding:{
+        op1=0xE9
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "ST.B A{b}, off16, D{a}"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        MEM[EA] = extract_bits(D[a], 7, 0);
+       }
+    }
+    instruction ST_H_BOL {
+       format: BOL
+       encoding:{
+        op1=0xF9
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "ST.H A{b}, off16, D{a}"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        MEM[EA] = extract_bits(D[a], 15, 0);
+       }
+    }
+    instruction ST_W_BOL {
+       format: BOL
+       encoding:{
+        op1=0xB5
+       }
+       operands:a,b,off16(off16_9_6,off16_15_10,off16_5_0)
+       assembly_syntax: "ST.W A{b}, off16, D{a}"
+       behavior:{
+        EA = A[b] + sign_extend((off16_9_6 << 10) | (off16_15_10 << 6) | off16_5_0, 16);
+        MEM[EA] = D[a];
+       }
+    }
+    instruction MUL_D {
+       format: RR2
+       encoding:{
+        op1=0x73,
+        op2=0x0A
+       }
+       operands:a,b,c
+       assembly_syntax: "MUL D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] * D[b];
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction MUL_E {
+       format: RR2
+       encoding:{
+        op1=0x73,
+        op2=0x6A
+       }
+       operands:a,b,c
+       assembly_syntax: "MUL E{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] * D[b];
+        E[c] = result;
+        msb = extract_bits(result, 63, 63);
+        lsb = extract_bits(result, 62, 62);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = 0;
+        PSW.SV = PSW.SV;
+       }
+    }
+    instruction ADDI {
+       format: RLC
+       encoding:{
+        op1=0x1B
+       }
+       operands:a,const16,c
+       assembly_syntax: "ADDI D{c}, D{a}, const16"
+       behavior:{
+        result = D[a] + sign_extend(const16, 16);
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction ADDIH {
+       format: RLC
+       encoding:{
+        op1=0x9B
+       }
+       operands:a,const16,c
+       assembly_syntax: "ADDIH D{c}, D{a}, const16"
+       behavior:{
+        result = D[a] + (const16 << 16);
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+        PSW.V = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.SV = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV;
+       }
+    }
+    instruction ADDIH_A {
+       format: RLC
+       encoding:{
+        op1=0x11
+       }
+       operands:a,const16,c
+       assembly_syntax: "ADDIH.A A{c}, A{a}, const16"
+       behavior:{
+        A[c] = A[a] + (const16 << 16);
+       }
+    }
+    instruction CADD_RCR {
+       format: RCR
+       encoding:{
+        op1=0xAB,
+        op2=0x0
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "CADD D{c}, D{d}, D{a}, const9"
+       behavior:{
+        condition = (D[d] != 0) ? 1 : 0;
+        result = (condition > 0) ? (D[a] + sign_extend(const9, 9)) : D[a];
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (condition > 0) ? ((av > 0) ? 1 : 0) : PSW.AV;
+        PSW.SAV = (condition > 0) ? ((av > 0) ? 1 : PSW.SAV) : PSW.SAV;
+        PSW.V = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0) : PSW.V;
+        PSW.SV = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV) : PSW.SV;
+       }
+    }
+    instruction CADDN_RCR {
+       format: RCR
+       encoding:{
+        op1=0xAB,
+        op2=0x1
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "CADDN D{c}, D{d}, D{a}, const9"
+       behavior:{
+        condition = (D[d] == 0) ? 1 : 0;
+        result = (condition > 0) ? (D[a] + sign_extend(const9, 9)) : D[a];
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (condition > 0) ? ((av > 0) ? 1 : 0) : PSW.AV;
+        PSW.SAV = (condition > 0) ? ((av > 0) ? 1 : PSW.SAV) : PSW.SAV;
+        PSW.V = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0) : PSW.V;
+        PSW.SV = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV) : PSW.SV;
+       }
+    }
+    instruction CADD_RRR {
+       format: RRR
+       encoding:{
+        op1=0x2B,
+        op2=0x0
+       }
+       operands:a,b,d,c
+       assembly_syntax: "CADD D{c}, D{d}, D{a}, D{b}"
+       behavior:{
+        condition = (D[d] != 0) ? 1 : 0;
+        result = (condition > 0) ? (D[a] + D[b]) : D[a];
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (condition > 0) ? ((av > 0) ? 1 : 0) : PSW.AV;
+        PSW.SAV = (condition > 0) ? ((av > 0) ? 1 : PSW.SAV) : PSW.SAV;
+        PSW.V = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0) : PSW.V;
+        PSW.SV = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV) : PSW.SV;
+       }
+    }
+    instruction CADDN_RRR {
+       format: RRR
+       encoding:{
+        op1=0x2B,
+        op2=0x1
+       }
+       operands:a,b,d,c
+       assembly_syntax: "CADDN D{c}, D{d}, D{a}, D{b}"
+       behavior:{
+        condition = (D[d] == 0) ? 1 : 0;
+        result = (condition > 0) ? (D[a] + D[b]) : D[a];
+        D[c] = result;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (condition > 0) ? ((av > 0) ? 1 : 0) : PSW.AV;
+        PSW.SAV = (condition > 0) ? ((av > 0) ? 1 : PSW.SAV) : PSW.SAV;
+        PSW.V = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0) : PSW.V;
+        PSW.SV = (condition > 0) ? (((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : PSW.SV) : PSW.SV;
+       }
+    }
+    instruction ADDS_RC {
+       format: RC
+       encoding:{
+        op1=0x8B,
+        op2=0x02
+       }
+       operands:a,const9,c
+       assembly_syntax: "ADDS D{c}, D{a}, const9"
+       behavior:{
+        result = D[a] + sign_extend(const9, 9);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ADDS_RR {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x02
+       }
+       operands:a,b,c
+       assembly_syntax: "ADDS D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] + D[b];
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ADDS_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x62
+       }
+       operands:a,b,c
+       assembly_syntax: "ADDS.H D{c}, D{a}, D{b}"
+       behavior:{
+        result_halfword1 = extract_bits(D[a], 31, 16) + extract_bits(D[b], 31, 16);
+        result_halfword0 = extract_bits(D[a], 15, 0) + extract_bits(D[b], 15, 0);
+        sat_halfword1 = ssov(result_halfword1, 16);
+        sat_halfword0 = ssov(result_halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+        ov_halfword1 = ((result_halfword1 > 0x7FFF) | (result_halfword1 < 0x8000)) ? 1 : 0;
+        ov_halfword0 = ((result_halfword0 > 0x7FFF) | (result_halfword0 < 0x8000)) ? 1 : 0;
+        overflow = ov_halfword1 | ov_halfword0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        aov_halfword1 = extract_bits(result_halfword1, 15, 15) ^ extract_bits(result_halfword1, 14, 14);
+        aov_halfword0 = extract_bits(result_halfword0, 15, 15) ^ extract_bits(result_halfword0, 14, 14);
+        advanced_overflow = aov_halfword1 | aov_halfword0;
+        PSW.AV = advanced_overflow ? 1 : 0;
+        PSW.SAV = advanced_overflow ? 1 : PSW.SAV;
+       }
+    }
+    instruction ADDS_U_RC {
+       format: RC
+       encoding:{
+        op1=0x8B,
+        op2=0x03
+       }
+       operands:a,const9,c
+       assembly_syntax: "ADDS.U D{c}, D{a}, const9"
+       behavior:{
+        result = D[a] + sign_extend(const9, 9);
+        D[c] = suov(result, 32);
+        overflow = (result > 0xFFFFFFFF) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ADDS_U_RR {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x03
+       }
+       operands:a,b,c
+       assembly_syntax: "ADDS.U D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] + D[b];
+        D[c] = suov(result, 32);
+        overflow = (result > 0xFFFFFFFF) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ADDS_HU {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x63
+       }
+       operands:a,b,c
+       assembly_syntax: "ADDS.HU D{c}, D[a], D{b}"
+       behavior:{
+        result_halfword1 = extract_bits(D[a], 31, 16) + extract_bits(D[b], 31, 16);
+        result_halfword0 = extract_bits(D[a], 15, 0) + extract_bits(D[b], 15, 0);
+        sat_halfword1 = suov(result_halfword1, 16);
+        sat_halfword0 = suov(result_halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+        ov_halfword1 = (result_halfword1 > 0xFFFF) ? 1 : 0;
+        ov_halfword0 = (result_halfword0 > 0xFFFF) ? 1 : 0;
+        overflow = ov_halfword1 | ov_halfword0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        aov_halfword1 = extract_bits(result_halfword1, 15, 15) ^ extract_bits(result_halfword1, 14, 14);
+        aov_halfword0 = extract_bits(result_halfword0, 15, 15) ^ extract_bits(result_halfword0, 14, 14);
+        advanced_overflow = aov_halfword1 | aov_halfword0;
+        PSW.AV = advanced_overflow ? 1 : 0;
+        PSW.SAV = advanced_overflow ? 1 : PSW.SAV;
+       }
+    }
+    instruction ABSDIFS_RC {
+       format: RC
+       encoding:{
+        op1=0x8B,
+        op2=0x0F
+       }
+       operands:a,const9,c
+       assembly_syntax: "ABSDIFS D{c}, D{a}, const9"
+       behavior:{
+        const9_sext = sign_extend(const9, 9);
+        result = (D[a] > const9_sext) ? (D[a] - const9_sext) : (const9_sext - D[a]);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ABSDIFS_RR {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x0F
+       }
+       operands:a,b,c
+       assembly_syntax: "ABSDIFS D{c}, D{a}, D{b}"
+       behavior:{
+        result = (D[a] > D[b]) ? (D[a] - D[b]) : (D[b] - D[a]);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ABSDIFS_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x6F
+       }
+       operands:a,b,c
+       assembly_syntax: "ABSDIFS.H D{c}, D{a}, D{b}"
+       behavior:{
+        result_halfword1 = (extract_bits(D[a], 31, 16) > extract_bits(D[b], 31, 16)) ? (extract_bits(D[a], 31, 16) - extract_bits(D[b], 31, 16)) : (extract_bits(D[b], 31, 16) - extract_bits(D[a], 31, 16));
+        result_halfword0 = (extract_bits(D[a], 15, 0) > extract_bits(D[b], 15, 0)) ? (extract_bits(D[a], 15, 0) - extract_bits(D[b], 15, 0)) : (extract_bits(D[b], 15, 0) - extract_bits(D[a], 15, 0));
+        sat_halfword1 = ssov(result_halfword1, 16);
+        sat_halfword0 = ssov(result_halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+        ov_halfword1 = ((result_halfword1 > 0x7FFF) | (result_halfword1 < 0x8000)) ? 1 : 0;
+        ov_halfword0 = ((result_halfword0 > 0x7FFF) | (result_halfword0 < 0x8000)) ? 1 : 0;
+        overflow = ov_halfword1 | ov_halfword0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        aov_halfword1 = extract_bits(result_halfword1, 15, 15) ^ extract_bits(result_halfword1, 14, 14);
+        aov_halfword0 = extract_bits(result_halfword0, 15, 15) ^ extract_bits(result_halfword0, 14, 14);
+        advanced_overflow = aov_halfword1 | aov_halfword0;
+        PSW.AV = advanced_overflow ? 1 : 0;
+        PSW.SAV = advanced_overflow ? 1 : PSW.SAV;
+       }
+    }
+    instruction ABSS {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x1D
+       }
+       operands:b,c
+       assembly_syntax: "ABSS D{c}, D{b}"
+       behavior:{
+        result = (D[b] >= 0) ? D[b] : (0 - D[b]);
+        D[c] = ssov(result, 32);
+        overflow = (result > 0x7FFFFFFF) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction ABSS_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x7D
+       }
+       operands:b,c
+       assembly_syntax: "ABSS.H D{c}, D{b}"
+       behavior:{
+        result_halfword1 = (extract_bits(D[b], 31, 16) >= 0) ? extract_bits(D[b], 31, 16) : (0 - extract_bits(D[b], 31, 16));
+        result_halfword0 = (extract_bits(D[b], 15, 0) >= 0) ? extract_bits(D[b], 15, 0) : (0 - extract_bits(D[b], 15, 0));
+        sat_halfword1 = ssov(result_halfword1, 16);
+        sat_halfword0 = ssov(result_halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+        ov_halfword1 = (result_halfword1 > 0x7FFF) ? 1 : 0;
+        ov_halfword0 = (result_halfword0 > 0x7FFF) ? 1 : 0;
+        overflow = ov_halfword1 | ov_halfword0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        aov_halfword1 = extract_bits(result_halfword1, 15, 15) ^ extract_bits(result_halfword1, 14, 14);
+        aov_halfword0 = extract_bits(result_halfword0, 15, 15) ^ extract_bits(result_halfword0, 14, 14);
+        advanced_overflow = aov_halfword1 | aov_halfword0;
+        PSW.AV = advanced_overflow ? 1 : 0;
+        PSW.SAV = advanced_overflow ? 1 : PSW.SAV;
+       }
+    }
+    instruction CLO {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x1C
+       }
+       operands:a,c
+       assembly_syntax: "CLO D{c}, D{a}"
+       behavior:{
+        result = leading_ones(D[a]);
+        D[c] = zero_extend(result, 32);
+       }
+    }
+    instruction CLO_H {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x7C
+       }
+       operands:a,c
+       assembly_syntax: "CLO.H D{c}, D{a}"
+       behavior:{
+        result_halfword1 = leading_ones(extract_bits(D[a], 31, 16));
+        result_halfword0 = leading_ones(extract_bits(D[a], 15, 0));
+        D[c] = (zero_extend(result_halfword1, 16) << 16) | zero_extend(result_halfword0, 16);
+       }
+    }
+    instruction CLZ {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x1B
+       }
+       operands:a,c
+       assembly_syntax: "CLZ D{c}, D{a}"
+       behavior:{
+        result = leading_zeros(D[a]);
+        D[c] = zero_extend(result, 32);
+       }
+    }
+    instruction CLZ_H {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x7B
+       }
+       operands:a,c
+       assembly_syntax: "CLZ.H D{c}, D{a}"
+       behavior:{
+        result_halfword1 = leading_zeros(extract_bits(D[a], 31, 16));
+        result_halfword0 = leading_zeros(extract_bits(D[a], 15, 0));
+        D[c] = (zero_extend(result_halfword1, 16) << 16) | zero_extend(result_halfword0, 16);
+       }
+    }
+    instruction CLS {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x1D
+       }
+       operands:a,c
+       assembly_syntax: "CLS D{c}, D{a}"
+       behavior:{
+        result = leading_signs(D[a]) - 1;
+        D[c] = zero_extend(result, 32);
+       }
+    }
+    instruction CLS_H {
+       format: RR
+       encoding:{
+        op1=0x0F,
+        op2=0x7E
+       }
+       operands:a,c
+       assembly_syntax: "CLS.H D{c}, D{a}"
+       behavior:{
+        result_halfword1 = leading_signs(extract_bits(D[a], 31, 16)) - 1;
+        result_halfword0 = leading_signs(extract_bits(D[a], 15, 0)) - 1;
+        D[c] = (zero_extend(result_halfword1, 16) << 16) | zero_extend(result_halfword0, 16);
+       }
+    }
+    instruction SUBC_RR {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x0D
+       }
+       operands:a,b,c
+       assembly_syntax: "SUBC D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] - D[b] + PSW.C - 1;
+        D[c] = result;
+        PSW.C = carry(D[a], ~D[b], PSW.C);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction SUBX {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x0C
+       }
+       operands:a,b,c
+       assembly_syntax: "SUBX D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] - D[b];
+        D[c] = result;
+        PSW.C = carry(D[a], ~D[b], 1);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction RSUBS {
+       format: RC
+       encoding:{
+        op1=0x8B,
+        op2=0x0A
+       }
+       operands:a,const9,c
+       assembly_syntax: "RSUBS D{c}, D{a}, const9"
+       behavior:{
+        const9_sext = sign_extend(const9, 9);
+        result = const9_sext - D[a];
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction RSUBS_U {
+       format: RC
+       encoding:{
+        op1=0x8B,
+        op2=0x0B
+       }
+       operands:a,const9,c
+       assembly_syntax: "RSUBS.U D{c}, D{a}, const9"
+       behavior:{
+        const9_sext = sign_extend(const9, 9);
+        result = const9_sext - D[a];
+        D[c] = suov(result, 32);
+        overflow = ((result > 0xFFFFFFFF) | (result < 0x00000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MULS_RC {
+       format: RC
+       encoding:{
+        op1=0x53,
+        op2=0x05
+       }
+       operands:a,const9,c
+       assembly_syntax: "MULS D{c}, D{a}, const9"
+       behavior:{
+        result = D[a] * sign_extend(const9, 9);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MULS_RR2 {
+       format: RR2
+       encoding:{
+        op1=0x73,
+        op2=0x8A
+       }
+       operands:a,b,c
+       assembly_syntax: "MULS D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] * D[b];
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MULS_U_RC {
+       format: RC
+       encoding:{
+        op1=0x53,
+        op2=0x04
+       }
+       operands:a,const9,c
+       assembly_syntax: "MULS.U D{c}, D{a}, const9"
+       behavior:{
+        result = D[a] * zero_extend(const9, 9);
+        D[c] = suov(result, 32);
+        overflow = ((result > 0xFFFFFFFF) | (result < 0x00000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MULS_U_RR2 {
+       format: RR2
+       encoding:{
+        op1=0x73,
+        op2=0x88
+       }
+       operands:a,b,c
+       assembly_syntax: "MULS.U D{c}, D{a}, D{b}"
+       behavior:{
+        result = D[a] * D[b];
+        D[c] = suov(result, 32);
+        overflow = ((result > 0xFFFFFFFF) | (result < 0x00000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MADDS_RCR_D {
+       format: RCR
+       encoding:{
+        op1=0x13,
+        op2=0x05
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "MADDS D{c}, D{d}, D{a}, const9"
+       behavior:{
+        result = D[d] + (D[a] * sign_extend(const9, 9));
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MADDS_RCR_E {
+       format: RCR
+       encoding:{
+        op1=0x13,
+        op2=0x07
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "MADDS E{c}, E{d}, D{a}, const9"
+       behavior:{
+        result = E[d] + (D[a] * sign_extend(const9, 9));
+        E[c] = ssov(result, 64);
+        overflow = ((result > 0x7FFFFFFFFFFFFFFF) | (result < 0x8000000000000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 63, 63);
+        lsb = extract_bits(result, 62, 62);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MADDS_RRR2_D {
+       format: RRR
+       encoding:{
+        op1=0x03,
+        op2=0x0
+       }
+       operands:a,b,d,c
+       assembly_syntax: "MADDS D{c}, D{d}, D{a}, D{b}"
+       behavior:{
+        result = D[d] + (D[a] * D[b]);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MADDS_RRR2_E {
+       format: RRR
+       encoding:{
+        op1=0x03,
+        op2=0x0
+       }
+       operands:a,b,d,c
+       assembly_syntax: "MADDS E{c}, E{d}, D{a}, D{b}"
+       behavior:{
+        result = E[d] + (D[a] * D[b]);
+        E[c] = ssov(result, 64);
+        overflow = ((result > 0x7FFFFFFFFFFFFFFF) | (result < 0x8000000000000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 63, 63);
+        lsb = extract_bits(result, 62, 62);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MSUBS_RCR_D {
+       format: RCR
+       encoding:{
+        op1=0x13,
+        op2=0x05
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "MSUBS D{c}, D{d}, D{a}, const9"
+       behavior:{
+        result = D[d] - (D[a] * sign_extend(const9, 9));
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MSUBS_RCR_E {
+       format: RCR
+       encoding:{
+        op1=0x13,
+        op2=0x05
+       }
+       operands:a,const9,d,c
+       assembly_syntax: "MSUBS E{c}, E{d}, D{a}, const9"
+       behavior:{
+        result = E[d] - (D[a] * sign_extend(const9, 9));
+        E[c] = ssov(result, 64);
+        overflow = ((result > 0x7FFFFFFFFFFFFFFF) | (result < 0x8000000000000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 63, 63);
+        lsb = extract_bits(result, 62, 62);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MSUBS_RRR2_D {
+       format: RRR
+       encoding:{
+        op1=0x23,
+        op2=0x0
+       }
+       operands:a,b,d,c
+       assembly_syntax: "MSUBS D{c}, D{d}, D{a}, D{b}"
+       behavior:{
+        result = D[d] - (D[a] * D[b]);
+        D[c] = ssov(result, 32);
+        overflow = ((result > 0x7FFFFFFF) | (result < 0x80000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 31, 31);
+        lsb = extract_bits(result, 30, 30);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction MSUBS_RRR2_E {
+       format: RRR
+       encoding:{
+        op1=0x23,
+        op2=0x0
+       }
+       operands:a,b,d,c
+       assembly_syntax: "MSUBS E{c}, E{d}, D{a}, D{b}"
+       behavior:{
+        result = E[d] - (D[a] * D[b]);
+        E[c] = ssov(result, 64);
+        overflow = ((result > 0x7FFFFFFFFFFFFFFF) | (result < 0x8000000000000000)) ? 1 : 0;
+        PSW.V = overflow;
+        PSW.SV = overflow ? 1 : PSW.SV;
+        msb = extract_bits(result, 63, 63);
+        lsb = extract_bits(result, 62, 62);
+        av = msb ^ lsb;
+        PSW.AV = (av > 0) ? 1 : 0;
+        PSW.SAV = (av > 0) ? 1 : PSW.SAV;
+       }
+    }
+    instruction SAT_B {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x5E
+       }
+       operands:a,c
+       assembly_syntax: "SAT.B D{c}, D{a}"
+       behavior:{
+        byte3 = to_signed(extract_bits(D[a], 31, 24), 8);
+        byte2 = to_signed(extract_bits(D[a], 23, 16), 8);
+        byte1 = to_signed(extract_bits(D[a], 15, 8), 8);
+        byte0 = to_signed(extract_bits(D[a], 7, 0), 8);
+        sat_byte3 = ssov(byte3, 8);
+        sat_byte2 = ssov(byte2, 8);
+        sat_byte1 = ssov(byte1, 8);
+        sat_byte0 = ssov(byte0, 8);
+        D[c] = (sat_byte3 << 24) | (sat_byte2 << 16) | (sat_byte1 << 8) | sat_byte0;
+       }
+    }
+    instruction SAT_BU {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x5F
+       }
+       operands:a,c
+       assembly_syntax: "SAT.BU D{c}, D{a}"
+       behavior:{
+        byte3 = to_unsigned(extract_bits(D[a], 31, 24), 8);
+        byte2 = to_unsigned(extract_bits(D[a], 23, 16), 8);
+        byte1 = to_unsigned(extract_bits(D[a], 15, 8), 8);
+        byte0 = to_unsigned(extract_bits(D[a], 7, 0), 8);
+        sat_byte3 = suov(byte3, 8);
+        sat_byte2 = suov(byte2, 8);
+        sat_byte1 = suov(byte1, 8);
+        sat_byte0 = suov(byte0, 8);
+        D[c] = (sat_byte3 << 24) | (sat_byte2 << 16) | (sat_byte1 << 8) | sat_byte0;
+       }
+    }
+    instruction SAT_H {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x6E
+       }
+       operands:a,c
+       assembly_syntax: "SAT.H D{c}, D{a}"
+       behavior:{
+        halfword1 = to_signed(extract_bits(D[a], 31, 16), 16);
+        halfword0 = to_signed(extract_bits(D[a], 15, 0), 16);
+        sat_halfword1 = ssov(halfword1, 16);
+        sat_halfword0 = ssov(halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+       }
+    }
+    instruction SAT_HU {
+       format: RR
+       encoding:{
+        op1=0x0B,
+        op2=0x7F
+       }
+       operands:a,c
+       assembly_syntax: "SAT.HU D{c}, D{a}"
+       behavior:{
+        halfword1 = to_unsigned(extract_bits(D[a], 31, 16), 16);
+        halfword0 = to_unsigned(extract_bits(D[a], 15, 0), 16);
+        sat_halfword1 = suov(halfword1, 16);
+        sat_halfword0 = suov(halfword0, 16);
+        D[c] = (sat_halfword1 << 16) | sat_halfword0;
+       }
+    }
+    instruction LD_A_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x06
+       }
+       operands:b,a
+       assembly_syntax: "LD.A A{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        A[a] = MEM[EA];
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_B_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x00
+       }
+       operands:b,a
+       assembly_syntax: "LD.B D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = sign_extend(MEM[EA], 8);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_BU_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x01
+       }
+       operands:b,a
+       assembly_syntax: "LD.BU D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = zero_extend(MEM[EA], 8);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_H_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x02
+       }
+       operands:b,a
+       assembly_syntax: "LD.H D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = sign_extend(MEM[EA], 16);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_HU_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x03
+       }
+       operands:b,a
+       assembly_syntax: "LD.HU D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = zero_extend(MEM[EA], 16);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_W_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x04
+       }
+       operands:b,a
+       assembly_syntax: "LD.W D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = MEM[EA];
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction LD_Q_P {
+       format: BO
+       encoding:{
+        op1=0x29,
+        op2=0x08
+       }
+       operands:b,a
+       assembly_syntax: "LD.Q D{a}, P{b}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        D[a] = (MEM[EA] << 16) | 0x0000;
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction ST_A_P {
+       format: BO
+       encoding:{
+        op1=0xA9,
+        op2=0x06
+       }
+       operands:b,a
+       assembly_syntax: "ST.A P{b}, A{a}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        MEM[EA] = A[a];
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction ST_B_P {
+       format: BO
+       encoding:{
+        op1=0xA9,
+        op2=0x00
+       }
+       operands:b,a
+       assembly_syntax: "ST.B P{b}, D{a}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        MEM[EA] = extract_bits(D[a], 7, 0);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction ST_H_P {
+       format: BO
+       encoding:{
+        op1=0xA9,
+        op2=0x02
+       }
+       operands:b,a
+       assembly_syntax: "ST.H P{b}, D{a}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        MEM[EA] = extract_bits(D[a], 15, 0);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction ST_W_P {
+       format: BO
+       encoding:{
+        op1=0xA9,
+        op2=0x04
+       }
+       operands:b,a
+       assembly_syntax: "ST.W P{b}, D{a}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        MEM[EA] = D[a];
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction ST_Q_P {
+       format: BO
+       encoding:{
+        op1=0xA9,
+        op2=0x08
+       }
+       operands:b,a
+       assembly_syntax: "ST.Q P{b}, D{a}"
+       behavior:{
+        temp_idx = b + 1;
+        index = zero_extend(extract_bits(A[temp_idx], 15, 0), 16);
+        incr = zero_extend(extract_bits(A[temp_idx], 31, 16), 16);
+        EA = A[b] + index;
+        MEM[EA] = extract_bits(D[a], 31, 16);
+        new_index = reverse16(reverse16(index) + reverse16(incr));
+        A[temp_idx] = (incr << 16) | new_index;
+       }
+    }
+    instruction EXTR_RRPW {
+       format: RRPW
+       encoding:{
+        op1=0x37,
+        op2=0x02
+       }
+       operands:a,pos,width,c
+       assembly_syntax: "EXTR D{c}, D{a}, pos, width"
+       behavior:{
+        shifted = D[a] >> pos;
+        D[c] = sign_extend(shifted[width-1:0], width);
+       }
+    }
+    instruction EXTR_RRRR {
+       format: RRRR
+       encoding:{
+        op1=0x17,
+        op2=0x02
+       }
+       operands:a,d,c
+       assembly_syntax: "EXTR D{c}, D{a}, E{d}"
+       behavior:{
+        pos_field = extract_bits(E[d], 4, 0);
+        width_field = extract_bits(E[d], 36, 32);
+        shifted = D[a] >> pos_field;
+        D[c] = sign_extend(shifted[width_field-1:0], width_field);
+       }
+    }
+    instruction EXTR_RRRW {
+       format: RRRW
+       encoding:{
+        op1=0x57,
+        op2=0x02
+       }
+       operands:a,d,width,c
+       assembly_syntax: "EXTR D{c}, D{a}, D{d}, width"
+       behavior:{
+        pos_field = extract_bits(D[d], 4, 0);
+        shifted = D[a] >> pos_field;
+        D[c] = sign_extend(shifted[width-1:0], width);
+       }
+    }
+    instruction EXTR_U_RRPW {
+       format: RRPW
+       encoding:{
+        op1=0x37,
+        op2=0x03
+       }
+       operands:a,pos,width,c
+       assembly_syntax: "EXTR.U D{c}, D{a}, pos, width"
+       behavior:{
+        shifted = D[a] >> pos;
+        D[c] = zero_extend(shifted[width-1:0], width);
+       }
+    }
+    instruction EXTR_U_RRRR {
+       format: RRRR
+       encoding:{
+        op1=0x17,
+        op2=0x03
+       }
+       operands:a,d,c
+       assembly_syntax: "EXTR.U D{c}, D{a}, E{d}"
+       behavior:{
+        pos_field = extract_bits(E[d], 4, 0);
+        width_field = extract_bits(E[d], 36, 32);
+        shifted = D[a] >> pos_field;
+        D[c] = zero_extend(shifted[width_field-1:0], width_field);
+       }
+    }
+    instruction EXTR_U_RRRW {
+       format: RRRW
+       encoding:{
+        op1=0x57,
+        op2=0x03
+       }
+       operands:a,d,width,c
+       assembly_syntax: "EXTR.U D{c}, D{a}, D{d}, width"
+       behavior:{
+        pos_field = extract_bits(D[d], 4, 0);
+        shifted = D[a] >> pos_field;
+        D[c] = zero_extend(shifted[width-1:0], width);
+       }
+    }
+    instruction INSERT_RRPW {
+       format: RRPW
+       encoding:{
+        op1=0x37,
+        op2=0x00
+       }
+       operands:a,b,pos,width,c
+       assembly_syntax: "INSERT D{c}, D{a}, D{b}, pos, width"
+       behavior:{
+        mask = ((1 << width) - 1) << pos;
+        D[c] = (D[a] & ~mask) | ((D[b] << pos) & mask);
+       }
+    }
+    instruction INSERT_RRRR {
+       format: RRRR
+       encoding:{
+        op1=0x17,
+        op2=0x00
+       }
+       operands:a,b,d,c
+       assembly_syntax: "INSERT D{c}, D{a}, D{b}, E{d}"
+       behavior:{
+        pos_field = extract_bits(E[d], 4, 0);
+        width_field = extract_bits(E[d], 36, 32);
+        mask = ((1 << width_field) - 1) << pos_field;
+        D[c] = (D[a] & ~mask) | ((D[b] << pos_field) & mask);
+       }
+    }
+    instruction INSERT_RRRW {
+       format: RRRW
+       encoding:{
+        op1=0x57,
+        op2=0x00
+       }
+       operands:a,b,d,width,c
+       assembly_syntax: "INSERT D{c}, D{a}, D{b}, D{d}, width"
+       behavior:{
+        pos_field = extract_bits(D[d], 4, 0);
+        mask = ((1 << width) - 1) << pos_field;
+        D[c] = (D[a] & ~mask) | ((D[b] << pos_field) & mask);
+       }
+    }
+    instruction LD_A_ABS {
+       format: ABS
+       encoding:{
+        op1=0x85,
+        op2=0x02
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.A A{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        A[s1_d] = MEM[EA];
+       }
+    }
+    instruction LD_B_ABS {
+       format: ABS
+       encoding:{
+        op1=0x05,
+        op2=0x00
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.B D{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        D[s1_d] = sign_extend(MEM[EA], 8);
+       }
+    }
+    instruction LD_BU_ABS {
+       format: ABS
+       encoding:{
+        op1=0x05,
+        op2=0x01
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.BU D{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        D[s1_d] = zero_extend(MEM[EA], 8);
+       }
+    }
+    instruction LD_H_ABS {
+       format: ABS
+       encoding:{
+        op1=0x05,
+        op2=0x02
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.H D{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        D[s1_d] = sign_extend(MEM[EA], 16);
+       }
+    }
+    instruction LD_HU_ABS {
+       format: ABS
+       encoding:{
+        op1=0x05,
+        op2=0x03
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.HU D{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        D[s1_d] = zero_extend(MEM[EA], 16);
+       }
+    }
+    instruction LD_W_ABS {
+       format: ABS
+       encoding:{
+        op1=0x45,
+        op2=0x00
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "LD.W D{s1_d}, off18"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        D[s1_d] = MEM[EA];
+       }
+    }
+    instruction ST_A_ABS {
+       format: ABS
+       encoding:{
+        op1=0xA5,
+        op2=0x02
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "ST.A off18, A{s1_d}"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        MEM[EA] = A[s1_d];
+       }
+    }
+    instruction ST_B_ABS {
+       format: ABS
+       encoding:{
+        op1=0x25,
+        op2=0x00
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "ST.B off18, D{s1_d}"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        MEM[EA] = extract_bits(D[s1_d], 7, 0);
+       }
+    }
+    instruction ST_H_ABS {
+       format: ABS
+       encoding:{
+        op1=0x25,
+        op2=0x02
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "ST.H off18, D{s1_d}"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        MEM[EA] = extract_bits(D[s1_d], 15, 0);
+       }
+    }
+    instruction ST_W_ABS {
+       format: ABS
+       encoding:{
+        op1=0xA5,
+        op2=0x00
+       }
+       operands:s1_d,off18_17_14,off18_5_0,off18_13_10,off18_9_6
+       assembly_syntax: "ST.W off18, D{s1_d}"
+       behavior:{
+        off18 = (off18_17_14 << 14) | (off18_13_10 << 10) | (off18_9_6 << 6) | off18_5_0;
+        EA = (off18_17_14 << 14) | (off18 & 0x3FFF);
+        MEM[EA] = D[s1_d];
+       }
+    }
+    instruction J_B {
+       format: B
+       encoding:{
+        op1=0x1D
+       }
+       operands:disp24_23_16,disp24_15_0
+       assembly_syntax: "J disp24"
+       behavior:{
+        disp24 = (disp24_23_16 << 16) | disp24_15_0;
+        PC = PC + sign_extend(2 * disp24, 24);
+       }
+    }
+    instruction J_SB {
+       format: SB
+       encoding:{
+        op1=0x3C
+       }
+       operands:disp8
+       assembly_syntax: "J disp8"
+       behavior:{
+        PC = PC + sign_extend(2 * disp8, 8);
+       }
+    }
+    instruction JA {
+       format: B
+       encoding:{
+        op1=0x9D
+       }
+       operands:disp24_23_16,disp24_15_0
+       assembly_syntax: "JA disp24"
+       behavior:{
+        disp24 = (disp24_23_16 << 16) | disp24_15_0;
+        PC = (extract_bits(disp24, 23, 20) << 27) | (extract_bits(disp24, 19, 0) << 1);
+       }
+    }
+    instruction JI_RR {
+       format: RR
+       encoding:{
+        op1=0x2D,
+        op2=0x03
+       }
+       operands:a
+       assembly_syntax: "JI A{a}"
+       behavior:{
+        PC = (extract_bits(A[a], 31, 1) << 1) | 0;
+       }
+    }
+    instruction JEQ_BRR {
+       format: BRR
+       encoding:{
+        op1=0x5F
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JEQ D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] == D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JEQ_BRC {
+       format: BRC
+       encoding:{
+        op1=0xDF
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JEQ D{a}, const4, disp15"
+       behavior:{
+        if (D[a] == sign_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JEQ_A {
+       format: BRR
+       encoding:{
+        op1=0x7D
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JEQ.A A{a}, A{b}, disp15"
+       behavior:{
+        if (A[a] == A[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JNE_BRR {
+       format: BRR
+       encoding:{
+        op1=0x1F
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JNE D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] != D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JNE_BRC {
+       format: BRC
+       encoding:{
+        op1=0x9F
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JNE D{a}, const4, disp15"
+       behavior:{
+        if (D[a] != sign_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JGE_BRR {
+       format: BRR
+       encoding:{
+        op1=0x7F
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JGE D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] >= D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JGE_BRC {
+       format: BRC
+       encoding:{
+        op1=0xFF
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JGE D{a}, const4, disp15"
+       behavior:{
+        if (D[a] >= sign_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JGE_U_BRR {
+       format: BRR
+       encoding:{
+        op1=0x7F,
+        u=1
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JGE.U D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] >= D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JGE_U_BRC {
+       format: BRC
+       encoding:{
+        op1=0xFF,
+        u=1
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JGE.U D{a}, const4, disp15"
+       behavior:{
+        if (D[a] >= zero_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JLT_BRR {
+       format: BRR
+       encoding:{
+        op1=0x3F
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JLT D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] < D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JLT_BRC {
+       format: BRC
+       encoding:{
+        op1=0xBF
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JLT D{a}, const4, disp15"
+       behavior:{
+        if (D[a] < sign_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JLT_U_BRR {
+       format: BRR
+       encoding:{
+        op1=0x3F,
+        u=1
+       }
+       operands:a,b,disp15
+       assembly_syntax: "JLT.U D{a}, D{b}, disp15"
+       behavior:{
+        if (D[a] < D[b]) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction JLT_U_BRC {
+       format: BRC
+       encoding:{
+        op1=0xBF,
+        u=1
+       }
+       operands:a,const4,disp15
+       assembly_syntax: "JLT.U D{a}, const4, disp15"
+       behavior:{
+        if (D[a] < zero_extend(const4, 4)) {
+         PC = PC + sign_extend(2 * disp15, 15);
+        }
+       }
+    }
+    instruction ST_B_SRO {
+       format: SRO
+       encoding:{
+        op1=0x2C
+       }
+       operands:b,off4
+       assembly_syntax: "ST.B A{b}, off4, D[15]"
+       behavior:{
+        MEM[A[b] + zero_extend(off4, 4)] = extract_bits(D[15], 7, 0);
+       }
+    }
+    instruction ST_H_SRO {
+       format: SRO
+       encoding:{
+        op1=0xAC
+       }
+       operands:b,off4
+       assembly_syntax: "ST.H A{b}, off4, D[15]"
+       behavior:{
+        MEM[A[b] + zero_extend(2 * off4, 4)] = extract_bits(D[15], 15, 0);
+       }
+    }
+    instruction ST_A_SRO {
+       format: SRO
+       encoding:{
+        op1=0xEC
+       }
+       operands:b,off4
+       assembly_syntax: "ST.A A{b}, off4, A[15]"
+       behavior:{
+        MEM[A[b] + zero_extend(4 * off4, 4)] = A[15];
+       }
+    }
+    instruction ST_A_SC {
+       format: SC
+       encoding:{
+        op1=0xF8
+       }
+       operands:const8
+       assembly_syntax: "ST.A A[10], const8, A[15]"
+       behavior:{
+        MEM[A[10] + zero_extend(4 * const8, 8)] = A[15];
+       }
+    }
+    instruction ST_W_SC {
+       format: SC
+       encoding:{
+        op1=0x78
+       }
+       operands:const8
+       assembly_syntax: "ST.W A[10], const8, D[15]"
+       behavior:{
+        MEM[A[10] + zero_extend(4 * const8, 8)] = D[15];
+       }
+    }
+    instruction LD_A_SLR {
+       format: SLR
+       encoding:{
+        op1=0xC4
+       }
+       operands:d,s2
+       assembly_syntax: "LD.A A{d}, A{s2}"
+       behavior:{
+        A[d] = MEM[A[s2]];
+        A[s2] = A[s2] + 4;
+       }
+    }
+    instruction LD_W_SC {
+       format: SC
+       encoding:{
+        op1=0x58
+       }
+       operands:const8
+       assembly_syntax: "LD.W D[15], A[10], const8"
+       behavior:{
+        D[15] = MEM[A[10] + zero_extend(4 * const8, 8)];
+       }
+    }
+    instruction LD_BU_SLR {
+       format: SLR
+       encoding:{
+        op1=0x04
+       }
+       operands:d,s2
+       assembly_syntax: "LD.BU D{d}, A{s2}"
+       behavior:{
+        D[d] = zero_extend(MEM[A[s2]], 8);
+        A[s2] = A[s2] + 1;
+       }
+    }
 
 }

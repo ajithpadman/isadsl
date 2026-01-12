@@ -5,8 +5,10 @@ from .isa_model import (
     ISASpecification, Register, InstructionFormat, Instruction,
     RTLExpression, RegisterAccess, FieldAccess, RTLAssignment,
     RTLConditional, RTLMemoryAccess, RTLTernary, RTLBinaryOp, RTLUnaryOp,
-    VirtualRegister, RegisterAlias, InstructionAlias, RTLBitfieldAccess, RTLFunctionCall
+    VirtualRegister, RegisterAlias, InstructionAlias, RTLBitfieldAccess, RTLFunctionCall,
+    RTLForLoop
 )
+from ..runtime.rtl_interpreter import RTLInterpreter
 
 
 class ValidationError(Exception):
@@ -128,6 +130,25 @@ class ISAValidator:
                                     f"instruction {instr.mnemonic}"
                                 )
                             )
+            
+            # Check that instruction has behavior (unless it's a bundle or has external_behavior)
+            if not instr.is_bundle() and not instr.external_behavior:
+                if not instr.behavior:
+                    self.errors.append(
+                        ValidationError(
+                            f"Instruction '{instr.mnemonic}' is missing behavior description. "
+                            f"Add a 'behavior' block or set 'external_behavior: true' if behavior is implemented externally.",
+                            f"instruction {instr.mnemonic}"
+                        )
+                    )
+                elif not instr.behavior.statements:
+                    self.errors.append(
+                        ValidationError(
+                            f"Instruction '{instr.mnemonic}' has an empty behavior block. "
+                            f"Add RTL statements to describe the instruction's behavior.",
+                            f"instruction {instr.mnemonic}"
+                        )
+                    )
 
     def _validate_encodings(self):
         """Check for encoding conflicts between instructions."""
@@ -185,6 +206,8 @@ class ISAValidator:
                 continue
 
             self._validate_rtl_block(instr.behavior, instr.mnemonic)
+            # Also validate that behavior can be interpreted by RTL interpreter
+            self._validate_rtl_interpretability(instr)
 
     def _validate_rtl_block(self, block, context: str):
         """Validate an RTL block."""
@@ -208,6 +231,14 @@ class ISAValidator:
                 self._validate_rtl_lvalue(stmt.target, context)
             if stmt.value:
                 self._validate_rtl_expression(stmt.value, context)
+        elif isinstance(stmt, RTLForLoop):
+            # RTLForLoop is not yet supported by the RTL interpreter
+            self.errors.append(
+                ValidationError(
+                    f"RTL for loops are not yet supported by the RTL interpreter",
+                    f"instruction {context}"
+                )
+            )
 
     def _validate_rtl_expression(self, expr: RTLExpression, context: str):
         """Validate an RTL expression."""
@@ -428,4 +459,69 @@ class ISAValidator:
             if alias.target_mnemonic in alias_mnemonics:
                 # Could be circular, but allow it for now
                 pass
+
+    def _validate_rtl_interpretability(self, instruction: Instruction):
+        """Validate that RTL behavior can be interpreted by the RTL interpreter.
+        
+        This catches unsupported features and syntax errors that would cause
+        instructions to fail during execution or disappear from ISA info.
+        """
+        if not instruction.behavior or instruction.external_behavior:
+            return
+        
+        # Create dummy registers for validation
+        dummy_registers = {}
+        for reg in self.isa.registers:
+            if reg.is_register_file():
+                # Create a dummy register file with default values
+                dummy_registers[reg.name] = [0] * (reg.count or 16)
+            else:
+                # Create a dummy single register
+                dummy_registers[reg.name] = 0
+        
+        # Create a dummy interpreter with minimal state
+        interpreter = RTLInterpreter(
+            registers=dummy_registers.copy(),
+            memory={},
+            isa=self.isa
+        )
+        
+        # Set dummy operand values (use 0 for all operands)
+        dummy_operands = {}
+        if instruction.operands:
+            for op in instruction.operands:
+                dummy_operands[op] = 0
+        elif instruction.operand_specs:
+            for op_spec in instruction.operand_specs:
+                dummy_operands[op_spec.name] = 0
+        
+        interpreter.set_operands(dummy_operands)
+        
+        # Try to execute the behavior block and catch any errors
+        try:
+            interpreter.execute(instruction)
+        except ValueError as e:
+            # ValueError indicates unsupported features or invalid syntax
+            self.errors.append(
+                ValidationError(
+                    f"RTL behavior contains unsupported feature or syntax error: {str(e)}",
+                    f"instruction {instruction.mnemonic}"
+                )
+            )
+        except IndexError as e:
+            # IndexError indicates register index out of range
+            self.errors.append(
+                ValidationError(
+                    f"RTL behavior contains invalid register index: {str(e)}",
+                    f"instruction {instruction.mnemonic}"
+                )
+            )
+        except Exception as e:
+            # Catch any other unexpected errors
+            self.errors.append(
+                ValidationError(
+                    f"RTL behavior cannot be interpreted: {str(e)}",
+                    f"instruction {instruction.mnemonic}"
+                )
+            )
 

@@ -276,6 +276,19 @@ export class IsaValidator {
                 accept('error', `Instruction '${instruction.mnemonic}' references unknown bundle format`, { node: instruction, property: 'bundle_format' });
             }
         }
+
+        // Check that instruction has behavior (unless it's a bundle or has external_behavior)
+        const isBundle = instruction.bundle_format !== undefined && instruction.bundle_format !== null;
+        const hasExternalBehavior = instruction.external_behavior === true;
+        const hasBehavior = instruction.behavior !== undefined && instruction.behavior !== null;
+        
+        if (!isBundle && !hasExternalBehavior) {
+            if (!hasBehavior) {
+                accept('error', `Instruction '${instruction.mnemonic}' is missing behavior description. Add a 'behavior' block or set 'external_behavior: true' if behavior is implemented externally.`, { node: instruction, property: 'behavior' });
+            } else if (instruction.behavior.statements === undefined || instruction.behavior.statements.length === 0) {
+                accept('error', `Instruction '${instruction.mnemonic}' has an empty behavior block. Add RTL statements to describe the instruction's behavior.`, { node: instruction.behavior, property: 'statements' });
+            }
+        }
     }
 
     /**

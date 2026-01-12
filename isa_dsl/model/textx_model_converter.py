@@ -624,25 +624,54 @@ class TextXModelConverter:
                     # handled separately when they appear as lvalues
                 return OperandReference(name=name_str)
         
+        elif class_name == 'RTLMemoryExpression':
+            address = self._convert_rtl_expression(getattr(expr_tx, 'address', None), isa_model)
+            if address:
+                # RTLMemoryExpression is used as an expression (e.g., in function calls)
+                # We'll represent it as a function call to MEM for now
+                # The RTL interpreter will handle MEM as a special case
+                return RTLFunctionCall(function_name='MEM', args=[address])
+        
         elif class_name == 'RTLTernary':
             condition = self._convert_rtl_expression(getattr(expr_tx, 'condition', None), isa_model)
             then_expr = self._convert_rtl_expression(getattr(expr_tx, 'then_expr', None), isa_model)
             else_expr = self._convert_rtl_expression(getattr(expr_tx, 'else_expr', None), isa_model)
             if condition and then_expr and else_expr:
-                return RTLTernary(condition=condition, then_expr=then_expr, else_expr=else_expr)
+                ternary = RTLTernary(condition=condition, then_expr=then_expr, else_expr=else_expr)
+                # Check for optional bitfield access
+                if hasattr(expr_tx, 'msb') and expr_tx.msb and hasattr(expr_tx, 'lsb') and expr_tx.lsb:
+                    msb = self._convert_rtl_expression(expr_tx.msb, isa_model)
+                    lsb = self._convert_rtl_expression(expr_tx.lsb, isa_model)
+                    if msb and lsb:
+                        return RTLBitfieldAccess(base=ternary, msb=msb, lsb=lsb)
+                return ternary
         
-        elif class_name == 'RTLBinaryOp':
+        elif class_name == 'RTLBinaryOp' or class_name == 'RTLBinaryOpWithBitfield':
             left = self._convert_rtl_expression(getattr(expr_tx, 'left', None), isa_model)
             op = getattr(expr_tx, 'op', None)
             right = self._convert_rtl_expression(getattr(expr_tx, 'right', None), isa_model)
             if left and op and right:
-                return RTLBinaryOp(left=left, op=str(op), right=right)
+                binary_op = RTLBinaryOp(left=left, op=str(op), right=right)
+                # Check for optional bitfield access
+                if hasattr(expr_tx, 'msb') and expr_tx.msb and hasattr(expr_tx, 'lsb') and expr_tx.lsb:
+                    msb = self._convert_rtl_expression(expr_tx.msb, isa_model)
+                    lsb = self._convert_rtl_expression(expr_tx.lsb, isa_model)
+                    if msb and lsb:
+                        return RTLBitfieldAccess(base=binary_op, msb=msb, lsb=lsb)
+                return binary_op
         
-        elif class_name == 'RTLUnaryOp':
+        elif class_name == 'RTLUnaryOp' or class_name == 'RTLUnaryOpWithBitfield':
             op = getattr(expr_tx, 'op', None)
             expr = self._convert_rtl_expression(getattr(expr_tx, 'expr', None), isa_model)
             if op and expr:
-                return RTLUnaryOp(op=str(op), expr=expr)
+                unary_op = RTLUnaryOp(op=str(op), expr=expr)
+                # Check for optional bitfield access
+                if hasattr(expr_tx, 'msb') and expr_tx.msb and hasattr(expr_tx, 'lsb') and expr_tx.lsb:
+                    msb = self._convert_rtl_expression(expr_tx.msb, isa_model)
+                    lsb = self._convert_rtl_expression(expr_tx.lsb, isa_model)
+                    if msb and lsb:
+                        return RTLBitfieldAccess(base=unary_op, msb=msb, lsb=lsb)
+                return unary_op
         
         elif class_name == 'RTLLValue':
             if hasattr(expr_tx, 'register_access') and expr_tx.register_access:
@@ -664,12 +693,30 @@ class TextXModelConverter:
             if reg_name and field_name:
                 return FieldAccess(reg_name=reg_name, field_name=field_name)
         
+        elif class_name == 'RTLExpressionWithOptionalBitfield' or class_name == 'RTLExpressionWithBitfield':
+            expr = self._convert_rtl_expression(getattr(expr_tx, 'expr', None), isa_model)
+            # Check for bitfield access
+            if hasattr(expr_tx, 'msb') and expr_tx.msb and hasattr(expr_tx, 'lsb') and expr_tx.lsb:
+                msb = self._convert_rtl_expression(expr_tx.msb, isa_model)
+                lsb = self._convert_rtl_expression(expr_tx.lsb, isa_model)
+                if expr and msb and lsb:
+                    return RTLBitfieldAccess(base=expr, msb=msb, lsb=lsb)
+            return expr
+        
         elif class_name == 'RTLBitfieldAccess':
             base = self._convert_rtl_expression(getattr(expr_tx, 'base', None), isa_model)
             msb = self._convert_rtl_expression(getattr(expr_tx, 'msb', None), isa_model)
             lsb = self._convert_rtl_expression(getattr(expr_tx, 'lsb', None), isa_model)
             if base and msb and lsb:
                 return RTLBitfieldAccess(base=base, msb=msb, lsb=lsb)
+        
+        elif class_name == 'RTLBitfieldAccessOnExpression' or class_name == 'RTLParenthesizedWithBitfield':
+            # RTLBitfieldAccessOnExpression or RTLParenthesizedWithBitfield: (expr)[msb:lsb] or expr[msb:lsb]
+            expr = self._convert_rtl_expression(getattr(expr_tx, 'expr', None), isa_model)
+            msb = self._convert_rtl_expression(getattr(expr_tx, 'msb', None), isa_model)
+            lsb = self._convert_rtl_expression(getattr(expr_tx, 'lsb', None), isa_model)
+            if expr and msb and lsb:
+                return RTLBitfieldAccess(base=expr, msb=msb, lsb=lsb)
         
         elif class_name == 'RTLFunctionCall':
             function_name = getattr(expr_tx, 'function_name', None)
