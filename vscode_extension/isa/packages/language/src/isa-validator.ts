@@ -285,7 +285,7 @@ export class IsaValidator {
         if (!isBundle && !hasExternalBehavior) {
             if (!hasBehavior) {
                 accept('error', `Instruction '${instruction.mnemonic}' is missing behavior description. Add a 'behavior' block or set 'external_behavior: true' if behavior is implemented externally.`, { node: instruction, property: 'behavior' });
-            } else if (instruction.behavior.statements === undefined || instruction.behavior.statements.length === 0) {
+            } else if (instruction.behavior && (instruction.behavior.statements === undefined || instruction.behavior.statements.length === 0)) {
                 accept('error', `Instruction '${instruction.mnemonic}' has an empty behavior block. Add RTL statements to describe the instruction's behavior.`, { node: instruction.behavior, property: 'statements' });
             }
         }

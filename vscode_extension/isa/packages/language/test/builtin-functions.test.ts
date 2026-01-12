@@ -728,12 +728,6 @@ describe('Built-in Functions Support', () => {
             
             // Validation should catch zero from_bits if constant extraction works
             // If constant extraction doesn't work (AST structure issue), at least verify no crashes
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('from_bits must be positive') || 
-                             e.message.includes('from_bits') ||
-                             e.message.includes('sign_extend'))
-            );
             // Note: Constant extraction may not work for all AST structures
             // The validation is implemented and will work when constants are properly extracted
             expect(diagnostics).toBeDefined();
@@ -767,7 +761,6 @@ describe('Built-in Functions Support', () => {
             
             // Negative numbers are unary operations, so constant extraction won't work
             // But we verify the code doesn't crash
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
             // Validation should not crash even if constant extraction fails
             expect(diagnostics).toBeDefined();
         });
@@ -797,12 +790,6 @@ describe('Built-in Functions Support', () => {
             const { diagnostics } = await parseText(text);
             
             // Validation should catch too large from_bits if constant extraction works
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('from_bits must be <= 64') ||
-                             e.message.includes('from_bits') ||
-                             e.message.includes('sign_extend'))
-            );
             // Note: Constant extraction may not work for all AST structures
             expect(diagnostics).toBeDefined();
         });
@@ -832,12 +819,6 @@ describe('Built-in Functions Support', () => {
             const { diagnostics } = await parseText(text);
             
             // Validation should catch zero to_bits if constant extraction works
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('to_bits must be positive') ||
-                             e.message.includes('to_bits') ||
-                             e.message.includes('sign_extend'))
-            );
             // Note: Constant extraction may not work for all AST structures
             expect(diagnostics).toBeDefined();
         });
@@ -867,12 +848,6 @@ describe('Built-in Functions Support', () => {
             const { diagnostics } = await parseText(text);
             
             // Validation should catch zero from_bits if constant extraction works
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('from_bits must be positive') ||
-                             e.message.includes('from_bits') ||
-                             e.message.includes('zero_extend'))
-            );
             // Note: Constant extraction may not work for all AST structures
             expect(diagnostics).toBeDefined();
         });
@@ -1547,12 +1522,7 @@ describe('Built-in Functions Support', () => {
 }`;
             const { diagnostics } = await parseText(text);
             
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('width must be positive') || 
-                             e.message.includes('width') ||
-                             e.message.includes('ssov'))
-            );
+            // Note: Constant extraction may not work for all AST structures
             expect(diagnostics).toBeDefined();
         });
 
@@ -1580,12 +1550,7 @@ describe('Built-in Functions Support', () => {
 }`;
             const { diagnostics } = await parseText(text);
             
-            const errors = diagnostics.filter((d: any) => d.severity === 1);
-            const functionErrors = errors.filter((e: any) => 
-                e.message && (e.message.includes('width must be <= 64') ||
-                             e.message.includes('width') ||
-                             e.message.includes('suov'))
-            );
+            // Note: Constant extraction may not work for all AST structures
             expect(diagnostics).toBeDefined();
         });
     });

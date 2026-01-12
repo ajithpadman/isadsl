@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 # ISA DSL - Instruction Set Architecture Domain Specific Language
 

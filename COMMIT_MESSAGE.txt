@@ -1,139 +1,49 @@
-Release v0.4.0: Behavior Validation, Disassembler Improvements, and ARM ISA Fixes
+Release v0.4.1: TypeScript Compilation Fixes
 
-This release adds comprehensive behavior validation, fixes critical disassembler
-issues for variable-length instructions, and corrects the ARM ISA specification.
+This patch release fixes TypeScript compilation errors in the VS Code extension
+to ensure clean builds.
 
-Major Changes:
-- Added instruction behavior validation to ensure all instructions have valid
-  behavior descriptions
-- Fixed disassembler for variable-length instruction sets (correct width
-  identification and instruction matching)
-- Fixed ARM Cortex-A9 ISA specification to correctly handle shifter_operand
-  field extraction
-- Removed skipped tests to ensure full test coverage
+Changes:
+- Fixed instruction.behavior possibly undefined error in isa-validator.ts
+- Removed unused variables from test files to eliminate TypeScript warnings
 
-1. Instruction Behavior Validation
+1. TypeScript Compilation Fixes
 
-Added comprehensive validation to ensure all instructions have valid behavior:
-- Missing behavior detection: Validates non-bundle instructions have either
-  behavior block or external_behavior: true
-- RTL interpretability check: Attempts to execute RTL behavior to catch runtime
-  errors (e.g., unknown registers, unsupported constructs)
-- Unsupported feature detection: Identifies unsupported RTL constructs
-  (RTLForLoop) and reports validation errors
-- VS Code integration: Real-time validation in editor with diagnostic messages
-
-Benefits:
-- Prevents generation of simulators with empty instruction handlers
-- Catches unsupported RTL features at validation time
-- Ensures ISA specifications are complete and executable
-- Improves developer experience with immediate feedback
-
-2. Disassembler Improvements for Variable-Length Instructions
-
-Fixed critical issues in disassembler for variable-length instruction sets:
-- Instruction width identification: Fixed _identify_instruction_width to check
-  longer widths first, preventing shorter instructions from incorrectly matching
-- Instruction matching: Fixed min_bits calculation in simulator to use max()
-  instead of min(), ensuring sufficient bits are peeked
-- Template simplification: Refactored disassembler template by moving complex
-  logic into Python utility functions
-- Unknown instruction handling: Changed to output .word directives for unmatched
-  instructions instead of invalid "UNKNOWN" syntax
+Fixed TypeScript compilation errors:
+- Fixed TS18048: Added null check for instruction.behavior before accessing
+  instruction.behavior.statements in isa-validator.ts line 288
+- Fixed TS6133: Removed 7 unused variable declarations (errors, functionErrors)
+  from builtin-functions.test.ts
 
 Technical Details:
-- Reversed width iteration order in _identify_instruction_width (longest first)
-- Changed min() to max() in simulator's step() function for min_bits
-- Added utility functions: _get_unique_widths(), _get_instructions_by_width(),
-  _get_width_mask_code(), _build_identification_condition(),
-  _build_encoding_condition()
-- Updated disassembler to return None for unmatched instructions, with
-  disassemble_file() converting to .word directives
+- Updated isa-validator.ts: Added instruction.behavior && check before
+  accessing instruction.behavior.statements
+- Cleaned up builtin-functions.test.ts: Removed unused variables that were
+  causing compilation warnings
 
-3. ARM ISA Fixes
-
-Fixed ARM Cortex-A9 ISA specification to correctly handle shifter_operand:
-- Problem: shifter_operand is 12-bit field, but for register operands (I=0),
-  only bits [0:3] contain register number
-- Solution: Updated format definitions to include Rm: [0:3] field
-- Updated all REG instructions to use Rm directly as operand
-- Updated assembly syntax and behavior blocks to use Rm
-- Removed hardcoded fixes from disassembler template (following ISA file spec)
-
-Files Updated:
-- examples/arm_cortex_a9_formats.isa - Added Rm, shift_type, shift_amount fields
-- examples/arm_cortex_a9_instructions.isa - Updated all REG instructions
-
-4. Test Improvements
-
-- Removed pytest.skip() calls from ARM disassembler test
-- Tests now properly fail when disassembled files cannot be assembled
-- Ensures disassembler produces valid output
-
-Implementation:
-
-Python Package:
-- isa_dsl/model/validator.py:
-  * Added _validate_instructions() check for missing behavior
-  * Added _validate_rtl_interpretability() to catch runtime errors
-  * Added _validate_rtl_statement() to detect unsupported constructs
-- isa_dsl/generators/templates/simulator.j2:
-  * Fixed min_bits calculation: min() → max() for correct instruction matching
-- isa_dsl/generators/disassembler.py:
-  * Added utility functions for building match conditions
-  * Simplified template by moving logic to Python
-- isa_dsl/generators/templates/disassembler.j2:
-  * Reversed width iteration order in _identify_instruction_width
-  * Changed to return None for unmatched instructions
-  * Updated disassemble_file() to output .word directives
-- isa_dsl/generators/templates/base_simulator.j2:
-  * Added __format__ method to Register class for f-string formatting
-
-VS Code Extension:
-- vscode_extension/isa/packages/language/src/isa-validator.ts:
-  * Added checkInstruction() to validate for missing behavior
-  * Added validation for RTLForLoop as unsupported feature
-
-ISA Files:
-- examples/arm_cortex_a9_formats.isa - Added Rm field definition
-- examples/arm_cortex_a9_instructions.isa - Updated all REG instructions
-
-Tests:
-- tests/arm/test_arm_disassembler.py - Removed pytest.skip() calls
-
-Documentation:
-- Updated validation documentation to reflect new behavior checks
-- Updated disassembler documentation with variable-length instruction details
-- Updated test counts in README.md and docs/ (193 → 216 tests)
-
-Test Results:
-- Python: 216 tests passing, 0 skipped, 0 failed
-- VS Code Extension: All tests passing
-- Total: 216 tests, all passing
-
-Version Updates:
-- pyproject.toml: 0.3.9 → 0.4.0
-- vscode_extension/isa/package.json: 0.3.9 → 0.4.0
-- vscode_extension/isa/packages/extension/package.json: 0.3.9 → 0.4.0
-- vscode_extension/isa/packages/language/package.json: 0.3.9 → 0.4.0
-- README.md: Version badge updated to 0.4.0
-- vscode_extension/isa/packages/extension/README.md: Version badge updated to 0.4.0
+Benefits:
+- Clean TypeScript compilation with no errors or warnings
+- Improved code quality and maintainability
+- Ensures VS Code extension builds successfully
 
 Files Changed:
-- Modified: isa_dsl/model/validator.py (behavior validation)
-- Modified: isa_dsl/generators/templates/simulator.j2 (min_bits fix)
-- Modified: isa_dsl/generators/disassembler.py (utility functions)
-- Modified: isa_dsl/generators/templates/disassembler.j2 (width ordering, .word output)
-- Modified: isa_dsl/generators/templates/base_simulator.j2 (__format__ method)
-- Modified: vscode_extension/isa/packages/language/src/isa-validator.ts (behavior validation)
-- Modified: examples/arm_cortex_a9_formats.isa (Rm field)
-- Modified: examples/arm_cortex_a9_instructions.isa (all REG instructions)
-- Modified: tests/arm/test_arm_disassembler.py (removed skips)
-- Modified: RELEASE_NOTES.md (v0.4.0 entry)
-- Modified: README.md (version badge, test count)
-- Modified: docs/TESTING.md (test count)
-- Modified: docs/INDEX.md (test count)
-- Modified: All version files (0.3.9 → 0.4.0)
+- Modified: vscode_extension/isa/packages/language/src/isa-validator.ts
+  (added null check for instruction.behavior)
+- Modified: vscode_extension/isa/packages/language/test/builtin-functions.test.ts
+  (removed unused variables)
+
+Test Results:
+- Python: 216 tests passing
+- VS Code Extension: All tests passing
+- TypeScript compilation: Clean build with no errors or warnings
+
+Version Updates:
+- pyproject.toml: 0.4.0 → 0.4.1
+- vscode_extension/isa/package.json: 0.4.0 → 0.4.1
+- vscode_extension/isa/packages/extension/package.json: 0.4.0 → 0.4.1
+- vscode_extension/isa/packages/language/package.json: 0.4.0 → 0.4.1
+- README.md: Version badge updated to 0.4.1
+- vscode_extension/isa/packages/extension/README.md: Version badge updated to 0.4.1
 
 Breaking Changes: None
-Migration: No changes required, existing ISA specifications continue to work
+Migration: No changes required, this is a bug fix release

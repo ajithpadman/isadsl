@@ -1,5 +1,59 @@
 # Release Notes
 
+## Version 0.4.1 - TypeScript Compilation Fixes
+
+**Release Date:** 2026-01-10
+
+### 🎯 Major Changes
+
+#### TypeScript Compilation Fixes
+
+Fixed TypeScript compilation errors in the VS Code extension to ensure clean builds.
+
+**Fixes:**
+- **Fixed `instruction.behavior` Possibly Undefined Error**: Added null check in `isa-validator.ts` before accessing `instruction.behavior.statements` to prevent TypeScript error TS18048
+- **Removed Unused Variables**: Cleaned up unused variable declarations in test files to eliminate TypeScript warnings (TS6133)
+
+**Technical Details:**
+- Updated `isa-validator.ts` line 288: Added `instruction.behavior &&` check before accessing `instruction.behavior.statements`
+- Removed 7 unused variable declarations (`errors`, `functionErrors`) from `builtin-functions.test.ts` that were causing compilation warnings
+
+**Benefits:**
+- Clean TypeScript compilation with no errors or warnings
+- Improved code quality and maintainability
+- Ensures VS Code extension builds successfully
+
+### 📦 Files Changed
+
+**VS Code Extension:**
+- `vscode_extension/isa/packages/language/src/isa-validator.ts` - Added null check for `instruction.behavior`
+- `vscode_extension/isa/packages/language/test/builtin-functions.test.ts` - Removed unused variables
+
+### 📦 Version Updates
+
+- `pyproject.toml` - Version 0.4.0 → 0.4.1
+- `vscode_extension/isa/package.json` - Version 0.4.0 → 0.4.1
+- `vscode_extension/isa/packages/extension/package.json` - Version 0.4.0 → 0.4.1
+- `vscode_extension/isa/packages/language/package.json` - Version 0.4.0 → 0.4.1
+- `README.md` - Version badge updated to 0.4.1
+- `vscode_extension/isa/packages/extension/README.md` - Version badge updated to 0.4.1
+
+### 🔄 Migration Guide
+
+No breaking changes. This is a bug fix release.
+
+**For Developers:**
+- TypeScript compilation now completes without errors or warnings
+- No changes required to existing code
+
+### 🧪 Testing
+
+- **All 216 Python tests passing** ✅
+- **All VS Code extension tests passing** ✅
+- **TypeScript compilation: Clean build with no errors or warnings** ✅
+
+---
+
 ## Version 0.4.0 - Behavior Validation, Disassembler Improvements, and ARM ISA Fixes
 
 **Release Date:** 2026-01-10
